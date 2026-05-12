@@ -1,0 +1,233 @@
+# C-DISC North India GTM Engine — Configuration
+# Editing this file retunes the entire engine. No code changes needed.
+
+company:
+  name: "C-DISC Technologies Pvt Ltd"
+  website: "https://cdisctechnologies.com"
+  email: "cdiscpvtltd@gmail.com"
+  phone: "+919847434848"
+  video_url: "https://youtu.be/CDISC_PEN_FOUNDATION_DEMO"  # replace once filmed
+  proof_point: "PEN Foundation — patented soil-nail technology validated by NIT Calicut · 15 MT load capacity per nail"
+
+# ------------------------------------------------------------------
+# Geo zones — based on the GTM beachhead strategy
+# Higher score = closer to Tier-1 priority zones
+# ------------------------------------------------------------------
+geo_zones:
+  zone_1_yeida_ncr:
+    score: 100
+    label: "YEIDA / Greater Noida belt"
+    districts:
+      - "Gautam Buddh Nagar"
+      - "Bulandshahr"
+      - "Ghaziabad"
+      - "Hapur"
+      - "Aligarh"
+      - "Mathura"
+
+  zone_2_rural_up:
+    score: 85
+    label: "Rural UP — Lucknow-Kanpur-Agra belt"
+    districts:
+      - "Lucknow"
+      - "Kanpur Nagar"
+      - "Kanpur Dehat"
+      - "Agra"
+      - "Bareilly"
+      - "Sitapur"
+      - "Hardoi"
+      - "Unnao"
+      - "Raebareli"
+      - "Etawah"
+      - "Mainpuri"
+      - "Firozabad"
+
+  zone_3_resort_belt:
+    score: 75
+    label: "Uttarakhand + Rajasthan resort belt"
+    districts:
+      - "Nainital"
+      - "Pauri Garhwal"
+      - "Dehradun"
+      - "Rishikesh"
+      - "Haridwar"
+      - "Almora"
+      - "Udaipur"
+      - "Jaisalmer"
+      - "Jodhpur"
+      - "Jaipur"
+      - "Pushkar"
+      - "Mount Abu"
+
+  zone_4_punjab_haryana:
+    score: 70
+    label: "Punjab / Haryana agri-industrial"
+    districts:
+      - "Ludhiana"
+      - "Jalandhar"
+      - "Patiala"
+      - "Bathinda"
+      - "Karnal"
+      - "Hisar"
+      - "Rohtak"
+      - "Sonipat"
+      - "Bhiwadi"
+      - "Gurugram"
+
+  zone_5_other_north:
+    score: 60
+    label: "Other UP / MP / Rajasthan / HP"
+
+# ------------------------------------------------------------------
+# Segments — C-DISC product-market fit
+# ------------------------------------------------------------------
+segments:
+  farm_infra:
+    score: 95
+    label: "Agri & Farm Infrastructure"
+    products: ["PEN Foundation", "Pre-Engineered Construction"]
+    channels: ["whatsapp", "email"]
+    default_language: "hi"
+    place_types: ["poultry_farm", "dairy_farm", "cold_storage", "warehouse", "agricultural_supply"]
+    place_keywords:
+      - "poultry farm"
+      - "dairy farm"
+      - "cold storage"
+      - "agro processing"
+      - "farm infrastructure"
+      - "goat farm"
+      - "FPO"
+
+  industrial_shed:
+    score: 90
+    label: "Industrial Shed & Warehouse Developers"
+    products: ["Pre-Engineered Construction", "PEN Foundation"]
+    channels: ["email", "linkedin"]
+    default_language: "en"
+    place_types: ["warehouse", "industrial_park", "manufacturing"]
+    place_keywords:
+      - "industrial shed"
+      - "warehouse developer"
+      - "logistics park"
+      - "fabrication shed"
+      - "PEB"
+
+  self_build_g1:
+    score: 85
+    label: "Individual Plot Owners / Self-Build G+1 Homes"
+    products: ["MNZE Homes", "PEN Foundation"]
+    channels: ["whatsapp", "facebook"]
+    default_language: "hi"
+    place_keywords:
+      - "individual house"
+      - "self build"
+      - "plot owner"
+      - "g+1"
+      - "single floor home"
+
+  resort:
+    score: 80
+    label: "Resort & Hospitality Developers"
+    products: ["MNZE Homes", "PEN Foundation"]
+    channels: ["email", "linkedin"]
+    default_language: "en"
+    place_types: ["lodging", "resort", "campground"]
+    place_keywords:
+      - "resort"
+      - "eco resort"
+      - "glamping"
+      - "heritage stay"
+      - "homestay"
+      - "boutique hotel"
+
+  disaster_shelter:
+    score: 75
+    label: "Government / NGO Rapid Shelter"
+    products: ["MNZE Homes", "PEN Foundation"]
+    channels: ["email"]
+    default_language: "en"
+    place_keywords:
+      - "SDMA"
+      - "NDRF"
+      - "disaster management"
+      - "rehabilitation"
+
+  compound_wall:
+    score: 70
+    label: "Compound Wall / Fencing"
+    products: ["PEN Foundation"]
+    channels: ["whatsapp", "email"]
+    default_language: "hi"
+    place_keywords:
+      - "fencing contractor"
+      - "compound wall"
+
+# ------------------------------------------------------------------
+# Hard auto-reject keywords  —  PEN Foundation is G+1 ONLY
+# If any of these appear in lead.name + lead.description, score = 0
+# ------------------------------------------------------------------
+reject_keywords:
+  - "apartment"
+  - "apartments"
+  - "flats"
+  - "tower"
+  - "towers"
+  - "high-rise"
+  - "high rise"
+  - "highrise"
+  - "multi-storey"
+  - "multistorey"
+  - "multistory"
+  - "housing society"
+  - "cooperative society"
+  - "co-operative society"
+  - "mall"
+  - "shopping complex"
+  - "g+2"
+  - "g+3"
+  - "g+4"
+  - "g+5"
+  - "g+6"
+  - "g+7"
+  - "g+8"
+  - "g+9"
+  - "g+10"
+  - "10-storey"
+  - "15-storey"
+  - "skyscraper"
+
+# ------------------------------------------------------------------
+# Scoring weights
+# ------------------------------------------------------------------
+scoring:
+  weights:
+    fit: 0.45
+    geo: 0.30
+    segment: 0.25
+  default_min_score: 60
+
+# ------------------------------------------------------------------
+# Messaging — constraints applied to every generated message
+# ------------------------------------------------------------------
+messaging:
+  max_words: 120
+  must_include:
+    - "G+1"
+    - "NIT Calicut"
+  forbid_pitching_for:
+    - "apartment"
+    - "high-rise"
+    - "multi-storey"
+
+# ------------------------------------------------------------------
+# Outreach — sender settings
+# ------------------------------------------------------------------
+outreach:
+  email:
+    throttle_seconds: 8
+    batch_size: 25
+    daily_cap: 200
+  followup:
+    day_1_template: "intro"
+    day_5_template: "share_video"
+    day_14_template: "demo_invite"

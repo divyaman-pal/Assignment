@@ -1,0 +1,2 @@
+"""C-DISC North India GTM automation engine."""
+__version__ = "0.1.0"
