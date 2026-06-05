@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# React Native
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Android
+android/app/build/
+android/app/.cxx/
+android/build/
+android/.gradle/
+local.properties
+
+# iOS
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+ios/*.pbxuser
+ios/*.mode1v3
+ios/*.mode2v3
+ios/*.perspectivev3
+ios/*.xcuserstate
+
+# Metro
+.metro-health-check*
+
+# Misc
+.DS_Store
+*.log
+*.tsbuildinfo
+.env
+.env.*
+
+# ML Models — placeholder TFLite excluded, real ONNX models tracked
+assets/models/*.tflite
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
