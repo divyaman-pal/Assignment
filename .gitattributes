@@ -2,3 +2,4 @@ DataLake3Auth_Final_Submission_2026-06-04/apk/*.apk filter=lfs diff=lfs merge=lf
 *.pdf binary
 *.pptx binary
 *.png binary
+*.mp4 binary

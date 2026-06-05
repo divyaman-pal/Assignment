@@ -7,6 +7,9 @@ Contents:
 - `source/` - React Native source code, Android project files, iOS scaffold, app docs, scripts, and bundled model assets.
 - `apk/DataLake3Auth-aws-sync-release.apk` - final Android release APK built from the AWS-integrated source snapshot.
 - `benchmarks/` - LFW benchmark report for the current `w600k_mbf.onnx` MobileFaceNet model used by this app.
+- `presentation_and_docs/DataLake3Auth_Secure_Final_PPT.pdf` - final presentation deck exported as PDF.
+- `presentation_and_docs/Final_Technical_Report.pdf` - final technical report.
+- `presentation_and_docs/Final_Verification_Video.mp4` - verification demo video for the final Android workflow.
 
 Build notes:
 
