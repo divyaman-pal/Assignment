@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# working renders / intermediate QA artifacts
+slide-*.jpg
+sfix-*.jpg
+s11-*.jpg
+crop_matrix.png
+contact_sheet.png
+content.txt
+*.log
+
+# OS
+.DS_Store
