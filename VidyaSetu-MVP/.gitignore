@@ -1,0 +1,11 @@
+literature_review/__pycache__/
+node_modules/
+dist/
+.vercel
+.env
+.env.*
+!.env.example
+*.log
+uploads/
+coverage/
+.DS_Store

@@ -1,0 +1,40 @@
+{
+  "name": "vidyasetu-clickable-prototype",
+  "version": "1.0.0",
+  "description": "Professional clickable prototype for VidyaSetu, a WhatsApp and voice-first AI career pathway system.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "serve:mvp": "node scripts/local-mvp-server.mjs",
+    "benchmark:slice3": "node scripts/slice3-opportunity-benchmark.mjs",
+    "benchmark:slice4": "node scripts/slice4-language-voice-benchmark.mjs",
+    "benchmark:slice5": "node scripts/slice5-journey-progress-benchmark.mjs",
+    "benchmark:slice6": "node scripts/slice6-final-smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/divyaman-pal/Github-FirstPR.git"
+  },
+  "keywords": [
+    "vidyasetu",
+    "prototype",
+    "vite",
+    "react"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/divyaman-pal/Github-FirstPR/issues"
+  },
+  "homepage": "https://github.com/divyaman-pal/Github-FirstPR#readme",
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "vite": "^8.0.16"
+  }
+}

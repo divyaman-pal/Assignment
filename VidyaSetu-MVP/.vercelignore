@@ -1,0 +1,12 @@
+DataLake3Auth/
+conventional-supplements-assets/
+data/
+literature_review/
+uploads/
+*.ipynb
+*.py
+*.tex
+*.txt
+node_modules/
+dist/
+.git/
