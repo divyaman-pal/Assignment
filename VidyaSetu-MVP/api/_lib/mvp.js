@@ -438,6 +438,44 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
       },
     ];
   }
+  if (goalType === 'self_employment_enterprise') {
+    const venture = titleCase(firstAspiration || 'micro-enterprise');
+    return [
+      {
+        id: 'enterprise-setup-plan',
+        name: `${venture} setup plan -> first 30 days roadmap`,
+        time: '3-5 days planning, then a 30-day setup loop',
+        distance: `Home/local market around ${location}`,
+        income: 'No income guarantee; first sales only after setup and buyers are confirmed',
+        tradeoff: `Best first step: write the setup steps, space, equipment, and a realistic budget for ${firstAspiration} before spending money.`,
+        source_url: 'https://www.pmfme.mofpi.gov.in/',
+        source_title: 'PM FME / MoFPI micro-enterprise setup reference',
+        confidence: 0.8,
+      },
+      {
+        id: 'enterprise-budget-scheme',
+        name: `${venture} budget + loan/scheme check`,
+        time: '1-2 weeks verification',
+        distance: `District industries centre / bank near ${location}`,
+        income: 'Improves funding readiness; subsidy/loan depends on eligibility',
+        tradeoff: 'Compare cost heads, working capital, and Mudra/PMEGP/PMFME scheme eligibility before any loan or investment.',
+        source_url: 'https://www.kviconline.gov.in/pmegpeportal/',
+        source_title: 'PMEGP / KVIC scheme reference',
+        confidence: 0.76,
+      },
+      {
+        id: 'enterprise-buyer-risk',
+        name: `${venture} buyer/customer + risk plan`,
+        time: 'Ongoing local-market loop',
+        distance: `Local market and buyers around ${location}`,
+        income: 'Depends on demand; start small to limit risk',
+        tradeoff: 'List buyers/customers, price, suppliers, and the top risks; a worker should verify the local market before scaling.',
+        source_url: 'https://udyamregistration.gov.in/',
+        source_title: 'Udyam MSME registration and local market base',
+        confidence: 0.72,
+      },
+    ];
+  }
   if (goalType === 'informal_skill_validation') {
     const skill = titleCase(firstAspiration || 'informal skill');
     return [
@@ -899,7 +937,7 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
       (urgency === 'high' ? 4 : 6),
   );
 
-  return {
+  const journey = {
     id: stableId('journey'),
     learner_id: profile.learner_id || null,
     route_id: route.id || null,
@@ -915,6 +953,8 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
             ? 'school_study_support'
             : skill === 'data science'
               ? 'data_science_pathway'
+            : skill === 'enterprise setup'
+              ? 'enterprise_setup'
           : ['job search', 'college pathway', 'informal skill validation', 'vocational training'].includes(skill)
             ? skill.replace(/\s+/g, '_')
           : 'career_pathway',
@@ -1027,6 +1067,8 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
     ],
     readiness_score: readinessScore,
   };
+
+  return enrichJourneyForLearner(profile, { ...route, name: routeName }, journey);
 }
 
 function journeyPrimarySkill(profile = {}) {
@@ -1042,7 +1084,9 @@ function journeyPrimarySkill(profile = {}) {
   if (profile.academic_goal?.type === 'class_12_exam_prep' || /class 12|board exam|exam preparation|marks|score/.test(text)) {
     return 'class 12 exam preparation';
   }
+  if (goalType === 'self_employment_enterprise') return 'enterprise setup';
   if (goalType === 'informal_skill_validation') return 'informal skill validation';
+  if (/poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|enterprise|self.?employment|apna kaam|business setup/.test(text)) return 'enterprise setup';
   if (/data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text)) return 'data science';
   if (/mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text)) return 'mechanic repair';
   if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) return 'job search';
@@ -1770,6 +1814,41 @@ const JOURNEY_TEMPLATES = {
       },
     ],
   },
+  'enterprise setup': {
+    id: 'enterprise-setup',
+    modules: [
+      {
+        title: 'Setup plan and budget',
+        goal: 'Learner writes the setup steps, space/equipment, and a realistic starting budget.',
+        lessons: ['List setup steps and space/equipment', 'Estimate one-time cost and working capital', 'Decide a small safe starting size'],
+        practice_tasks: ['Write a one-page setup plan', 'Make a simple budget sheet with cost heads'],
+        proof: 'Setup plan + budget sheet',
+        unlock: 'Loan/scheme verification',
+        completion_criteria: 'Setup plan and budget with cost heads are written; starting size is realistic, not over-ambitious.',
+        worker_check: 'Confirm space, budget source, family support, and that the learner is not taking on unsafe debt.',
+      },
+      {
+        title: 'Loan, scheme and supplier check',
+        goal: 'Learner checks scheme/loan eligibility and reliable suppliers before spending.',
+        lessons: ['Mudra/PMEGP/PMFME scheme basics', 'Documents and eligibility', 'Comparing two suppliers'],
+        practice_tasks: ['Note one scheme/loan option with eligibility', 'List two suppliers with price'],
+        proof: 'Scheme/loan note + supplier list',
+        unlock: 'Buyer and risk plan',
+        completion_criteria: 'One scheme/loan path and at least two suppliers are listed with cost; no money spent before verification.',
+        worker_check: 'Verify scheme details from an official source before the learner applies or pays anyone.',
+      },
+      {
+        title: 'Buyers, local market and risk',
+        goal: 'Learner finds first buyers/customers and writes the top risks before scaling.',
+        lessons: ['Who are the first buyers/customers', 'Pricing for first sales', 'Top 3 risks and how to reduce them'],
+        practice_tasks: ['List five possible buyers or sale points', 'Write a 30-day first-sales plan'],
+        proof: 'Buyer list + 30-day first-sales plan',
+        unlock: 'Worker-verified enterprise start',
+        completion_criteria: 'Buyer list, pricing, and a 30-day plan exist with named risks; income is treated as not guaranteed.',
+        worker_check: 'Confirm local-market demand and that risks are understood before any investment scales.',
+      },
+    ],
+  },
   generic: {
     id: 'career-skill',
     modules: [
@@ -1993,5 +2072,595 @@ export function computeAdews(features = {}) {
     fired: normalized >= 0.65,
     top_features_json,
     worker_message: `ADEWS alert: learner risk ${normalized}. Missed ${missed} check-ins and attendance dropped ${attendanceDrop} days. Suggested action: home visit and pathway counseling.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Goal-family route validation
+// Keeps pathway cards relevant to the learner goal. Routes that do not belong
+// to the learner's goal family (e.g. a beauty/PMKVY card for a JEE aspirant)
+// are rejected and back-filled with deterministic, family-correct routes.
+// ---------------------------------------------------------------------------
+
+const ROUTE_FAMILY_RULES = {
+  entrance_exam: {
+    requireAny:
+      /jee|iit|neet|cuet|gate|clat|\bnda\b|physics|chemistry|math|maths|biology|syllabus|mock|practice|error.?log|concept|revision|\btest\b|problem set/i,
+    deny: /beauty|salon|mehandi|tailor|stitch|silai|electrician|plumber|pmkvy|job outreach|employer outreach|hirer outreach|placement job|vacancy|apprenticeship|data entry|computer basics/i,
+  },
+  board_exam: {
+    requireAny:
+      /ncert|diksha|sample paper|previous paper|board|revision|practice|\btest\b|mistake.?log|chapter|exam|marking scheme/i,
+    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|pmkvy|data entry/i,
+  },
+  school_study: {
+    requireAny: /ncert|diksha|chapter|practice|\btest\b|revision|mistake.?log|homework|subject|concept|quiz|study/i,
+    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|pmkvy/i,
+  },
+  data_science_job: {
+    requireAny:
+      /python|sql|project|portfolio|resume|github|notebook|dashboard|internship|fresher|analyst|data science|outreach/i,
+    deny: /beauty|salon|mehandi|tailor|stitch|silai|cooking|kitchen|\bjee\b|\biit\b|neet|ncert|sample paper|computer basics/i,
+  },
+  college: {
+    requireAny: /college|internship|project|portfolio|resume|profile|outreach|placement|gap map|fresher|github|skill/i,
+    deny: /beauty|salon|mehandi|\bjee\b|\biit\b|neet|ncert|sample paper/i,
+  },
+  informal_skill: {
+    requireAny: /proof|sample|\brpl\b|local work|customer|photo|video|certificate|apprentice|skill passport|portfolio|stitch|silai|repair/i,
+    deny: /\bjee\b|\biit\b|neet|ncert|sample paper|data science|\bpython\b|\bsql\b/i,
+  },
+  enterprise: {
+    requireAny:
+      /setup|budget|loan|scheme|mudra|pmegp|pmfme|buyer|customer|supplier|\brisk\b|local market|30.?day|working capital|first sales/i,
+    deny: /employer outreach|hirer outreach|job outreach|placement job|job matching|job search|scholarship|\bvacancy\b/i,
+  },
+  job: {
+    requireAny: /\bjob\b|vacancy|employer|outreach|resume|proof|\bncs\b|\brole\b|hiring|apprentice|placement|search/i,
+    deny: /\bjee\b|\biit\b|neet|ncert|sample paper/i,
+  },
+  vocational: {
+    requireAny: /training|course|center|centre|practice|apprentice|foundation|skill|certificate/i,
+    deny: /\bjee\b|\biit\b|neet|ncert|sample paper/i,
+  },
+  generic: {
+    requireAny: /skill|course|apprentice|proof|practice|\bjob\b|training|portfolio|setup|study|exam|outreach/i,
+    deny: /$^/,
+  },
+};
+
+const FAMILY_EXPLANATIONS = {
+  entrance_exam: {
+    why: 'This route keeps you on the exam track (syllabus, concepts, practice, mocks, error-log) instead of mixing in job or vocational distractions.',
+    next: 'Open the study plan and start the first syllabus/diagnostic block today.',
+    locked: 'Job, training, and outreach cards stay locked while you are in exam-prep mode.',
+    risk: 'Watching videos alone is not progress — every block must end with solved questions and an error-log entry.',
+    outcome: 'Higher syllabus coverage, accuracy, and mock scores before any career step.',
+  },
+  board_exam: {
+    why: 'This route uses official NCERT/DIKSHA and sample papers so your board marks improve before any job route.',
+    next: 'Start the NCERT/revision block and solve one practice set today.',
+    locked: 'Job and outreach cards stay locked during board exam preparation.',
+    risk: 'Skipping NCERT for random videos repeats mistakes; keep a mistake log every week.',
+    outcome: 'Better board marks and stronger eligibility for the next pathway.',
+  },
+  school_study: {
+    why: 'This route fixes weak chapters with NCERT/DIKSHA practice and tests, matched to your class and subjects.',
+    next: 'Pick one weak chapter and finish the first practice set today.',
+    locked: 'Job/outreach cards are not shown for school study help.',
+    risk: 'Without honest mistake tracking, the same errors repeat in tests.',
+    outcome: 'Clearer concepts, better marks, and steady study habits.',
+  },
+  data_science_job: {
+    why: 'This route builds the exact data-science hiring stack — Python, SQL, a real project/portfolio, resume, and consent-based outreach — not generic computer basics.',
+    next: 'Run the readiness gap-check, then start the first portfolio project task today.',
+    locked: 'Employer outreach unlocks only after one verifiable project/proof and consent.',
+    risk: 'A course certificate without a shareable project rarely gets shortlisted; proof matters more.',
+    outcome: 'A shortlist-ready profile for fresher/analyst/internship roles.',
+  },
+  college: {
+    why: 'This route turns your college profile into internship/project-ready proof (portfolio, resume, outreach) instead of starting from basics.',
+    next: 'Build the profile/portfolio gap map, then add one project proof today.',
+    locked: 'Outreach unlocks after resume/portfolio proof and consent.',
+    risk: 'Applying with no project proof leads to silent rejections; build proof first.',
+    outcome: 'Stronger shortlisting for internships, projects, or fresher roles.',
+  },
+  informal_skill: {
+    why: 'This route makes your existing hands-on skill visible as proof (photo/video/RPL) so local work or a certificate becomes possible — no beginner course needed.',
+    next: 'Capture one sample-work proof (photo/video/voice) today.',
+    locked: 'Local work/outreach unlocks after enough proof or RPL-grade evidence and consent.',
+    risk: 'No certificate is not a barrier — but unverified claims are; keep clear sample proof.',
+    outcome: 'A trusted Skill Passport that unlocks local work, RPL, or apprenticeship.',
+  },
+  enterprise: {
+    why: 'This route checks setup, budget, scheme/loan eligibility, buyers, and risk before any money is spent — not a job-outreach path.',
+    next: 'Write the one-page setup plan and a simple budget sheet today.',
+    locked: 'Loan/scheme and scaling steps unlock only after a written plan and worker verification.',
+    risk: 'No income is guaranteed; start small and verify schemes from official sources before paying anyone.',
+    outcome: 'A verified, low-risk plan from setup to first sales.',
+  },
+  job: {
+    why: 'This route is a direct, location-aware job search with resume/proof readiness and consent-based outreach, not a long training detour.',
+    next: 'Confirm role/commute, fix the resume/proof gap, then shortlist leads today.',
+    locked: 'Outreach uses only the fields you consent to share.',
+    risk: 'Offline roles need a verified location and safe commute before you travel.',
+    outcome: 'A tracked application pipeline toward a real interview.',
+  },
+  vocational: {
+    why: 'This route finds the right local/online training plus phone-first practice so you build proof while a center is verified.',
+    next: 'Shortlist one local and one online option, then start the first practice task today.',
+    locked: 'Offline center/commute steps stay locked until location and safety are confirmed.',
+    risk: 'Waiting for a course seat can become dropout time; start phone-first practice now.',
+    outcome: 'Verified training plus early proof for apprenticeship or entry work.',
+  },
+  generic: {
+    why: 'This route is the shortest credible step from your current profile toward your goal.',
+    next: 'Build the weekly plan and finish the first proof task today.',
+    locked: 'The next step unlocks after proof, location (if offline), and consent.',
+    risk: 'Confirm time, location, and proof so the plan stays realistic.',
+    outcome: 'Clear, visible progress toward your goal.',
+  },
+};
+
+function coerceText(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') return value.trim() || fallback;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map((item) => coerceText(item)).filter(Boolean).join(', ') || fallback;
+  if (typeof value === 'object') {
+    return coerceText(value.label || value.title || value.name || value.text || value.value || value.description, fallback);
+  }
+  return fallback;
+}
+
+function routeTextOf(route = {}) {
+  return [
+    route.name,
+    route.title,
+    route.route_name,
+    route.tradeoff,
+    route.why_this_route,
+    route.route_description,
+    route.description,
+    route.source_title,
+    route.time,
+    route.distance,
+    route.income,
+    ...(Array.isArray(route.focus_subjects) ? route.focus_subjects : []),
+  ]
+    .map((value) => coerceText(value))
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function sameRouteName(a = {}, b = {}) {
+  return coerceText(a.name).toLowerCase() === coerceText(b.name).toLowerCase() && coerceText(a.name) !== '';
+}
+
+export function goalFamily(profile = {}, context = {}) {
+  const academicType = profile.academic_goal?.type || '';
+  const goalType = profile.learner_goal?.type || '';
+  const intent = profile.learner_goal?.intent || '';
+  const text = `${(profile.aspirations || []).join(' ')} ${profile.class_level || ''} ${profile.education_status || ''} ${goalType}`.toLowerCase();
+  if (context.entrancePrep || academicType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bclat\b|\bnda\b|entrance exam|competitive exam/.test(text)) {
+    return 'entrance_exam';
+  }
+  if (context.academicPrep || academicType === 'class_12_exam_prep' || /class 12|board exam|12th|twelfth/.test(text)) {
+    return 'board_exam';
+  }
+  if (context.schoolStudy || academicType === 'school_study_support' || (/class \d/.test(text) && intent === 'study')) {
+    return 'school_study';
+  }
+  if (goalType === 'self_employment_enterprise' || /poultry|mushroom|goat|dairy|food processing|enterprise|self.?employment|apna kaam/.test(text)) {
+    return 'enterprise';
+  }
+  const dataScience = /data science|machine learning|data analyst|analytics|\bpython\b|\bsql\b|artificial intelligence/.test(text);
+  if (['college_job_search', 'college_career', 'college_internship_project'].includes(goalType) || /college|btech|b\.tech|engineering|internship|project/.test(text)) {
+    return dataScience && (intent === 'job' || /naukri|\bjob\b/.test(text)) ? 'data_science_job' : 'college';
+  }
+  if (dataScience && (intent === 'job' || /\bjob\b|naukri/.test(text))) return 'data_science_job';
+  if (goalType === 'informal_skill_validation' || intent === 'proof_to_work' || /informal|\brpl\b|certificate nahi|workshop mein|seekha hai/.test(text)) {
+    return 'informal_skill';
+  }
+  if (['job_search_only', 'formal_skill_job_search'].includes(goalType) || intent === 'job') return 'job';
+  if (goalType === 'vocational_training' || intent === 'training') return 'vocational';
+  return 'generic';
+}
+
+export function routeMatchesGoalFamily(profile = {}, route = {}, family = goalFamily(profile)) {
+  const rules = ROUTE_FAMILY_RULES[family] || ROUTE_FAMILY_RULES.generic;
+  const text = routeTextOf(route);
+  if (!text) return false;
+  if (rules.deny && rules.deny.test(text)) return false;
+  return rules.requireAny ? rules.requireAny.test(text) : true;
+}
+
+// Specific vocations, so a mobile-repair learner never gets a beauty/tailoring
+// card just because both say "training". A route is rejected when it clearly
+// belongs to a different vocation than the learner's.
+const VOCATIONS = {
+  mobile_repair: /mobile repair|phone repair|smartphone repair|mobile technician|cellphone/i,
+  mechanic: /\bmechanic\b|bike repair|motorcycle|two.?wheeler|automobile/i,
+  beauty: /beauty|salon|mehandi|mehendi|wellness|beautician|parlour|parlor|makeup/i,
+  tailoring: /tailor|silai|stitch|sewing|garment|boutique|alteration/i,
+  cooking: /\bcook\b|\bchef\b|kitchen|hospitality|catering|\bhotel\b/i,
+  electrician: /electrician|wireman|wiring|electrical/i,
+  computer: /computer basics|data entry|typing|office assistant|cyber cafe|\bcsc\b/i,
+  agriculture: /agriculture|farming|kheti|\bcrop\b|\bagri\b|\bfarm\b/i,
+  driving: /\bdriver\b|driving|\blicense\b/i,
+  video: /video creation|content creator|videograph/i,
+};
+
+function detectVocations(text = '') {
+  return Object.entries(VOCATIONS)
+    .filter(([, pattern]) => pattern.test(text))
+    .map(([key]) => key);
+}
+
+function crossVocationConflict(profile = {}, route = {}) {
+  const learnerText = `${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`.toLowerCase();
+  const learnerVocations = detectVocations(learnerText);
+  if (!learnerVocations.length) return false;
+  const routeVocations = detectVocations(routeTextOf(route));
+  if (!routeVocations.length) return false;
+  return !routeVocations.some((vocation) => learnerVocations.includes(vocation));
+}
+
+export function rejectUnrelatedRoute(profile = {}, route = {}, family = goalFamily(profile)) {
+  if (!routeMatchesGoalFamily(profile, route, family)) return true;
+  if (['vocational', 'informal_skill', 'generic', 'job'].includes(family) && crossVocationConflict(profile, route)) return true;
+  return false;
+}
+
+export function validatePathwayRoutes(profile = {}, routes = [], options = {}) {
+  const family = options.family || goalFamily(profile, options);
+  const deterministic =
+    Array.isArray(options.deterministic) && options.deterministic.length ? options.deterministic : sourceLimitedPathways(profile);
+  const incoming = (Array.isArray(routes) ? routes : []).filter((route) => route && typeof route === 'object' && !Array.isArray(route));
+  const kept = incoming.filter((route) => !rejectUnrelatedRoute(profile, route, family));
+  const rejected = incoming.filter((route) => !kept.includes(route)).map((route) => coerceText(route.name, route.id || 'route'));
+  let finalRoutes = [...kept];
+  for (const det of deterministic) {
+    if (finalRoutes.length >= 3) break;
+    if (!finalRoutes.some((route) => sameRouteName(route, det))) finalRoutes.push(det);
+  }
+  if (!finalRoutes.length) finalRoutes = deterministic.slice(0, 3);
+  finalRoutes = finalRoutes.slice(0, 3);
+  return {
+    family,
+    routes: finalRoutes,
+    incoming_count: incoming.length,
+    kept_count: kept.length,
+    rejected_count: incoming.length - kept.length,
+    rejected,
+    replaced: incoming.length === 0 || kept.length < incoming.length || finalRoutes.length > kept.length,
+    used_deterministic: kept.length === 0,
+  };
+}
+
+export function buildLocationGuardrail(profile = {}, options = {}) {
+  const goalLabel = coerceText(profile.learner_goal?.label) || (profile.aspirations || [])[0] || 'your goal';
+  const message =
+    options.message ||
+    `To find safe ${goalLabel} options near you, share your district or block (and how far you can travel safely). VidyaSetu will not guess your location or show far-off cards.`;
+  return {
+    routes: [],
+    confidence: options.confidence ?? 0.7,
+    callback_flag: true,
+    callback_message: message,
+    location_required: true,
+    guardrail: 'location',
+  };
+}
+
+export function decorateRouteExplanation(route = {}, context = {}) {
+  const family = context.family || goalFamily(context.profile || {});
+  const defaults = FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic;
+  const facts = Array.isArray(context.matchedFacts) ? context.matchedFacts : [];
+  const blockers = Array.isArray(context.blockers) ? context.blockers : [];
+  const factLine = facts
+    .slice(0, 3)
+    .map((fact) => (typeof fact === 'string' ? fact : `${fact.label}: ${fact.value}`))
+    .filter(Boolean)
+    .join('; ');
+  const why = coerceText(route.why_this_route) || coerceText(route.tradeoff) || defaults.why;
+  return {
+    ...route,
+    why_this_route: factLine && !/matched:/i.test(why) ? `${why} (matched: ${factLine})` : why,
+    matched_profile_facts:
+      Array.isArray(route.matched_profile_facts) && route.matched_profile_facts.length ? route.matched_profile_facts : facts,
+    next_action: coerceText(route.next_action) || coerceText(context.nextAction) || defaults.next,
+    locked_until: coerceText(route.locked_until) || coerceText(blockers[0]) || defaults.locked,
+    risk: coerceText(route.risk) || coerceText(route.tradeoff_risk) || defaults.risk,
+    expected_outcome: coerceText(route.expected_outcome) || coerceText(route.income) || defaults.outcome,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Learner journey enrichment (makes each week clear and actionable)
+// ---------------------------------------------------------------------------
+
+function familyOutcome(family = 'generic') {
+  return (FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic).outcome;
+}
+
+export function buildProofTask(family = 'generic', profile = {}) {
+  switch (family) {
+    case 'entrance_exam':
+      return 'a photo of today’s solved questions plus your error-log entry';
+    case 'board_exam':
+      return 'a photo of the NCERT/sample-paper questions you solved with your score';
+    case 'school_study':
+      return 'a photo of your solved practice and your mistake list';
+    case 'data_science_job':
+      return 'a project notebook/dashboard link or screenshot with a 3-line summary';
+    case 'college':
+      return 'a resume, portfolio, or project proof link/screenshot';
+    case 'informal_skill':
+      return 'a photo/video or voice note of your sample work';
+    case 'enterprise':
+      return 'your setup plan, budget sheet, or buyer list';
+    case 'job':
+      return 'your resume/proof and a shortlist of the leads you contacted';
+    case 'vocational':
+      return 'a photo or note of your practice sample';
+    default:
+      return 'a short note or photo of what you completed';
+  }
+}
+
+export function buildTodayTask(family = 'generic', profile = {}, route = {}, firstModule = {}) {
+  const micro =
+    Array.isArray(firstModule.daily_micro_tasks) && firstModule.daily_micro_tasks.length ? coerceText(firstModule.daily_micro_tasks[0]) : '';
+  if (micro) return micro.replace(/^day\s*1:\s*/i, '');
+  const subjects = profile.academic_goal?.subjects?.length ? profile.academic_goal.subjects.join(', ') : 'your first topic';
+  switch (family) {
+    case 'entrance_exam':
+      return `Mark the ${profile.academic_goal?.exam || 'exam'} syllabus as red/yellow/green and solve one short diagnostic set in ${subjects}.`;
+    case 'board_exam':
+      return `Pick one weak chapter in ${subjects} and read the NCERT explanation, then solve 5 questions.`;
+    case 'school_study':
+      return `Pick one weak chapter in ${subjects} and finish a short practice set, marking mistakes.`;
+    case 'data_science_job':
+      return 'Do the readiness gap-check (Python, SQL, stats, project, resume) and pick one public dataset for your first project.';
+    case 'college':
+      return 'List your current skills/projects and write a one-line internship/project target.';
+    case 'informal_skill':
+      return 'Record a 60-second voice or video explaining your skill, and capture one sample-work photo.';
+    case 'enterprise':
+      return 'Write the setup steps, the space/equipment you need, and a rough starting budget.';
+    case 'job':
+      return 'Confirm your target role, safe commute/relocation, and check your resume/proof gap.';
+    case 'vocational':
+      return 'Shortlist one local and one online training option and set your commute/time limits.';
+    default:
+      return 'Start the first lesson and complete one small practice task today.';
+  }
+}
+
+function whyModuleMatters(family = 'generic', module = {}, index = 0) {
+  const goal = coerceText(module.goal);
+  const base = (FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic).outcome;
+  if (index === 0) return `This is the foundation week: ${goal || base}`;
+  return goal ? `Builds on the previous week so that ${goal.charAt(0).toLowerCase()}${goal.slice(1)}` : base;
+}
+
+function lessonResourceFor(family = 'generic') {
+  switch (family) {
+    case 'entrance_exam':
+      return { title: 'NCERT textbooks + official exam syllabus', type: 'official', source_url: 'https://ncert.nic.in/textbook.php' };
+    case 'board_exam':
+      return { title: 'NCERT + CBSE sample papers', type: 'official', source_url: 'https://ncert.nic.in/textbook.php' };
+    case 'school_study':
+      return { title: 'NCERT + DIKSHA practice', type: 'official', source_url: 'https://diksha.gov.in/' };
+    case 'data_science_job':
+    case 'college':
+      return { title: 'Skill India Digital learning', type: 'official', source_url: 'https://www.skillindiadigital.gov.in/' };
+    case 'enterprise':
+      return { title: 'PM FME / MSME setup resources', type: 'official', source_url: 'https://www.pmfme.mofpi.gov.in/' };
+    default:
+      return { title: 'Skill India Digital learning', type: 'official', source_url: 'https://www.skillindiadigital.gov.in/' };
+  }
+}
+
+function buildLessonDetail(lesson, index = 0, module = {}, family = 'generic', profile = {}) {
+  const language = coerceText(profile.preferred_language) || coerceText(profile.language) || 'your language';
+  const academic = /entrance_exam|board_exam|school_study/.test(family);
+  const title = coerceText(lesson, `Lesson ${index + 1}`);
+  return {
+    title,
+    type: academic ? (index === 0 ? 'concept' : 'practice') : index === 0 ? 'watch_or_listen' : 'do',
+    estimated_time: academic ? '20-30 min' : '10-15 min',
+    instructions: academic
+      ? `Open "${title}" in ${language}. Read or listen once, then solve at least 3 questions on it without looking at answers.`
+      : `Open "${title}" in ${language}. Watch/listen once, then do the small task by hand or in your own words.`,
+    completion_criteria: `You can explain "${title}" in one line and finished its small task.`,
+    proof_required: coerceText(module.proof_task) || coerceText(module.proof) || buildProofTask(family, profile),
+    resource: lessonResourceFor(family),
+  };
+}
+
+export function enrichModule(module = {}, family = 'generic', profile = {}, index = 0) {
+  const lessons = Array.isArray(module.lessons) ? module.lessons : [];
+  const proofTask =
+    coerceText(module.proof_task) ||
+    coerceText(module.proof) ||
+    (Array.isArray(module.proof_tasks) ? coerceText(module.proof_tasks[0]) : '') ||
+    buildProofTask(family, profile);
+  return {
+    ...module,
+    why_it_matters: coerceText(module.why_it_matters) || whyModuleMatters(family, module, index),
+    daily_plan: Array.isArray(module.daily_plan) && module.daily_plan.length ? module.daily_plan : module.daily_micro_tasks || [],
+    proof_task: proofTask,
+    checkpoint:
+      coerceText(module.checkpoint) ||
+      coerceText(module.completion_criteria) ||
+      `Finish Week ${module.week || index + 1} lessons/practice and save ${proofTask}.`,
+    unlocks: coerceText(module.unlocks) || coerceText(module.unlock_after_completion) || coerceText(module.unlock) || 'the next step',
+    lesson_details:
+      Array.isArray(module.lesson_details) && module.lesson_details.length
+        ? module.lesson_details
+        : lessons.map((lesson, lessonIndex) => buildLessonDetail(lesson, lessonIndex, module, family, profile)),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// "This week" hyperlocal actions
+// Concrete steps a learner can physically take this week. Only real official
+// portals and real local-action TYPES are used. No fabricated employers,
+// phone numbers, or specific job listings.
+// ---------------------------------------------------------------------------
+
+const OFFICIAL = {
+  ncs: { title: 'National Career Service (NCS)', url: 'https://www.ncs.gov.in/' },
+  skillIndia: { title: 'Skill India Digital', url: 'https://www.skillindiadigital.gov.in/' },
+  pmkvy: { title: 'PMKVY / Skill India', url: 'https://www.pmkvyofficial.org/' },
+  digilocker: { title: 'DigiLocker', url: 'https://www.digilocker.gov.in/' },
+  nsp: { title: 'National Scholarship Portal', url: 'https://scholarships.gov.in/' },
+  ncert: { title: 'NCERT official textbooks', url: 'https://ncert.nic.in/textbook.php' },
+  diksha: { title: 'DIKSHA', url: 'https://diksha.gov.in/' },
+  jee: { title: 'NTA JEE Main', url: 'https://jeemain.nta.ac.in/' },
+  cbseSqp: { title: 'CBSE sample papers', url: 'https://cbseacademic.nic.in/' },
+  udyam: { title: 'Udyam registration', url: 'https://udyamregistration.gov.in/' },
+  pmegp: { title: 'PMEGP / KVIC', url: 'https://www.kviconline.gov.in/pmegpeportal/' },
+  pmfme: { title: 'PM FME (MoFPI)', url: 'https://www.pmfme.mofpi.gov.in/' },
+};
+
+function action(id, type, title, how, source, byWhen = 'This week') {
+  return { id, type, title, how, source_title: source.title, source_url: source.url, by_when: byWhen };
+}
+
+export function buildThisWeekActions(profile = {}, family = goalFamily(profile)) {
+  const place = coerceText(profile.block) || coerceText(profile.location) || 'your area';
+  const hasPreciseArea = Boolean(coerceText(profile.block));
+
+  // Steps every learner can take now.
+  const base = [
+    action(
+      'tw-skill-passport',
+      'in_app',
+      'Build your Skill Passport with Meera (no resume needed)',
+      'Just keep chatting with Meera. She turns your answers into proof you can share — you do not need to write a resume.',
+      { title: 'VidyaSetu Skill Passport', url: '' },
+    ),
+    action(
+      'tw-ncs',
+      'register_online',
+      'Create a free National Career Service account',
+      `Open the link, sign up with your phone number, and set your district to ${place} so nearby jobs and job-melas reach you.`,
+      OFFICIAL.ncs,
+    ),
+    action(
+      'tw-digilocker',
+      'register_online',
+      'Set up DigiLocker for your documents',
+      'Create DigiLocker with your phone + Aadhaar so your marksheets/certificates are safe and shareable in one tap.',
+      OFFICIAL.digilocker,
+    ),
+  ];
+
+  if (!hasPreciseArea) {
+    base.push(
+      action(
+        'tw-set-area',
+        'in_app',
+        'Tell Meera your exact block / panchayat',
+        `We currently show options near "${place}". Share your block or panchayat so centres and work shown are truly within reach.`,
+        { title: 'VidyaSetu', url: '' },
+      ),
+    );
+  }
+
+  const byFamily = {
+    entrance_exam: [
+      action('tw-jee-syllabus', 'study_today', 'Download the official exam syllabus today', 'Open the official exam site, save the latest syllabus, and tick the chapters you have not started.', OFFICIAL.jee),
+      action('tw-ncert-start', 'study_today', 'Start one NCERT chapter and solve 10 questions', 'Pick your weakest topic, read the NCERT explanation, then solve 10 questions and note every mistake.', OFFICIAL.ncert),
+      action('tw-mock', 'practice', 'Attempt one timed practice set this week', 'Do one timed section, then convert every wrong answer into a revision note (your error log).', OFFICIAL.diksha),
+    ],
+    board_exam: [
+      action('tw-ncert-board', 'study_today', 'Finish one NCERT chapter + back exercises', 'Read the chapter, redo the solved examples, and complete the exercise; mark wrong answers in a mistake log.', OFFICIAL.ncert),
+      action('tw-sample-paper', 'practice', 'Solve one CBSE/board sample-paper section', 'Download a sample paper, solve one section in time, and compare with the marking scheme.', OFFICIAL.cbseSqp),
+      action('tw-scholarship', 'deadline', 'Check scholarship eligibility on NSP', 'Open the National Scholarship Portal, check pre/post-matric eligibility, and note the application deadline.', OFFICIAL.nsp, 'Before the portal deadline'),
+    ],
+    school_study: [
+      action('tw-diksha-chapter', 'study_today', 'Do one DIKSHA chapter + practice today', 'Open DIKSHA, watch one short lesson for your weak chapter, then solve the practice questions.', OFFICIAL.diksha),
+      action('tw-ncert-school', 'study_today', 'Solve 8 NCERT questions and list mistakes', 'Pick one subject, solve 8 questions from NCERT, and write down which type you got wrong.', OFFICIAL.ncert),
+      action('tw-scholarship-school', 'deadline', 'Ask a teacher/parent to check NSP scholarship', 'Open the National Scholarship Portal with a guardian and check what your class is eligible for.', OFFICIAL.nsp, 'Before the portal deadline'),
+    ],
+    data_science_job: [
+      action('tw-ds-project', 'do_today', 'Pick one public dataset and start a mini-project', 'Choose a simple dataset, clean it, and write a 6-line summary — this becomes your portfolio proof.', OFFICIAL.skillIndia),
+      action('tw-ncs-analyst', 'register_online', 'Search "data entry / analyst" roles on NCS', `Register on NCS and search analyst/data roles filtered to ${place} and remote.`, OFFICIAL.ncs),
+      action('tw-skillindia-course', 'register_online', 'Enrol in one free Python/SQL module', 'Start one short Python or SQL module so your skills are current and certified.', OFFICIAL.skillIndia),
+    ],
+    college: [
+      action('tw-portfolio', 'do_today', 'Write two strong resume bullets from one project', 'Take one college project and write two clear result-focused lines for your profile.', OFFICIAL.skillIndia),
+      action('tw-ncs-intern', 'register_online', 'Search internships/projects on NCS', `Register and search internship/apprenticeship listings near ${place} and remote.`, OFFICIAL.ncs),
+      action('tw-skillindia-cert', 'register_online', 'Add one free certified short course', 'Pick one course matching your goal so your profile has a verifiable certificate.', OFFICIAL.skillIndia),
+    ],
+    informal_skill: [
+      action('tw-sample-proof', 'do_today', 'Capture one sample-work photo/video today', 'Make one piece of your work (stitch/repair/etc.) and record a clear photo or 30-second video as proof.', { title: 'VidyaSetu Skill Passport', url: '' }),
+      action('tw-rpl', 'register_online', 'Check RPL recognition on Skill India', 'See if you can get your existing skill certified (RPL) without a long course.', OFFICIAL.skillIndia),
+      action('tw-local-work', 'local_outreach', `Ask 3 shops/customers near ${place} for small work`, 'List three nearby shops or past customers and ask for one small paid task or trial — start earning while you build proof.', OFFICIAL.ncs),
+    ],
+    enterprise: [
+      action('tw-setup-plan', 'do_today', 'Write a one-page setup plan + rough budget', 'List the space, equipment, and a realistic starting cost — start small to limit risk.', OFFICIAL.pmfme),
+      action('tw-udyam', 'register_online', 'Register on Udyam (free MSME ID)', 'A free Udyam registration unlocks schemes and buyer trust later.', OFFICIAL.udyam),
+      action('tw-pmegp', 'deadline', 'Check PMEGP/PMFME loan-scheme eligibility', 'Open the scheme portal, check eligibility and documents before spending any money.', OFFICIAL.pmegp),
+      action('tw-buyers', 'local_outreach', `List 5 possible buyers/customers near ${place}`, 'Write down five nearby people or shops who might buy from you, and a fair first price.', OFFICIAL.udyam),
+    ],
+    job: [
+      action('tw-ncs-job', 'register_online', 'Register on NCS and shortlist 5 local roles', `Sign up, set your district to ${place} and commute limit, and shortlist five roles to apply to.`, OFFICIAL.ncs),
+      action('tw-proof', 'do_today', 'Let Meera build your one-page proof summary', 'Answer Meera’s questions; she creates a truthful proof summary so you do not need a formal resume.', { title: 'VidyaSetu', url: '' }),
+      action('tw-walkin', 'local_outreach', `Prepare for 2 local shop/employer enquiries near ${place}`, 'Pick two nearby workplaces and practise a 30-second introduction with Meera before you visit.', OFFICIAL.ncs),
+    ],
+    vocational: [
+      action('tw-pmkvy-center', 'visit_center', 'Find the nearest PMKVY/Skill India training centre', `Open the centre locator and note the closest centre to ${place}, its course, and fees.`, OFFICIAL.pmkvy),
+      action('tw-skillindia-start', 'register_online', 'Start one free foundation module now', 'Begin a short phone-first module so you build proof while a local centre is confirmed.', OFFICIAL.skillIndia),
+      action('tw-practice-proof', 'do_today', 'Do one practice task and save proof', 'Complete one small hands-on task and save a photo/note as your first proof.', { title: 'VidyaSetu Skill Passport', url: '' }),
+    ],
+    generic: [
+      action('tw-skillindia-explore', 'register_online', 'Explore one free Skill India course', 'Open Skill India Digital and start one short course matching your interest.', OFFICIAL.skillIndia),
+      action('tw-ncs-explore', 'register_online', 'Register on NCS for local opportunities', `Create an NCS account and set your district to ${place}.`, OFFICIAL.ncs),
+    ],
+  };
+
+  return [...base, ...(byFamily[family] || byFamily.generic)].slice(0, 10);
+}
+
+export function enrichJourneyForLearner(profile = {}, route = {}, journey = {}) {
+  const family = goalFamily(profile);
+  const baseModules = Array.isArray(journey.modules) ? journey.modules : [];
+  const modules = baseModules.map((module, index) => enrichModule(module, family, profile, index));
+  const first = modules[0] || {};
+  const todayTask = buildTodayTask(family, profile, route, first);
+  const proofRequired = coerceText(first.proof_task) || buildProofTask(family, profile);
+  const startHere = {
+    week: first.week || 1,
+    title: coerceText(first.title) || 'Week 1',
+    goal: coerceText(first.goal),
+    why_it_matters: coerceText(first.why_it_matters),
+    today_task: todayTask,
+    how_to_complete:
+      coerceText(first.checkpoint) ||
+      coerceText(first.completion_criteria) ||
+      'Finish the lesson/practice, tap it done, then save a short proof note or photo.',
+    proof_required: proofRequired,
+    unlocks_next: coerceText(first.unlocks) || coerceText(first.unlock_after_completion) || coerceText(first.unlock) || 'the next week',
+  };
+  return {
+    ...journey,
+    modules,
+    start_here: startHere,
+    today_task: todayTask,
+    selected_pathway_summary: {
+      route_name: coerceText(route.name) || coerceText(journey.route_name) || coerceText(journey.title) || 'Selected pathway',
+      family,
+      what_you_get: familyOutcome(family),
+      time: coerceText(journey.duration?.mvp) || `${modules.length}-week plan`,
+      channel: coerceText(journey.delivery?.primary_channel) || 'WhatsApp + voice',
+      proof_required: proofRequired,
+      unlocks_next: startHere.unlocks_next,
+    },
   };
 }

@@ -58,6 +58,7 @@ const cases = [
     modulesToComplete: 1,
     expectedMode: 'academic_exam_prep',
     expectPassportReady: true,
+    expectedContent: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b/i,
     profile: {
       name: 'Rohit',
       class_level: 'Class 12',
@@ -91,6 +92,7 @@ const cases = [
     modulesToComplete: 2,
     expectedMode: 'data_science_pathway',
     expectPassportReady: true,
+    expectedContent: /python|sql|project|portfolio|resume|github|notebook|outreach/i,
     profile: {
       name: 'Anshuman',
       class_level: 'BTech',
@@ -124,6 +126,7 @@ const cases = [
     modulesToComplete: 2,
     expectedMode: 'informal_skill_validation',
     expectPassportReady: true,
+    expectedContent: /stitch|silai|tailor|sample|customer|rpl|local|proof/i,
     profile: {
       name: 'Shabnam',
       class_level: 'School dropout',
@@ -230,6 +233,46 @@ async function runCase(testCase, index) {
     }))),
   );
   assertCheck(checks, 'journey mode correct', journey.mode === testCase.expectedMode, journey.mode || '');
+  assertCheck(
+    checks,
+    'journey has start-here and today task',
+    Boolean(journey.start_here && journey.start_here.today_task && journey.today_task && journey.selected_pathway_summary),
+    JSON.stringify(journey.start_here || {}),
+  );
+  assertCheck(
+    checks,
+    'modules include learner-clarity enrichment',
+    modules.length >= 3 &&
+      modules.every(
+        (module) =>
+          Array.isArray(module.lessons) &&
+          module.lessons.length > 0 &&
+          Boolean(module.completion_criteria) &&
+          Boolean(module.why_it_matters) &&
+          Boolean(module.proof_task) &&
+          Boolean(module.unlocks) &&
+          Array.isArray(module.lesson_details) &&
+          module.lesson_details.length > 0 &&
+          module.lesson_details.every((lesson) => Boolean(lesson.completion_criteria) && Boolean(lesson.proof_required)),
+      ),
+    JSON.stringify(modules.map((module) => ({ id: module.id, ld: module.lesson_details?.length || 0, why: Boolean(module.why_it_matters) }))),
+  );
+  assertCheck(
+    checks,
+    'journey has proof tasks and unlock logic',
+    modules.every((module) => Boolean(module.proof_task)) &&
+      modules.every((module) => Boolean(module.unlocks)) &&
+      Boolean(journey.progress?.placement_unlock_rule || journey.progress?.unlock_label),
+    journey.progress?.unlock_label || '',
+  );
+  if (testCase.expectedContent) {
+    assertCheck(
+      checks,
+      'journey content matches goal family',
+      testCase.expectedContent.test(JSON.stringify(journey).toLowerCase()),
+      String(testCase.expectedContent),
+    );
+  }
   if (requirePersistence) {
     assertCheck(checks, 'progress persisted ok', progressResponse.ok === true || progressResponse.proof?.persistence?.ok === true, JSON.stringify(progressResponse.proof || {}));
   } else {

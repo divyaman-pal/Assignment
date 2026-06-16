@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { getTranslations } from './i18n.js';
 import {
   Bell,
   BookOpen,
@@ -531,6 +532,10 @@ function App() {
   const [mode, setMode] = useState('landing');
   const [phone, setPhone] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
+  // The learner's explicit language choice. Set only by the login picker and
+  // returning-learner restore; never overwritten by later language detection,
+  // so the UI chrome stays in the language they chose.
+  const [uiLanguage, setUiLanguage] = useState('');
   const [profile, setProfile] = useState(emptyProfile());
   const [messages, setMessages] = useState([initialAssistantMessage]);
   const [input, setInput] = useState('');
@@ -638,6 +643,7 @@ function App() {
     const starter = starterMessageForLanguage(nextProfile.preferred_language || selectedLanguage || 'English');
     setProfile(nextProfile);
     setSelectedLanguage(nextProfile.preferred_language || selectedLanguage || 'English');
+    setUiLanguage((current) => current || nextProfile.preferred_language || selectedLanguage || 'English');
     setMessages(workspace.messages?.length ? workspace.messages : data.messages?.length ? data.messages : [starter]);
     setReturning(Boolean(data.returning));
     setPathway(workspace.pathway || null);
@@ -1229,6 +1235,7 @@ function App() {
       const starter = starterMessageForLanguage(demoLanguage);
       const demoMessages = [starter, { role: 'user', content: FIELD_DEMO_PROMPT }];
       setSelectedLanguage(demoLanguage);
+      setUiLanguage(demoLanguage);
       setProfile(baseProfile);
       setMessages(demoMessages);
       setVoiceStatus('Field demo: Odia voice note transcript loaded.');
@@ -1386,6 +1393,7 @@ function App() {
                 key={option.name}
                 onClick={() => {
                   setSelectedLanguage(option.name);
+                  setUiLanguage(option.name);
                   setProfile((current) => profileWithPreferredLanguage(current, option.name));
                   setMessages([starterMessageForLanguage(option.name)]);
                 }}
@@ -1438,21 +1446,29 @@ function App() {
     );
   }
 
+  // The learner's explicit language choice at login drives the UI chrome and
+  // must persist even if a later chat message is typed in another language.
+  const t = getTranslations(uiLanguage || selectedLanguage || profile?.preferred_language || profile?.language);
   const visibleNavItems = [
-    ['counselor', 'Meera'],
-    ['pathways', 'My Pathway'],
-    ['journey', 'Learning Journey'],
-    ['passport', 'Skill Passport'],
-    ['jobs', 'Opportunities'],
+    ['counselor', t.nav.counselor],
+    ['pathways', t.nav.pathways],
+    ['journey', t.nav.journey],
+    ['passport', t.nav.passport],
+    ['jobs', t.nav.jobs],
   ];
-  const activeMeta = tabMeta[activeTab] || tabMeta.profile;
+  const baseMeta = tabMeta[activeTab] || tabMeta.profile;
+  const activeMeta = {
+    ...baseMeta,
+    title: t.title[activeTab] || baseMeta.title,
+    subtitle: t.subtitle[activeTab] || baseMeta.subtitle,
+  };
   const ActiveIcon = activeMeta.Icon || LayoutDashboard;
   const mobileNavItems = [
-    ['counselor', 'Meera'],
-    ['pathways', 'Pathway'],
-    ['journey', 'Journey'],
-    ['passport', 'Passport'],
-    ['jobs', 'Jobs'],
+    ['counselor', t.navShort.counselor],
+    ['pathways', t.navShort.pathways],
+    ['journey', t.navShort.journey],
+    ['passport', t.navShort.passport],
+    ['jobs', t.navShort.jobs],
   ];
 
   return (
@@ -1490,7 +1506,7 @@ function App() {
           }}
           type="button"
         >
-          This is not me
+          {t.btn.notMe}
         </button>
         <div className="sb-meera">
           <CounselorAvatar compact />
@@ -1563,6 +1579,7 @@ function App() {
               setSelectedRoute={setSelectedRoute}
               generatePathway={generatePathway}
               createJourney={createJourney}
+              t={t}
             />
           )}
           {activeTab === 'journey' && (
@@ -1579,6 +1596,7 @@ function App() {
               updateProofArtifact={updateProofArtifact}
               saveJourneyProgress={saveJourneyProgress}
               progressState={progressState}
+              t={t}
             />
           )}
           {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} />}
@@ -2150,7 +2168,8 @@ function TracePanel({ trace, nextAction }) {
   );
 }
 
-function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney }) {
+function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney, t = getTranslations('English') }) {
+  const thisWeekActions = Array.isArray(pathway?.this_week_actions) ? pathway.this_week_actions : [];
   const routes = pathway?.routes || [];
   const activeRoute = selectedRoute || routes[0] || null;
   const academicMode = routes.some((route) => (
@@ -2190,32 +2209,18 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             : 'Generate a route after Meera has the learner goal, language, time, location or mobility, and proof details.'}
         </p>
         {activeRoute && (
-          <div className="prototype-route-explain">
-            <span>{academicMode ? 'Study-first guard active' : 'Personalized recommendation'}</span>
-            <strong>{academicMode ? 'VidyaSetu will not show job/training cards before the exam plan.' : 'This route is ranked from the current learner profile.'}</strong>
-            <small>
-              Source: {uiText(activeRoute.source_title, 'verified evidence')}
-              {uiUrl(activeRoute.source_url) ? ' | Official source available' : ''}
-            </small>
-            {uiUrl(activeRoute.source_url) && <a href={uiUrl(activeRoute.source_url)} rel="noreferrer" target="_blank">Open official source</a>}
+          <div className="route-outcome-grid">
+            <span><b>{t.pathway.whyThisRoute}</b>{uiText(activeRoute.why_this_route, uiText(activeRoute.tradeoff, 'Matches the learner profile collected by Meera.'))}</span>
+            <span><b>{t.pathway.whatYouGet}</b>{uiText(activeRoute.expected_outcome, uiText(activeRoute.income, 'Clear progress toward your goal.'))}</span>
+            <span><b>{t.pathway.doThisNext}</b>{uiText(activeRoute.next_action, 'Start the weekly plan and finish the first task.')}</span>
+            <span><b>{t.pathway.unlocksAfter}</b>{uiText(activeRoute.locked_until, 'proof, location if offline, and consent.')}</span>
           </div>
         )}
-      </div>
-      <div className="two">
-        <div className="card">
-          <span className="tag green">✓ Suitable for you</span>
-          <h3>Why this pathway</h3>
-          {facts.slice(0, 4).map((fact) => (
-            <div className="task ok" key={fact}><span className="cb">✓</span>{fact}</div>
-          ))}
-        </div>
-        <div className="card">
-          <span className="tag amber">🔒 Locked for now</span>
-          <h3>What's blocked and why</h3>
-          {blockers.slice(0, 3).map((blocker) => (
-            <div className="task" key={blocker}><span className="cb">🔒</span>{blocker}</div>
-          ))}
-        </div>
+        {activeRoute && uiUrl(activeRoute.source_url) && (
+          <a className="pathway-source-link" href={uiUrl(activeRoute.source_url)} rel="noreferrer" target="_blank">
+            {t.btn.open}: {uiText(activeRoute.source_title, 'official source')}
+          </a>
+        )}
       </div>
       {routes.length > 1 && (
         <div className="reslinks route-choice-strip">
@@ -2223,18 +2228,47 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             const selected = sameRoute(activeRoute, route);
             return (
               <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
-                {index === 0 ? 'Recommended' : `Option ${index + 1}`}: {uiText(route.name, 'Route')}
+                {index === 0 ? t.pathway.recommended : `${t.pathway.option} ${index + 1}`}: {uiText(route.name, 'Route')}
               </button>
             );
           })}
         </div>
       )}
+      {thisWeekActions.length > 0 && (
+        <div className="card this-week-card">
+          <span className="tag green">✓ {t.thisWeek.title}</span>
+          <h3>{t.thisWeek.title}</h3>
+          <p className="this-week-subtitle">{t.thisWeek.subtitle}</p>
+          <div className="this-week-list">
+            {thisWeekActions.map((item, index) => {
+              const url = uiUrl(item.source_url);
+              return (
+                <div className="this-week-item" key={uiText(item.id, `tw-${index}`)}>
+                  <span className="this-week-num">{index + 1}</span>
+                  <div className="this-week-body">
+                    <strong>{uiText(item.title, 'Action')}</strong>
+                    <small><b>{t.thisWeek.how}:</b> {uiText(item.how)}</small>
+                    <div className="this-week-meta">
+                      <span className="this-week-when">{t.thisWeek.byWhen}: {uiText(item.by_when, t.thisWeek.title)}</span>
+                      {url ? (
+                        <a href={url} rel="noreferrer" target="_blank">{t.btn.open}: {uiText(item.source_title, 'official source')}</a>
+                      ) : (
+                        <span className="this-week-inapp">{t.thisWeek.inApp}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="action-row">
         <button className="primary-button" onClick={generatePathway}>
-          Refresh recommendations
+          {t.btn.refreshRecommendations}
         </button>
         <button className="ghost-button" disabled={!activeRoute} onClick={() => createJourney(activeRoute)}>
-          Start this week
+          {t.btn.startThisWeek}
         </button>
         <span>
           {pathway?.callback_flag
@@ -2261,6 +2295,7 @@ function JourneyTab({
   updateProofArtifact,
   saveJourneyProgress,
   progressState = {},
+  t = getTranslations('English'),
 }) {
   const modules = Array.isArray(journey?.modules) ? journey.modules : [];
   const delivery = journey?.delivery && typeof journey.delivery === 'object' ? journey.delivery : {};
@@ -2308,67 +2343,52 @@ function JourneyTab({
       </div>
       <div className="action-row">
         <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
-          {academicMode ? 'Refresh study plan' : 'Create / refresh journey'}
+          {academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
         </button>
         <span>{selectedRoute ? `Course: ${selectedRoute.name}` : 'Choose a pathway first.'}</span>
       </div>
       {!journey && <EmptyState text="After choosing a route, VidyaSetu creates weekly lessons, practice tasks, proof requirements, and support rules." />}
       {journey && (
         <>
-          <div className="helper-panel">
-            <strong>How to complete this course</strong>
-            <p>
-              Start from Week 1. Complete a lesson or practice task, tap it done, then write a short proof note or paste a proof link.
-              Saving progress unlocks the next week and keeps this learner profile ready on the same phone login.
-            </p>
-            <small>
-              Built from the complete learner journey contract: weekly goal, daily micro-tasks, proof task,
-              low-data version, voice/WhatsApp version, completion criteria, and exact unlock rule.
-            </small>
-          </div>
+          <p className="journey-tip">
+            Open Week 1, finish a lesson or task, tap it done, then save a short proof. Saving unlocks the next week.
+          </p>
           <div className="journey-readiness-grid">
             <span><b>{completionPercent}%</b>Course completion</span>
-            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>Proof notes saved</span>
+            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>Proof saved</span>
             <span><b>{passportEligible ? 'Ready' : 'Draft'}</b>{academicMode ? 'Study record' : 'Skill Passport'}</span>
           </div>
-          <div className="delivery-grid">
-            <span><b>Channel</b>{delivery.primary_channel || 'WhatsApp micro-lessons'}</span>
-            <span><b>Lesson size</b>{delivery.lesson_length || '5-10 minutes/day'}</span>
-            <span><b>{academicMode ? 'Study completion' : 'Readiness'}</b>{academicMode ? `${completionPercent}% completed` : `${journey.readiness_score}%`}</span>
-            <span><b>Low-data</b>{delivery.low_data_alternative || 'Audio/text recap with small proof upload'}</span>
-          </div>
-          <div className="journey-contract-grid">
-            <section>
-              <span>4-week MVP</span>
-              <strong>{duration.mvp || `${modules.length || 4}-week learner journey`}</strong>
-              <p>{learningContract.week_shape || 'Every week has lessons, practice, proof, and an unlock rule.'}</p>
-            </section>
-            <section>
-              <span>12-week full version</span>
-              <strong>Depth after proof</strong>
-              <p>{duration.full || 'After MVP, VidyaSetu extends the same pathway into deeper practice and stronger proof.'}</p>
-            </section>
-            <section>
-              <span>Proof gate</span>
-              <strong>{academicMode ? 'Study proof' : 'Opportunity proof'}</strong>
-              <p>{learningContract.proof_gate || progress.placement_unlock_rule || 'Proof is required before the next step unlocks.'}</p>
-            </section>
-            <section>
-              <span>Opportunity unlock</span>
-              <strong>Only the right next step</strong>
-              <p>{learningContract.opportunity_unlock || 'Next route unlocks after proof, location if offline, and consent.'}</p>
-            </section>
-          </div>
-          {firstIncompleteModule && (
-            <div className="today-card">
-              <span>Start here</span>
-              <strong>Week {firstIncompleteModule.week}: {firstIncompleteModule.title}</strong>
-              <p>{firstIncompleteModule.goal}</p>
-              {Array.isArray(firstIncompleteModule.daily_micro_tasks) && firstIncompleteModule.daily_micro_tasks.length > 0 && (
-                <small>Today: {firstIncompleteModule.daily_micro_tasks[0]}</small>
-              )}
+          {journey.selected_pathway_summary && (
+            <div className="pathway-summary-line">
+              <b>{t.journey.yourPathway}:</b> {uiText(journey.selected_pathway_summary.route_name, selectedRoute?.name)}
+              {uiText(journey.selected_pathway_summary.what_you_get) ? ` — ${uiText(journey.selected_pathway_summary.what_you_get)}` : ''}
             </div>
           )}
+          {(firstIncompleteModule || journey.start_here) && (() => {
+            const startModule = firstIncompleteModule || {};
+            const start = journey.start_here || {};
+            const startWeek = startModule.week || start.week || 1;
+            const startTitle = uiText(startModule.title, uiText(start.title, 'Week 1'));
+            const startWhy = uiText(startModule.why_it_matters, uiText(startModule.goal, uiText(start.why_it_matters)));
+            const startToday = uiText(
+              Array.isArray(startModule.daily_micro_tasks) && startModule.daily_micro_tasks.length ? startModule.daily_micro_tasks[0] : '',
+              uiText(start.today_task, 'Start the first lesson and finish one small task.'),
+            );
+            const startHow = uiText(startModule.checkpoint, uiText(startModule.completion_criteria, uiText(start.how_to_complete, 'Finish the lesson/practice, tap it done, then save a short proof note.')));
+            const startProof = uiText(startModule.proof_task, uiText(startModule.proof, uiText(start.proof_required, 'a short note or photo of what you did')));
+            const startUnlocks = uiText(startModule.unlocks, uiText(startModule.unlock_after_completion, uiText(start.unlocks_next, 'the next week')));
+            return (
+              <div className="today-card">
+                <span>{t.journey.startHere}</span>
+                <strong>{t.journey.week} {startWeek}: {startTitle}</strong>
+                {startWhy ? <p>{startWhy}</p> : null}
+                <small><b>{t.journey.todaysTask}:</b> {startToday}</small>
+                <small><b>{t.journey.howToComplete}:</b> {startHow}</small>
+                <small><b>{t.journey.proofRequired}:</b> {startProof}</small>
+                <small><b>{t.journey.unlocksNext}:</b> {startUnlocks}</small>
+              </div>
+            );
+          })()}
           <div className="study-progress">
             <div>
               <strong>{completedCount}/{totalItems}</strong>
@@ -2412,18 +2432,7 @@ function JourneyTab({
                   </div>
                   <h3>{module.title}</h3>
                   <p>{module.goal}</p>
-                  <div className="week-outcome-grid">
-                    <span><b>Completion</b>{module.completion_criteria || 'Finish lessons, practice, and proof note.'}</span>
-                    <span><b>Unlocks</b>{module.unlock_after_completion || module.unlock || 'Next safe step'}</span>
-                  </div>
-                  {dailyMicroTasks.length > 0 && (
-                    <div className="micro-task-list">
-                      <strong>Daily micro-tasks</strong>
-                      {dailyMicroTasks.map((task) => (
-                        <span key={`${module.id}-${task}`}>{task}</span>
-                      ))}
-                    </div>
-                  )}
+                  <small className="module-unlock-hint">{t.journey.unlocksNext}: {module.unlocks || module.unlock_after_completion || module.unlock || 'next step'}</small>
                   <div className="module-progress-line">
                     <strong>{moduleDone}/{moduleItems.length} complete</strong>
                     <i><b style={{ width: `${modulePercent}%` }} /></i>
@@ -2474,24 +2483,14 @@ function JourneyTab({
                     <button className="ghost-button" disabled={locked} onClick={() => saveJourneyProgress?.('proof_note_saved')}>
                       Save proof for Week {module.week}
                     </button>
-                    <small>{proofReady ? 'Proof saved. Next unlock is active after all items are complete.' : `Unlocks: ${module.unlock}`}</small>
-                  </div>
-                  <div className="journey-support-notes">
-                    <span><b>Low-data</b>{module.low_data_alternative || delivery.low_data_alternative || 'Use text/audio recap and compressed proof.'}</span>
-                    <span><b>Voice/WhatsApp</b>{module.voice_whatsapp_version || delivery.voice_whatsapp_version || 'Voice note lessons and photo proof are supported.'}</span>
-                    <span><b>Support</b>{module.family_support_note || 'Ask one trusted person to review proof.'}</span>
-                    <span><b>Safety</b>{module.safety_commute_note || 'Offline next steps stay locked until location, safety, and consent are clear.'}</span>
-                    <span><b>Dropout trigger</b>{module.dropout_prevention_trigger || 'If check-ins are missed, restart with one small visible win.'}</span>
-                    {progressMetrics.length > 0 && <span><b>Metrics</b>{progressMetrics.join(', ')}</span>}
+                    <small>{proofReady ? 'Proof saved. Next week unlocks after all items are complete.' : `Unlocks: ${module.unlock}`}</small>
                   </div>
                 </article>
               );
             })}
           </div>
-          <div className="source-box">
-            <strong>{progress.unlock_label || 'Placement unlock rule'}</strong>
-            <p>{progress.placement_unlock_rule || 'Complete the listed lessons and proof tasks to unlock the next step.'}</p>
-            <p><b>Next:</b> {progress.next_action || 'Complete Week 1 lesson, practice, and proof note.'}</p>
+          <div className="journey-next-line">
+            <b>{t.journey.todaysTask}:</b> {progress.next_action || 'Complete the Week 1 lesson and save a short proof note.'}
           </div>
           <div className="action-row">
             <button className="ghost-button" onClick={() => saveJourneyProgress?.('manual_progress_saved')}>

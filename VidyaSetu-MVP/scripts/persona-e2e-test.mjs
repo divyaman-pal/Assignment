@@ -171,7 +171,29 @@ const personas = [
     expectIntent: 'proof_to_work',
     text: 'Main Imran Hyderabad se hoon. Bike mechanic ka kaam seekha hai workshop mein, certificate nahi hai. Local job ya RPL certificate chahiye, 18 km commute, roz 1 hour, phone hai.',
   },
+  {
+    id: 'enterprise_poultry',
+    kind: 'enterprise',
+    expectIntent: 'self_employment',
+    text: 'Mera naam Mohan hai. Main Balangir Odisha se hoon. Apna poultry farm business start karna chahta hoon, mujhe setup, budget aur loan/scheme guidance chahiye. 15 km tak ja sakta hoon, Android phone hai, Hindi mein.',
+  },
 ];
+
+// Per-persona content-quality rules applied to the pathway+journey output.
+// require: at least one match must be present. forbid: none may be present.
+// require/requireAlso are checked against pathway routes + journey text.
+// forbidInRoutes is checked against pathway ROUTE cards only (journey prose may
+// legitimately say things like "no job outreach is unlocked").
+const CONTENT_RULES = {
+  switch_ds_to_jee: { require: /jee|iit|entrance/i, requireAlso: /mock|practice|error.?log|syllabus|concept/i, forbidInRoutes: /beauty|salon|mehandi|placement job/i },
+  class12: { require: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b/i, forbidInRoutes: /salon|beautician|mehandi|placement job|data entry job/i },
+  hindi_class12_question: { require: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b|परीक्षा|पेपर/i, forbidInRoutes: /salon|beautician|mehandi|placement job/i },
+  class10_coding: { require: /ncert|diksha|practice|\btest\b|chapter|revision/i, forbidInRoutes: /salon|beautician|mehandi|placement job|data entry job/i },
+  btech_ds: { require: /python|sql|project|portfolio|resume|github|internship|fresher|outreach|data science/i, forbidInRoutes: /computer basics|beauty|salon|tailor/i },
+  informal_mechanic: { require: /proof|sample|rpl|local work|apprentice|certificate/i },
+  dropout_tailor: { require: /stitch|silai|tailor|sample|customer|rpl|local|proof/i },
+  enterprise_poultry: { require: /setup|budget|scheme|loan|buyer|customer|\brisk\b|mudra|30/i, forbidInRoutes: /employer outreach|hirer outreach|placement job/i },
+};
 
 const filterIds = new Set(process.argv.slice(2).filter(Boolean));
 const selectedPersonas = filterIds.size ? personas.filter((persona) => filterIds.has(persona.id)) : personas;
@@ -216,6 +238,36 @@ function expectedEnough(persona, result) {
   }
   if (persona.kind === 'study' && result.jobCount > 0) failures.push('study persona produced jobs');
   if (persona.kind === 'study' && !result.studyJobGuard) failures.push('study persona missing job-search guardrail');
+
+  const rule = CONTENT_RULES[persona.id];
+  if (rule && persona.kind !== 'location_guard') {
+    const haystack = `${result.pathwayText || ''} ${result.journeyText || ''}`;
+    if (rule.require && !rule.require.test(haystack)) {
+      failures.push(`content missing required terms: ${rule.require}`);
+    }
+    if (rule.requireAlso && !rule.requireAlso.test(haystack)) {
+      failures.push(`content missing required terms: ${rule.requireAlso}`);
+    }
+    if (rule.forbidInRoutes && rule.forbidInRoutes.test(result.pathwayText || '')) {
+      failures.push(`route cards contain forbidden terms: ${rule.forbidInRoutes}`);
+    }
+  }
+
+  if (result.routeCount > 0 && result.routesHaveExplanations === false) {
+    failures.push('routes missing explanation fields (why/next/outcome/locked)');
+  }
+
+  if (persona.kind !== 'clarify') {
+    if (Number(result.thisWeekCount || 0) < 5) failures.push(`too few this-week actions (${result.thisWeekCount || 0})`);
+    if (result.thisWeekValid === false) failures.push('this-week actions missing title/how/source');
+  }
+
+  if (result.moduleCount > 0) {
+    if (!(result.moduleCount >= 3)) failures.push('journey has fewer than 3 modules');
+    if (!result.journeyModulesValid) failures.push('journey modules missing lessons/completion/lesson_details/proof/unlock');
+    if (!result.journeyHasStartHere) failures.push('journey missing start_here/today_task');
+    if (!result.journeyHasProofAndUnlock) failures.push('journey missing proof tasks or unlock logic');
+  }
   if (persona.id === 'btech_ds' && !JSON.stringify(result).toLowerCase().includes('data science')) {
     failures.push('data science not preserved');
   }
@@ -288,6 +340,18 @@ async function runPersona(persona, index) {
   out.callback = Boolean(pathway.callback_flag);
   out.callbackMessage = pathway.callback_message || '';
   out.routes = (pathway.routes || []).map((route) => route.name).slice(0, 3);
+  out.locationRequired = Boolean(pathway.location_required) || out.locationRequired;
+  out.pathwayText = JSON.stringify(pathway.routes || []).toLowerCase();
+  const thisWeek = Array.isArray(pathway.this_week_actions) ? pathway.this_week_actions : [];
+  out.thisWeekCount = thisWeek.length;
+  out.thisWeekValid =
+    thisWeek.length > 0 &&
+    thisWeek.every((item) => item && item.title && item.how) &&
+    thisWeek.filter((item) => /^https?:\/\//.test(item.source_url || '')).length >= 3;
+  out.routeValidation = pathway.route_validation || null;
+  out.routesHaveExplanations = (pathway.routes || []).every(
+    (route) => route.why_this_route && route.next_action && route.expected_outcome && route.locked_until,
+  );
 
   const firstRoute = pathway.routes?.[0] || null;
   if (firstRoute) {
@@ -295,6 +359,25 @@ async function runPersona(persona, index) {
     out.journeyMode = journey.journey?.mode;
     out.moduleCount = journey.journey?.modules?.length || 0;
     out.readiness = journey.journey?.readiness_score;
+    const journeyModules = Array.isArray(journey.journey?.modules) ? journey.journey.modules : [];
+    out.journeyText = JSON.stringify(journey.journey || {}).toLowerCase();
+    out.journeyHasStartHere = Boolean(journey.journey?.start_here && journey.journey?.today_task);
+    out.journeyModulesValid =
+      journeyModules.length >= 3 &&
+      journeyModules.every(
+        (module) =>
+          Array.isArray(module.lessons) &&
+          module.lessons.length > 0 &&
+          Boolean(module.completion_criteria) &&
+          Array.isArray(module.lesson_details) &&
+          module.lesson_details.length > 0 &&
+          Boolean(module.proof_task) &&
+          Boolean(module.unlocks),
+      );
+    out.journeyHasProofAndUnlock =
+      journeyModules.every((module) => Boolean(module.proof_task)) &&
+      journeyModules.every((module) => Boolean(module.unlocks)) &&
+      Boolean(journey.journey?.progress?.placement_unlock_rule || journey.journey?.progress?.unlock_label);
     if (persona.kind !== 'study') {
       const passport = await post('/api/passport', {
         profile,

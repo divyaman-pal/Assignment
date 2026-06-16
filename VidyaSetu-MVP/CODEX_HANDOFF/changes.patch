@@ -1,0 +1,1998 @@
+diff --git a/VidyaSetu-MVP/README.md b/VidyaSetu-MVP/README.md
+index abe23f1..bcb1883 100644
+--- a/VidyaSetu-MVP/README.md
++++ b/VidyaSetu-MVP/README.md
+@@ -59,6 +59,51 @@ VidyaSetu addresses this as a full pathway-to-placement system, not just a cours
+    - If live opportunities are not verified yet, it shows source tasks, missing proof/resume, and safe next actions instead of fake cards.
+    - Firecrawl is used only for deeper verification or contact discovery to protect credits.
+ 
++## Pathway relevance and journey clarity
++
++Two quality layers keep recommendations relevant and journeys actionable. Both live in `api/_lib/mvp.js` as reusable helpers (no new serverless functions).
++
++### Goal-family route validation
++
++After routes are generated (LLM-first, deterministic fallback), every route is validated against the learner's **goal family** before it reaches the UI:
++
++- `goalFamily(profile)` resolves one of: `entrance_exam`, `board_exam`, `school_study`, `data_science_job`, `college`, `informal_skill`, `enterprise`, `job`, `vocational`, `generic`.
++- `routeMatchesGoalFamily(profile, route)` / `rejectUnrelatedRoute(profile, route)` accept a route only if it contains required terms for the family and none of the forbidden terms.
++- `validatePathwayRoutes(profile, routes)` drops unrelated routes and back-fills with deterministic, family-correct routes so the learner always sees three relevant cards.
++- `buildLocationGuardrail(profile)` returns a location prompt (no cards) when an offline route needs a district/commute that the learner has not shared. A learner who refuses to relocate and hides their location now correctly hits this guardrail.
++
++Examples of what is enforced:
++
++- A **JEE/IIT** learner only gets syllabus, concept, practice, mock, and error-log routes — never beauty/PMKVY/job-outreach cards.
++- A **Class 10/12** learner gets NCERT/DIKSHA/sample-paper/revision study routes, not an employability route.
++- A **BTech data-science job seeker** gets Python/SQL/project/portfolio/resume/outreach-readiness routes, never a computer-basics-only route.
++- An **informal mechanic/tailor** gets proof/RPL/local-work/apprenticeship routes, not a generic beginner course.
++- An **enterprise** learner gets setup/budget/scheme/buyer/risk/first-30-days routes, with job-outreach blocked as the primary route.
++
++Each validated route also carries deterministic explanation fields when the model omits them: `why_this_route`, `matched_profile_facts`, `next_action`, `locked_until`, `risk` (tradeoff), and `expected_outcome`.
++
++### Learner journey enrichment
++
++`enrichJourneyForLearner(profile, route, journey)` (with `enrichModule`, `buildTodayTask`, and `buildProofTask`) makes every journey understandable for a real learner:
++
++- Each **module** has `week`, `title`, `goal`, `why_it_matters`, `lessons`, `daily_plan`, `practice_tasks`, `proof_task`, `checkpoint`, and `unlocks`.
++- Each **lesson** carries `title`, `type`, `estimated_time`, `instructions`, `completion_criteria`, `proof_required`, and a `resource`.
++- The journey exposes a `start_here` panel and `today_task` so the learner knows what to start today, how to complete the step, what proof is required, and what unlocks next, plus a `selected_pathway_summary`.
++
++These fields are additive, so existing progress tracking, persistence, and the opportunity engine continue to work unchanged.
++
++## Vernacular UI and "this week" actions
++
++Two changes make the product usable by a first-generation rural learner on her own and give her something to do today.
++
++### Vernacular UI chrome (`src/i18n.js`)
++
++The learner's language choice now drives the **interface chrome**, not just the chat. `src/i18n.js` provides dictionaries for English, Hindi, Hinglish, and Odia (the persona languages) covering the navigation, page headers, primary buttons, and the pathway/journey panels. The explicit login language is stored in a dedicated `uiLanguage` state and is **not** overwritten by later language detection, so the menus and labels stay in the chosen language even if the learner types a chat message in another language (the counselor still replies in the detected language). Other languages fall back to English chrome while the conversation stays in-language — full per-language chrome translation is a follow-up.
++
++### "This week" hyperlocal actions (`buildThisWeekActions`)
++
++Every pathway response now includes `this_week_actions`: 5-10 concrete steps the learner can take this week, tailored to her goal family and location, and surfaced as a numbered "Do this week" list on the Pathway screen. These use only **real official portals** (National Career Service, DigiLocker, Skill India Digital, NCERT/DIKSHA, NTA, National Scholarship Portal, Udyam, PMEGP, PM FME) and **real local-action types** (capture sample-work proof, ask nearby shops/customers for small work). Consistent with the no-fake-data policy, there are **no fabricated employers, phone numbers, or specific job listings**. The list also appears on the location guardrail, so a learner who has not shared her location still gets actionable steps plus a prompt to share her exact block/panchayat. The dynamic action descriptions are currently in simple English; translating them per language is the next step.
++
+ ## Architecture
+ 
+ ```mermaid
+@@ -186,7 +231,19 @@ npm run benchmark:slice5
+ npm run benchmark:slice6
+ ```
+ 
+-The current persona suite covers school, Class 12, JEE switch, dropout tailoring, ITI electrician, nursing, mobile repair, BTech data science, no-location job, no-location training, informal mechanic, driver, hospitality, design, agri drone, and open counseling cases.
++The current persona suite covers school, Class 12, JEE switch, dropout tailoring, ITI electrician, nursing, mobile repair, BTech data science, no-location job, no-location training, informal mechanic, poultry enterprise, driver, hospitality, design, agri drone, and open counseling cases. Beyond pass/fail, the persona and slice-5 suites now assert pathway/journey **content quality** per family (for example: JEE output contains mock/practice/error-log and never beauty/job-outreach; data-science output contains Python/SQL/project/resume; informal output contains proof/RPL/local work; enterprise output contains setup/budget/scheme), that every route carries explanation fields, and that journeys have at least three modules with lessons, completion criteria, proof tasks, and unlock logic.
++
++For fast, low-cost local runs, set `DISABLE_PATHWAY_WEB_SEARCH=true` and point the suites at the local server:
++
++```bash
++npm run build
++DISABLE_PATHWAY_WEB_SEARCH=true npm run serve:mvp   # in one terminal
++TEST_BASE_URL=http://localhost:4175 node scripts/persona-e2e-test.mjs
++SLICE5_BASE_URL=http://localhost:4175 node scripts/slice5-journey-progress-benchmark.mjs
++SLICE6_BASE_URL=http://localhost:4175 node scripts/slice6-final-smoke.mjs
++```
++
++`DISABLE_PATHWAY_WEB_SEARCH` only skips the live web-search evidence step (keeping tests fast and deterministic); production leaves it unset so OpenAI web search and Firecrawl still ground recommendations.
+ 
+ ## Responsible AI and Product Guardrails
+ 
+diff --git a/VidyaSetu-MVP/api/_lib/mvp.js b/VidyaSetu-MVP/api/_lib/mvp.js
+index 43a2973..aa1a24e 100644
+--- a/VidyaSetu-MVP/api/_lib/mvp.js
++++ b/VidyaSetu-MVP/api/_lib/mvp.js
+@@ -438,6 +438,44 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
+       },
+     ];
+   }
++  if (goalType === 'self_employment_enterprise') {
++    const venture = titleCase(firstAspiration || 'micro-enterprise');
++    return [
++      {
++        id: 'enterprise-setup-plan',
++        name: `${venture} setup plan -> first 30 days roadmap`,
++        time: '3-5 days planning, then a 30-day setup loop',
++        distance: `Home/local market around ${location}`,
++        income: 'No income guarantee; first sales only after setup and buyers are confirmed',
++        tradeoff: `Best first step: write the setup steps, space, equipment, and a realistic budget for ${firstAspiration} before spending money.`,
++        source_url: 'https://www.pmfme.mofpi.gov.in/',
++        source_title: 'PM FME / MoFPI micro-enterprise setup reference',
++        confidence: 0.8,
++      },
++      {
++        id: 'enterprise-budget-scheme',
++        name: `${venture} budget + loan/scheme check`,
++        time: '1-2 weeks verification',
++        distance: `District industries centre / bank near ${location}`,
++        income: 'Improves funding readiness; subsidy/loan depends on eligibility',
++        tradeoff: 'Compare cost heads, working capital, and Mudra/PMEGP/PMFME scheme eligibility before any loan or investment.',
++        source_url: 'https://www.kviconline.gov.in/pmegpeportal/',
++        source_title: 'PMEGP / KVIC scheme reference',
++        confidence: 0.76,
++      },
++      {
++        id: 'enterprise-buyer-risk',
++        name: `${venture} buyer/customer + risk plan`,
++        time: 'Ongoing local-market loop',
++        distance: `Local market and buyers around ${location}`,
++        income: 'Depends on demand; start small to limit risk',
++        tradeoff: 'List buyers/customers, price, suppliers, and the top risks; a worker should verify the local market before scaling.',
++        source_url: 'https://udyamregistration.gov.in/',
++        source_title: 'Udyam MSME registration and local market base',
++        confidence: 0.72,
++      },
++    ];
++  }
+   if (goalType === 'informal_skill_validation') {
+     const skill = titleCase(firstAspiration || 'informal skill');
+     return [
+@@ -899,7 +937,7 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
+       (urgency === 'high' ? 4 : 6),
+   );
+ 
+-  return {
++  const journey = {
+     id: stableId('journey'),
+     learner_id: profile.learner_id || null,
+     route_id: route.id || null,
+@@ -915,6 +953,8 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
+             ? 'school_study_support'
+             : skill === 'data science'
+               ? 'data_science_pathway'
++            : skill === 'enterprise setup'
++              ? 'enterprise_setup'
+           : ['job search', 'college pathway', 'informal skill validation', 'vocational training'].includes(skill)
+             ? skill.replace(/\s+/g, '_')
+           : 'career_pathway',
+@@ -1027,6 +1067,8 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
+     ],
+     readiness_score: readinessScore,
+   };
++
++  return enrichJourneyForLearner(profile, { ...route, name: routeName }, journey);
+ }
+ 
+ function journeyPrimarySkill(profile = {}) {
+@@ -1042,7 +1084,9 @@ function journeyPrimarySkill(profile = {}) {
+   if (profile.academic_goal?.type === 'class_12_exam_prep' || /class 12|board exam|exam preparation|marks|score/.test(text)) {
+     return 'class 12 exam preparation';
+   }
++  if (goalType === 'self_employment_enterprise') return 'enterprise setup';
+   if (goalType === 'informal_skill_validation') return 'informal skill validation';
++  if (/poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|enterprise|self.?employment|apna kaam|business setup/.test(text)) return 'enterprise setup';
+   if (/data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text)) return 'data science';
+   if (/mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text)) return 'mechanic repair';
+   if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) return 'job search';
+@@ -1770,6 +1814,41 @@ const JOURNEY_TEMPLATES = {
+       },
+     ],
+   },
++  'enterprise setup': {
++    id: 'enterprise-setup',
++    modules: [
++      {
++        title: 'Setup plan and budget',
++        goal: 'Learner writes the setup steps, space/equipment, and a realistic starting budget.',
++        lessons: ['List setup steps and space/equipment', 'Estimate one-time cost and working capital', 'Decide a small safe starting size'],
++        practice_tasks: ['Write a one-page setup plan', 'Make a simple budget sheet with cost heads'],
++        proof: 'Setup plan + budget sheet',
++        unlock: 'Loan/scheme verification',
++        completion_criteria: 'Setup plan and budget with cost heads are written; starting size is realistic, not over-ambitious.',
++        worker_check: 'Confirm space, budget source, family support, and that the learner is not taking on unsafe debt.',
++      },
++      {
++        title: 'Loan, scheme and supplier check',
++        goal: 'Learner checks scheme/loan eligibility and reliable suppliers before spending.',
++        lessons: ['Mudra/PMEGP/PMFME scheme basics', 'Documents and eligibility', 'Comparing two suppliers'],
++        practice_tasks: ['Note one scheme/loan option with eligibility', 'List two suppliers with price'],
++        proof: 'Scheme/loan note + supplier list',
++        unlock: 'Buyer and risk plan',
++        completion_criteria: 'One scheme/loan path and at least two suppliers are listed with cost; no money spent before verification.',
++        worker_check: 'Verify scheme details from an official source before the learner applies or pays anyone.',
++      },
++      {
++        title: 'Buyers, local market and risk',
++        goal: 'Learner finds first buyers/customers and writes the top risks before scaling.',
++        lessons: ['Who are the first buyers/customers', 'Pricing for first sales', 'Top 3 risks and how to reduce them'],
++        practice_tasks: ['List five possible buyers or sale points', 'Write a 30-day first-sales plan'],
++        proof: 'Buyer list + 30-day first-sales plan',
++        unlock: 'Worker-verified enterprise start',
++        completion_criteria: 'Buyer list, pricing, and a 30-day plan exist with named risks; income is treated as not guaranteed.',
++        worker_check: 'Confirm local-market demand and that risks are understood before any investment scales.',
++      },
++    ],
++  },
+   generic: {
+     id: 'career-skill',
+     modules: [
+@@ -1995,3 +2074,593 @@ export function computeAdews(features = {}) {
+     worker_message: `ADEWS alert: learner risk ${normalized}. Missed ${missed} check-ins and attendance dropped ${attendanceDrop} days. Suggested action: home visit and pathway counseling.`,
+   };
+ }
++
++// ---------------------------------------------------------------------------
++// Goal-family route validation
++// Keeps pathway cards relevant to the learner goal. Routes that do not belong
++// to the learner's goal family (e.g. a beauty/PMKVY card for a JEE aspirant)
++// are rejected and back-filled with deterministic, family-correct routes.
++// ---------------------------------------------------------------------------
++
++const ROUTE_FAMILY_RULES = {
++  entrance_exam: {
++    requireAny:
++      /jee|iit|neet|cuet|gate|clat|\bnda\b|physics|chemistry|math|maths|biology|syllabus|mock|practice|error.?log|concept|revision|\btest\b|problem set/i,
++    deny: /beauty|salon|mehandi|tailor|stitch|silai|electrician|plumber|pmkvy|job outreach|employer outreach|hirer outreach|placement job|vacancy|apprenticeship|data entry|computer basics/i,
++  },
++  board_exam: {
++    requireAny:
++      /ncert|diksha|sample paper|previous paper|board|revision|practice|\btest\b|mistake.?log|chapter|exam|marking scheme/i,
++    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|pmkvy|data entry/i,
++  },
++  school_study: {
++    requireAny: /ncert|diksha|chapter|practice|\btest\b|revision|mistake.?log|homework|subject|concept|quiz|study/i,
++    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|pmkvy/i,
++  },
++  data_science_job: {
++    requireAny:
++      /python|sql|project|portfolio|resume|github|notebook|dashboard|internship|fresher|analyst|data science|outreach/i,
++    deny: /beauty|salon|mehandi|tailor|stitch|silai|cooking|kitchen|\bjee\b|\biit\b|neet|ncert|sample paper|computer basics/i,
++  },
++  college: {
++    requireAny: /college|internship|project|portfolio|resume|profile|outreach|placement|gap map|fresher|github|skill/i,
++    deny: /beauty|salon|mehandi|\bjee\b|\biit\b|neet|ncert|sample paper/i,
++  },
++  informal_skill: {
++    requireAny: /proof|sample|\brpl\b|local work|customer|photo|video|certificate|apprentice|skill passport|portfolio|stitch|silai|repair/i,
++    deny: /\bjee\b|\biit\b|neet|ncert|sample paper|data science|\bpython\b|\bsql\b/i,
++  },
++  enterprise: {
++    requireAny:
++      /setup|budget|loan|scheme|mudra|pmegp|pmfme|buyer|customer|supplier|\brisk\b|local market|30.?day|working capital|first sales/i,
++    deny: /employer outreach|hirer outreach|job outreach|placement job|job matching|job search|scholarship|\bvacancy\b/i,
++  },
++  job: {
++    requireAny: /\bjob\b|vacancy|employer|outreach|resume|proof|\bncs\b|\brole\b|hiring|apprentice|placement|search/i,
++    deny: /\bjee\b|\biit\b|neet|ncert|sample paper/i,
++  },
++  vocational: {
++    requireAny: /training|course|center|centre|practice|apprentice|foundation|skill|certificate/i,
++    deny: /\bjee\b|\biit\b|neet|ncert|sample paper/i,
++  },
++  generic: {
++    requireAny: /skill|course|apprentice|proof|practice|\bjob\b|training|portfolio|setup|study|exam|outreach/i,
++    deny: /$^/,
++  },
++};
++
++const FAMILY_EXPLANATIONS = {
++  entrance_exam: {
++    why: 'This route keeps you on the exam track (syllabus, concepts, practice, mocks, error-log) instead of mixing in job or vocational distractions.',
++    next: 'Open the study plan and start the first syllabus/diagnostic block today.',
++    locked: 'Job, training, and outreach cards stay locked while you are in exam-prep mode.',
++    risk: 'Watching videos alone is not progress — every block must end with solved questions and an error-log entry.',
++    outcome: 'Higher syllabus coverage, accuracy, and mock scores before any career step.',
++  },
++  board_exam: {
++    why: 'This route uses official NCERT/DIKSHA and sample papers so your board marks improve before any job route.',
++    next: 'Start the NCERT/revision block and solve one practice set today.',
++    locked: 'Job and outreach cards stay locked during board exam preparation.',
++    risk: 'Skipping NCERT for random videos repeats mistakes; keep a mistake log every week.',
++    outcome: 'Better board marks and stronger eligibility for the next pathway.',
++  },
++  school_study: {
++    why: 'This route fixes weak chapters with NCERT/DIKSHA practice and tests, matched to your class and subjects.',
++    next: 'Pick one weak chapter and finish the first practice set today.',
++    locked: 'Job/outreach cards are not shown for school study help.',
++    risk: 'Without honest mistake tracking, the same errors repeat in tests.',
++    outcome: 'Clearer concepts, better marks, and steady study habits.',
++  },
++  data_science_job: {
++    why: 'This route builds the exact data-science hiring stack — Python, SQL, a real project/portfolio, resume, and consent-based outreach — not generic computer basics.',
++    next: 'Run the readiness gap-check, then start the first portfolio project task today.',
++    locked: 'Employer outreach unlocks only after one verifiable project/proof and consent.',
++    risk: 'A course certificate without a shareable project rarely gets shortlisted; proof matters more.',
++    outcome: 'A shortlist-ready profile for fresher/analyst/internship roles.',
++  },
++  college: {
++    why: 'This route turns your college profile into internship/project-ready proof (portfolio, resume, outreach) instead of starting from basics.',
++    next: 'Build the profile/portfolio gap map, then add one project proof today.',
++    locked: 'Outreach unlocks after resume/portfolio proof and consent.',
++    risk: 'Applying with no project proof leads to silent rejections; build proof first.',
++    outcome: 'Stronger shortlisting for internships, projects, or fresher roles.',
++  },
++  informal_skill: {
++    why: 'This route makes your existing hands-on skill visible as proof (photo/video/RPL) so local work or a certificate becomes possible — no beginner course needed.',
++    next: 'Capture one sample-work proof (photo/video/voice) today.',
++    locked: 'Local work/outreach unlocks after enough proof or RPL-grade evidence and consent.',
++    risk: 'No certificate is not a barrier — but unverified claims are; keep clear sample proof.',
++    outcome: 'A trusted Skill Passport that unlocks local work, RPL, or apprenticeship.',
++  },
++  enterprise: {
++    why: 'This route checks setup, budget, scheme/loan eligibility, buyers, and risk before any money is spent — not a job-outreach path.',
++    next: 'Write the one-page setup plan and a simple budget sheet today.',
++    locked: 'Loan/scheme and scaling steps unlock only after a written plan and worker verification.',
++    risk: 'No income is guaranteed; start small and verify schemes from official sources before paying anyone.',
++    outcome: 'A verified, low-risk plan from setup to first sales.',
++  },
++  job: {
++    why: 'This route is a direct, location-aware job search with resume/proof readiness and consent-based outreach, not a long training detour.',
++    next: 'Confirm role/commute, fix the resume/proof gap, then shortlist leads today.',
++    locked: 'Outreach uses only the fields you consent to share.',
++    risk: 'Offline roles need a verified location and safe commute before you travel.',
++    outcome: 'A tracked application pipeline toward a real interview.',
++  },
++  vocational: {
++    why: 'This route finds the right local/online training plus phone-first practice so you build proof while a center is verified.',
++    next: 'Shortlist one local and one online option, then start the first practice task today.',
++    locked: 'Offline center/commute steps stay locked until location and safety are confirmed.',
++    risk: 'Waiting for a course seat can become dropout time; start phone-first practice now.',
++    outcome: 'Verified training plus early proof for apprenticeship or entry work.',
++  },
++  generic: {
++    why: 'This route is the shortest credible step from your current profile toward your goal.',
++    next: 'Build the weekly plan and finish the first proof task today.',
++    locked: 'The next step unlocks after proof, location (if offline), and consent.',
++    risk: 'Confirm time, location, and proof so the plan stays realistic.',
++    outcome: 'Clear, visible progress toward your goal.',
++  },
++};
++
++function coerceText(value, fallback = '') {
++  if (value === null || value === undefined) return fallback;
++  if (typeof value === 'string') return value.trim() || fallback;
++  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
++  if (Array.isArray(value)) return value.map((item) => coerceText(item)).filter(Boolean).join(', ') || fallback;
++  if (typeof value === 'object') {
++    return coerceText(value.label || value.title || value.name || value.text || value.value || value.description, fallback);
++  }
++  return fallback;
++}
++
++function routeTextOf(route = {}) {
++  return [
++    route.name,
++    route.title,
++    route.route_name,
++    route.tradeoff,
++    route.why_this_route,
++    route.route_description,
++    route.description,
++    route.source_title,
++    route.time,
++    route.distance,
++    route.income,
++    ...(Array.isArray(route.focus_subjects) ? route.focus_subjects : []),
++  ]
++    .map((value) => coerceText(value))
++    .filter(Boolean)
++    .join(' ')
++    .toLowerCase();
++}
++
++function sameRouteName(a = {}, b = {}) {
++  return coerceText(a.name).toLowerCase() === coerceText(b.name).toLowerCase() && coerceText(a.name) !== '';
++}
++
++export function goalFamily(profile = {}, context = {}) {
++  const academicType = profile.academic_goal?.type || '';
++  const goalType = profile.learner_goal?.type || '';
++  const intent = profile.learner_goal?.intent || '';
++  const text = `${(profile.aspirations || []).join(' ')} ${profile.class_level || ''} ${profile.education_status || ''} ${goalType}`.toLowerCase();
++  if (context.entrancePrep || academicType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bclat\b|\bnda\b|entrance exam|competitive exam/.test(text)) {
++    return 'entrance_exam';
++  }
++  if (context.academicPrep || academicType === 'class_12_exam_prep' || /class 12|board exam|12th|twelfth/.test(text)) {
++    return 'board_exam';
++  }
++  if (context.schoolStudy || academicType === 'school_study_support' || (/class \d/.test(text) && intent === 'study')) {
++    return 'school_study';
++  }
++  if (goalType === 'self_employment_enterprise' || /poultry|mushroom|goat|dairy|food processing|enterprise|self.?employment|apna kaam/.test(text)) {
++    return 'enterprise';
++  }
++  const dataScience = /data science|machine learning|data analyst|analytics|\bpython\b|\bsql\b|artificial intelligence/.test(text);
++  if (['college_job_search', 'college_career', 'college_internship_project'].includes(goalType) || /college|btech|b\.tech|engineering|internship|project/.test(text)) {
++    return dataScience && (intent === 'job' || /naukri|\bjob\b/.test(text)) ? 'data_science_job' : 'college';
++  }
++  if (dataScience && (intent === 'job' || /\bjob\b|naukri/.test(text))) return 'data_science_job';
++  if (goalType === 'informal_skill_validation' || intent === 'proof_to_work' || /informal|\brpl\b|certificate nahi|workshop mein|seekha hai/.test(text)) {
++    return 'informal_skill';
++  }
++  if (['job_search_only', 'formal_skill_job_search'].includes(goalType) || intent === 'job') return 'job';
++  if (goalType === 'vocational_training' || intent === 'training') return 'vocational';
++  return 'generic';
++}
++
++export function routeMatchesGoalFamily(profile = {}, route = {}, family = goalFamily(profile)) {
++  const rules = ROUTE_FAMILY_RULES[family] || ROUTE_FAMILY_RULES.generic;
++  const text = routeTextOf(route);
++  if (!text) return false;
++  if (rules.deny && rules.deny.test(text)) return false;
++  return rules.requireAny ? rules.requireAny.test(text) : true;
++}
++
++// Specific vocations, so a mobile-repair learner never gets a beauty/tailoring
++// card just because both say "training". A route is rejected when it clearly
++// belongs to a different vocation than the learner's.
++const VOCATIONS = {
++  mobile_repair: /mobile repair|phone repair|smartphone repair|mobile technician|cellphone/i,
++  mechanic: /\bmechanic\b|bike repair|motorcycle|two.?wheeler|automobile/i,
++  beauty: /beauty|salon|mehandi|mehendi|wellness|beautician|parlour|parlor|makeup/i,
++  tailoring: /tailor|silai|stitch|sewing|garment|boutique|alteration/i,
++  cooking: /\bcook\b|\bchef\b|kitchen|hospitality|catering|\bhotel\b/i,
++  electrician: /electrician|wireman|wiring|electrical/i,
++  computer: /computer basics|data entry|typing|office assistant|cyber cafe|\bcsc\b/i,
++  agriculture: /agriculture|farming|kheti|\bcrop\b|\bagri\b|\bfarm\b/i,
++  driving: /\bdriver\b|driving|\blicense\b/i,
++  video: /video creation|content creator|videograph/i,
++};
++
++function detectVocations(text = '') {
++  return Object.entries(VOCATIONS)
++    .filter(([, pattern]) => pattern.test(text))
++    .map(([key]) => key);
++}
++
++function crossVocationConflict(profile = {}, route = {}) {
++  const learnerText = `${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`.toLowerCase();
++  const learnerVocations = detectVocations(learnerText);
++  if (!learnerVocations.length) return false;
++  const routeVocations = detectVocations(routeTextOf(route));
++  if (!routeVocations.length) return false;
++  return !routeVocations.some((vocation) => learnerVocations.includes(vocation));
++}
++
++export function rejectUnrelatedRoute(profile = {}, route = {}, family = goalFamily(profile)) {
++  if (!routeMatchesGoalFamily(profile, route, family)) return true;
++  if (['vocational', 'informal_skill', 'generic', 'job'].includes(family) && crossVocationConflict(profile, route)) return true;
++  return false;
++}
++
++export function validatePathwayRoutes(profile = {}, routes = [], options = {}) {
++  const family = options.family || goalFamily(profile, options);
++  const deterministic =
++    Array.isArray(options.deterministic) && options.deterministic.length ? options.deterministic : sourceLimitedPathways(profile);
++  const incoming = (Array.isArray(routes) ? routes : []).filter((route) => route && typeof route === 'object' && !Array.isArray(route));
++  const kept = incoming.filter((route) => !rejectUnrelatedRoute(profile, route, family));
++  const rejected = incoming.filter((route) => !kept.includes(route)).map((route) => coerceText(route.name, route.id || 'route'));
++  let finalRoutes = [...kept];
++  for (const det of deterministic) {
++    if (finalRoutes.length >= 3) break;
++    if (!finalRoutes.some((route) => sameRouteName(route, det))) finalRoutes.push(det);
++  }
++  if (!finalRoutes.length) finalRoutes = deterministic.slice(0, 3);
++  finalRoutes = finalRoutes.slice(0, 3);
++  return {
++    family,
++    routes: finalRoutes,
++    incoming_count: incoming.length,
++    kept_count: kept.length,
++    rejected_count: incoming.length - kept.length,
++    rejected,
++    replaced: incoming.length === 0 || kept.length < incoming.length || finalRoutes.length > kept.length,
++    used_deterministic: kept.length === 0,
++  };
++}
++
++export function buildLocationGuardrail(profile = {}, options = {}) {
++  const goalLabel = coerceText(profile.learner_goal?.label) || (profile.aspirations || [])[0] || 'your goal';
++  const message =
++    options.message ||
++    `To find safe ${goalLabel} options near you, share your district or block (and how far you can travel safely). VidyaSetu will not guess your location or show far-off cards.`;
++  return {
++    routes: [],
++    confidence: options.confidence ?? 0.7,
++    callback_flag: true,
++    callback_message: message,
++    location_required: true,
++    guardrail: 'location',
++  };
++}
++
++export function decorateRouteExplanation(route = {}, context = {}) {
++  const family = context.family || goalFamily(context.profile || {});
++  const defaults = FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic;
++  const facts = Array.isArray(context.matchedFacts) ? context.matchedFacts : [];
++  const blockers = Array.isArray(context.blockers) ? context.blockers : [];
++  const factLine = facts
++    .slice(0, 3)
++    .map((fact) => (typeof fact === 'string' ? fact : `${fact.label}: ${fact.value}`))
++    .filter(Boolean)
++    .join('; ');
++  const why = coerceText(route.why_this_route) || coerceText(route.tradeoff) || defaults.why;
++  return {
++    ...route,
++    why_this_route: factLine && !/matched:/i.test(why) ? `${why} (matched: ${factLine})` : why,
++    matched_profile_facts:
++      Array.isArray(route.matched_profile_facts) && route.matched_profile_facts.length ? route.matched_profile_facts : facts,
++    next_action: coerceText(route.next_action) || coerceText(context.nextAction) || defaults.next,
++    locked_until: coerceText(route.locked_until) || coerceText(blockers[0]) || defaults.locked,
++    risk: coerceText(route.risk) || coerceText(route.tradeoff_risk) || defaults.risk,
++    expected_outcome: coerceText(route.expected_outcome) || coerceText(route.income) || defaults.outcome,
++  };
++}
++
++// ---------------------------------------------------------------------------
++// Learner journey enrichment (makes each week clear and actionable)
++// ---------------------------------------------------------------------------
++
++function familyOutcome(family = 'generic') {
++  return (FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic).outcome;
++}
++
++export function buildProofTask(family = 'generic', profile = {}) {
++  switch (family) {
++    case 'entrance_exam':
++      return 'a photo of today’s solved questions plus your error-log entry';
++    case 'board_exam':
++      return 'a photo of the NCERT/sample-paper questions you solved with your score';
++    case 'school_study':
++      return 'a photo of your solved practice and your mistake list';
++    case 'data_science_job':
++      return 'a project notebook/dashboard link or screenshot with a 3-line summary';
++    case 'college':
++      return 'a resume, portfolio, or project proof link/screenshot';
++    case 'informal_skill':
++      return 'a photo/video or voice note of your sample work';
++    case 'enterprise':
++      return 'your setup plan, budget sheet, or buyer list';
++    case 'job':
++      return 'your resume/proof and a shortlist of the leads you contacted';
++    case 'vocational':
++      return 'a photo or note of your practice sample';
++    default:
++      return 'a short note or photo of what you completed';
++  }
++}
++
++export function buildTodayTask(family = 'generic', profile = {}, route = {}, firstModule = {}) {
++  const micro =
++    Array.isArray(firstModule.daily_micro_tasks) && firstModule.daily_micro_tasks.length ? coerceText(firstModule.daily_micro_tasks[0]) : '';
++  if (micro) return micro.replace(/^day\s*1:\s*/i, '');
++  const subjects = profile.academic_goal?.subjects?.length ? profile.academic_goal.subjects.join(', ') : 'your first topic';
++  switch (family) {
++    case 'entrance_exam':
++      return `Mark the ${profile.academic_goal?.exam || 'exam'} syllabus as red/yellow/green and solve one short diagnostic set in ${subjects}.`;
++    case 'board_exam':
++      return `Pick one weak chapter in ${subjects} and read the NCERT explanation, then solve 5 questions.`;
++    case 'school_study':
++      return `Pick one weak chapter in ${subjects} and finish a short practice set, marking mistakes.`;
++    case 'data_science_job':
++      return 'Do the readiness gap-check (Python, SQL, stats, project, resume) and pick one public dataset for your first project.';
++    case 'college':
++      return 'List your current skills/projects and write a one-line internship/project target.';
++    case 'informal_skill':
++      return 'Record a 60-second voice or video explaining your skill, and capture one sample-work photo.';
++    case 'enterprise':
++      return 'Write the setup steps, the space/equipment you need, and a rough starting budget.';
++    case 'job':
++      return 'Confirm your target role, safe commute/relocation, and check your resume/proof gap.';
++    case 'vocational':
++      return 'Shortlist one local and one online training option and set your commute/time limits.';
++    default:
++      return 'Start the first lesson and complete one small practice task today.';
++  }
++}
++
++function whyModuleMatters(family = 'generic', module = {}, index = 0) {
++  const goal = coerceText(module.goal);
++  const base = (FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic).outcome;
++  if (index === 0) return `This is the foundation week: ${goal || base}`;
++  return goal ? `Builds on the previous week so that ${goal.charAt(0).toLowerCase()}${goal.slice(1)}` : base;
++}
++
++function lessonResourceFor(family = 'generic') {
++  switch (family) {
++    case 'entrance_exam':
++      return { title: 'NCERT textbooks + official exam syllabus', type: 'official', source_url: 'https://ncert.nic.in/textbook.php' };
++    case 'board_exam':
++      return { title: 'NCERT + CBSE sample papers', type: 'official', source_url: 'https://ncert.nic.in/textbook.php' };
++    case 'school_study':
++      return { title: 'NCERT + DIKSHA practice', type: 'official', source_url: 'https://diksha.gov.in/' };
++    case 'data_science_job':
++    case 'college':
++      return { title: 'Skill India Digital learning', type: 'official', source_url: 'https://www.skillindiadigital.gov.in/' };
++    case 'enterprise':
++      return { title: 'PM FME / MSME setup resources', type: 'official', source_url: 'https://www.pmfme.mofpi.gov.in/' };
++    default:
++      return { title: 'Skill India Digital learning', type: 'official', source_url: 'https://www.skillindiadigital.gov.in/' };
++  }
++}
++
++function buildLessonDetail(lesson, index = 0, module = {}, family = 'generic', profile = {}) {
++  const language = coerceText(profile.preferred_language) || coerceText(profile.language) || 'your language';
++  const academic = /entrance_exam|board_exam|school_study/.test(family);
++  const title = coerceText(lesson, `Lesson ${index + 1}`);
++  return {
++    title,
++    type: academic ? (index === 0 ? 'concept' : 'practice') : index === 0 ? 'watch_or_listen' : 'do',
++    estimated_time: academic ? '20-30 min' : '10-15 min',
++    instructions: academic
++      ? `Open "${title}" in ${language}. Read or listen once, then solve at least 3 questions on it without looking at answers.`
++      : `Open "${title}" in ${language}. Watch/listen once, then do the small task by hand or in your own words.`,
++    completion_criteria: `You can explain "${title}" in one line and finished its small task.`,
++    proof_required: coerceText(module.proof_task) || coerceText(module.proof) || buildProofTask(family, profile),
++    resource: lessonResourceFor(family),
++  };
++}
++
++export function enrichModule(module = {}, family = 'generic', profile = {}, index = 0) {
++  const lessons = Array.isArray(module.lessons) ? module.lessons : [];
++  const proofTask =
++    coerceText(module.proof_task) ||
++    coerceText(module.proof) ||
++    (Array.isArray(module.proof_tasks) ? coerceText(module.proof_tasks[0]) : '') ||
++    buildProofTask(family, profile);
++  return {
++    ...module,
++    why_it_matters: coerceText(module.why_it_matters) || whyModuleMatters(family, module, index),
++    daily_plan: Array.isArray(module.daily_plan) && module.daily_plan.length ? module.daily_plan : module.daily_micro_tasks || [],
++    proof_task: proofTask,
++    checkpoint:
++      coerceText(module.checkpoint) ||
++      coerceText(module.completion_criteria) ||
++      `Finish Week ${module.week || index + 1} lessons/practice and save ${proofTask}.`,
++    unlocks: coerceText(module.unlocks) || coerceText(module.unlock_after_completion) || coerceText(module.unlock) || 'the next step',
++    lesson_details:
++      Array.isArray(module.lesson_details) && module.lesson_details.length
++        ? module.lesson_details
++        : lessons.map((lesson, lessonIndex) => buildLessonDetail(lesson, lessonIndex, module, family, profile)),
++  };
++}
++
++// ---------------------------------------------------------------------------
++// "This week" hyperlocal actions
++// Concrete steps a learner can physically take this week. Only real official
++// portals and real local-action TYPES are used. No fabricated employers,
++// phone numbers, or specific job listings.
++// ---------------------------------------------------------------------------
++
++const OFFICIAL = {
++  ncs: { title: 'National Career Service (NCS)', url: 'https://www.ncs.gov.in/' },
++  skillIndia: { title: 'Skill India Digital', url: 'https://www.skillindiadigital.gov.in/' },
++  pmkvy: { title: 'PMKVY / Skill India', url: 'https://www.pmkvyofficial.org/' },
++  digilocker: { title: 'DigiLocker', url: 'https://www.digilocker.gov.in/' },
++  nsp: { title: 'National Scholarship Portal', url: 'https://scholarships.gov.in/' },
++  ncert: { title: 'NCERT official textbooks', url: 'https://ncert.nic.in/textbook.php' },
++  diksha: { title: 'DIKSHA', url: 'https://diksha.gov.in/' },
++  jee: { title: 'NTA JEE Main', url: 'https://jeemain.nta.ac.in/' },
++  cbseSqp: { title: 'CBSE sample papers', url: 'https://cbseacademic.nic.in/' },
++  udyam: { title: 'Udyam registration', url: 'https://udyamregistration.gov.in/' },
++  pmegp: { title: 'PMEGP / KVIC', url: 'https://www.kviconline.gov.in/pmegpeportal/' },
++  pmfme: { title: 'PM FME (MoFPI)', url: 'https://www.pmfme.mofpi.gov.in/' },
++};
++
++function action(id, type, title, how, source, byWhen = 'This week') {
++  return { id, type, title, how, source_title: source.title, source_url: source.url, by_when: byWhen };
++}
++
++export function buildThisWeekActions(profile = {}, family = goalFamily(profile)) {
++  const place = coerceText(profile.block) || coerceText(profile.location) || 'your area';
++  const hasPreciseArea = Boolean(coerceText(profile.block));
++
++  // Steps every learner can take now.
++  const base = [
++    action(
++      'tw-skill-passport',
++      'in_app',
++      'Build your Skill Passport with Meera (no resume needed)',
++      'Just keep chatting with Meera. She turns your answers into proof you can share — you do not need to write a resume.',
++      { title: 'VidyaSetu Skill Passport', url: '' },
++    ),
++    action(
++      'tw-ncs',
++      'register_online',
++      'Create a free National Career Service account',
++      `Open the link, sign up with your phone number, and set your district to ${place} so nearby jobs and job-melas reach you.`,
++      OFFICIAL.ncs,
++    ),
++    action(
++      'tw-digilocker',
++      'register_online',
++      'Set up DigiLocker for your documents',
++      'Create DigiLocker with your phone + Aadhaar so your marksheets/certificates are safe and shareable in one tap.',
++      OFFICIAL.digilocker,
++    ),
++  ];
++
++  if (!hasPreciseArea) {
++    base.push(
++      action(
++        'tw-set-area',
++        'in_app',
++        'Tell Meera your exact block / panchayat',
++        `We currently show options near "${place}". Share your block or panchayat so centres and work shown are truly within reach.`,
++        { title: 'VidyaSetu', url: '' },
++      ),
++    );
++  }
++
++  const byFamily = {
++    entrance_exam: [
++      action('tw-jee-syllabus', 'study_today', 'Download the official exam syllabus today', 'Open the official exam site, save the latest syllabus, and tick the chapters you have not started.', OFFICIAL.jee),
++      action('tw-ncert-start', 'study_today', 'Start one NCERT chapter and solve 10 questions', 'Pick your weakest topic, read the NCERT explanation, then solve 10 questions and note every mistake.', OFFICIAL.ncert),
++      action('tw-mock', 'practice', 'Attempt one timed practice set this week', 'Do one timed section, then convert every wrong answer into a revision note (your error log).', OFFICIAL.diksha),
++    ],
++    board_exam: [
++      action('tw-ncert-board', 'study_today', 'Finish one NCERT chapter + back exercises', 'Read the chapter, redo the solved examples, and complete the exercise; mark wrong answers in a mistake log.', OFFICIAL.ncert),
++      action('tw-sample-paper', 'practice', 'Solve one CBSE/board sample-paper section', 'Download a sample paper, solve one section in time, and compare with the marking scheme.', OFFICIAL.cbseSqp),
++      action('tw-scholarship', 'deadline', 'Check scholarship eligibility on NSP', 'Open the National Scholarship Portal, check pre/post-matric eligibility, and note the application deadline.', OFFICIAL.nsp, 'Before the portal deadline'),
++    ],
++    school_study: [
++      action('tw-diksha-chapter', 'study_today', 'Do one DIKSHA chapter + practice today', 'Open DIKSHA, watch one short lesson for your weak chapter, then solve the practice questions.', OFFICIAL.diksha),
++      action('tw-ncert-school', 'study_today', 'Solve 8 NCERT questions and list mistakes', 'Pick one subject, solve 8 questions from NCERT, and write down which type you got wrong.', OFFICIAL.ncert),
++      action('tw-scholarship-school', 'deadline', 'Ask a teacher/parent to check NSP scholarship', 'Open the National Scholarship Portal with a guardian and check what your class is eligible for.', OFFICIAL.nsp, 'Before the portal deadline'),
++    ],
++    data_science_job: [
++      action('tw-ds-project', 'do_today', 'Pick one public dataset and start a mini-project', 'Choose a simple dataset, clean it, and write a 6-line summary — this becomes your portfolio proof.', OFFICIAL.skillIndia),
++      action('tw-ncs-analyst', 'register_online', 'Search "data entry / analyst" roles on NCS', `Register on NCS and search analyst/data roles filtered to ${place} and remote.`, OFFICIAL.ncs),
++      action('tw-skillindia-course', 'register_online', 'Enrol in one free Python/SQL module', 'Start one short Python or SQL module so your skills are current and certified.', OFFICIAL.skillIndia),
++    ],
++    college: [
++      action('tw-portfolio', 'do_today', 'Write two strong resume bullets from one project', 'Take one college project and write two clear result-focused lines for your profile.', OFFICIAL.skillIndia),
++      action('tw-ncs-intern', 'register_online', 'Search internships/projects on NCS', `Register and search internship/apprenticeship listings near ${place} and remote.`, OFFICIAL.ncs),
++      action('tw-skillindia-cert', 'register_online', 'Add one free certified short course', 'Pick one course matching your goal so your profile has a verifiable certificate.', OFFICIAL.skillIndia),
++    ],
++    informal_skill: [
++      action('tw-sample-proof', 'do_today', 'Capture one sample-work photo/video today', 'Make one piece of your work (stitch/repair/etc.) and record a clear photo or 30-second video as proof.', { title: 'VidyaSetu Skill Passport', url: '' }),
++      action('tw-rpl', 'register_online', 'Check RPL recognition on Skill India', 'See if you can get your existing skill certified (RPL) without a long course.', OFFICIAL.skillIndia),
++      action('tw-local-work', 'local_outreach', `Ask 3 shops/customers near ${place} for small work`, 'List three nearby shops or past customers and ask for one small paid task or trial — start earning while you build proof.', OFFICIAL.ncs),
++    ],
++    enterprise: [
++      action('tw-setup-plan', 'do_today', 'Write a one-page setup plan + rough budget', 'List the space, equipment, and a realistic starting cost — start small to limit risk.', OFFICIAL.pmfme),
++      action('tw-udyam', 'register_online', 'Register on Udyam (free MSME ID)', 'A free Udyam registration unlocks schemes and buyer trust later.', OFFICIAL.udyam),
++      action('tw-pmegp', 'deadline', 'Check PMEGP/PMFME loan-scheme eligibility', 'Open the scheme portal, check eligibility and documents before spending any money.', OFFICIAL.pmegp),
++      action('tw-buyers', 'local_outreach', `List 5 possible buyers/customers near ${place}`, 'Write down five nearby people or shops who might buy from you, and a fair first price.', OFFICIAL.udyam),
++    ],
++    job: [
++      action('tw-ncs-job', 'register_online', 'Register on NCS and shortlist 5 local roles', `Sign up, set your district to ${place} and commute limit, and shortlist five roles to apply to.`, OFFICIAL.ncs),
++      action('tw-proof', 'do_today', 'Let Meera build your one-page proof summary', 'Answer Meera’s questions; she creates a truthful proof summary so you do not need a formal resume.', { title: 'VidyaSetu', url: '' }),
++      action('tw-walkin', 'local_outreach', `Prepare for 2 local shop/employer enquiries near ${place}`, 'Pick two nearby workplaces and practise a 30-second introduction with Meera before you visit.', OFFICIAL.ncs),
++    ],
++    vocational: [
++      action('tw-pmkvy-center', 'visit_center', 'Find the nearest PMKVY/Skill India training centre', `Open the centre locator and note the closest centre to ${place}, its course, and fees.`, OFFICIAL.pmkvy),
++      action('tw-skillindia-start', 'register_online', 'Start one free foundation module now', 'Begin a short phone-first module so you build proof while a local centre is confirmed.', OFFICIAL.skillIndia),
++      action('tw-practice-proof', 'do_today', 'Do one practice task and save proof', 'Complete one small hands-on task and save a photo/note as your first proof.', { title: 'VidyaSetu Skill Passport', url: '' }),
++    ],
++    generic: [
++      action('tw-skillindia-explore', 'register_online', 'Explore one free Skill India course', 'Open Skill India Digital and start one short course matching your interest.', OFFICIAL.skillIndia),
++      action('tw-ncs-explore', 'register_online', 'Register on NCS for local opportunities', `Create an NCS account and set your district to ${place}.`, OFFICIAL.ncs),
++    ],
++  };
++
++  return [...base, ...(byFamily[family] || byFamily.generic)].slice(0, 10);
++}
++
++export function enrichJourneyForLearner(profile = {}, route = {}, journey = {}) {
++  const family = goalFamily(profile);
++  const baseModules = Array.isArray(journey.modules) ? journey.modules : [];
++  const modules = baseModules.map((module, index) => enrichModule(module, family, profile, index));
++  const first = modules[0] || {};
++  const todayTask = buildTodayTask(family, profile, route, first);
++  const proofRequired = coerceText(first.proof_task) || buildProofTask(family, profile);
++  const startHere = {
++    week: first.week || 1,
++    title: coerceText(first.title) || 'Week 1',
++    goal: coerceText(first.goal),
++    why_it_matters: coerceText(first.why_it_matters),
++    today_task: todayTask,
++    how_to_complete:
++      coerceText(first.checkpoint) ||
++      coerceText(first.completion_criteria) ||
++      'Finish the lesson/practice, tap it done, then save a short proof note or photo.',
++    proof_required: proofRequired,
++    unlocks_next: coerceText(first.unlocks) || coerceText(first.unlock_after_completion) || coerceText(first.unlock) || 'the next week',
++  };
++  return {
++    ...journey,
++    modules,
++    start_here: startHere,
++    today_task: todayTask,
++    selected_pathway_summary: {
++      route_name: coerceText(route.name) || coerceText(journey.route_name) || coerceText(journey.title) || 'Selected pathway',
++      family,
++      what_you_get: familyOutcome(family),
++      time: coerceText(journey.duration?.mvp) || `${modules.length}-week plan`,
++      channel: coerceText(journey.delivery?.primary_channel) || 'WhatsApp + voice',
++      proof_required: proofRequired,
++      unlocks_next: startHere.unlocks_next,
++    },
++  };
++}
+diff --git a/VidyaSetu-MVP/api/_lib/services.js b/VidyaSetu-MVP/api/_lib/services.js
+index 2e06301..1996cee 100644
+--- a/VidyaSetu-MVP/api/_lib/services.js
++++ b/VidyaSetu-MVP/api/_lib/services.js
+@@ -2,6 +2,11 @@ import {
+   ACADEMIC_RESOURCE_DOCS,
+   KB_DOCS,
+   sourceLimitedPathways,
++  validatePathwayRoutes,
++  buildLocationGuardrail,
++  decorateRouteExplanation,
++  goalFamily,
++  buildThisWeekActions,
+ } from './mvp.js';
+ import { detectLanguageStyle, languageInstruction, phrase } from './language.js';
+ 
+@@ -1003,7 +1008,14 @@ export async function generateProfile(transcript) {
+ 
+ export async function generatePathways(profile, question = '') {
+   const outputLanguage = `${languageInstruction(profile, question)} Keep official scheme, exam, employer, and source names unchanged. Translate or localize route names, tradeoffs, time, distance, income, callback messages, lesson titles, and learner-facing suggestions into that language/style.`;
+-  const offScope = /canada|loan|marriage|medical diagnosis|legal/i.test(question);
++  const enterpriseContext =
++    profile.learner_goal?.type === 'self_employment_enterprise' ||
++    /business|enterprise|scheme|mudra|pmegp|pmfme|udyam|setup|\bshop\b|farm|poultry|mushroom|dairy|self.?employ|apna kaam/i.test(
++      question,
++    );
++  const offScope =
++    /canada|marriage|medical diagnosis|legal advice/i.test(question) ||
++    (/\bloan\b/i.test(question) && !enterpriseContext);
+   if (offScope) {
+     const guardData = enrichPathwayData(
+       {
+@@ -1042,15 +1054,14 @@ export async function generatePathways(profile, question = '') {
+   const pathwayProfile = academicMode
+     ? academicPathwayProfile(profile, question, { entrancePrep, academicPrep, schoolStudy, goal })
+     : profile;
+-  const hasJobMobility = goal.intent === 'job' && profile.relocation_preference;
++  const relocationText = String(profile.relocation_preference || '').toLowerCase();
++  const negativeMobility = /\bno\b|nahi|not |local|same city|same town|won'?t|cannot|can'?t/.test(relocationText);
++  const positiveMobility =
++    !negativeMobility && /remote|anywhere|india.?wide|relocat|pan.?india|wfh|work from home|open to/.test(relocationText);
++  const hasJobMobility = goal.intent === 'job' && positiveMobility;
+   if (goal.needs_location_for_offline && !profile.location && !hasJobMobility) {
+     const guardData = enrichPathwayData(
+-      {
+-        routes: [],
+-        confidence: 0.7,
+-        callback_flag: true,
+-        callback_message: phrase(profile, question, 'need_location', {}),
+-      },
++      buildLocationGuardrail(profile, { message: phrase(profile, question, 'need_location', {}) }),
+       profile,
+       { goal, academicMode: false, evidenceProvider: 'location_guardrail', evidenceCount: 0 },
+     );
+@@ -1070,7 +1081,9 @@ export async function generatePathways(profile, question = '') {
+ 
+   const aspiration = (pathwayProfile.aspirations || []).join(' ') || 'career skills';
+   const location = pathwayProfile.relocation_preference || pathwayProfile.location || 'India';
+-  const webEvidence = await discoverPathwayEvidence(
++  const liveEvidenceEnabled = process.env.DISABLE_PATHWAY_WEB_SEARCH !== 'true';
++  const webEvidence = liveEvidenceEnabled
++    ? await discoverPathwayEvidence(
+     entrancePrep
+       ? `${profile.academic_goal?.exam || 'JEE entrance exam'} official syllabus mock test practice ${profile.academic_goal?.subjects?.join(' ') || ''}`
+       : academicMode
+@@ -1082,8 +1095,9 @@ export async function generatePathways(profile, question = '') {
+           : goal.intent === 'college'
+             ? `${location} ${aspiration} internship project placement college opportunity`
+             : `${location} ${aspiration} government scheme training scholarship job official PMKVY NCS`,
+-    academicMode ? ACADEMIC_RESOURCE_DOCS : KB_DOCS,
+-  );
++        academicMode ? ACADEMIC_RESOURCE_DOCS : KB_DOCS,
++      )
++    : { data: [], ok: false, provider: 'web_search_disabled', error: null };
+   const evidence = [
+     ...(academicMode ? ACADEMIC_RESOURCE_DOCS : KB_DOCS),
+     ...(webEvidence.data || []).slice(0, 5).map((item) => ({
+@@ -1116,15 +1130,30 @@ export async function generatePathways(profile, question = '') {
+     system: `${outputLanguage} ${pathwaySystem}`,
+     prompt: `Learner profile:\n${JSON.stringify(profile)}\n\nEvidence:\n${JSON.stringify(evidence)}\n\nQuestion: ${question || 'Generate a personalized pathway map.'}`,
+   });
+-  const data = academicMode && hasVocationalLeak(generated.data?.routes)
+-    ? {
+-        ...generated.data,
+-        routes: sourceLimitedPathways(pathwayProfile),
+-        confidence: Math.max(Number(generated.data?.confidence || 0), 0.82),
+-        callback_flag: false,
+-        leak_guard_applied: true,
+-      }
+-    : generated.data;
++  const family = goalFamily(pathwayProfile, { entrancePrep, academicPrep, schoolStudy });
++  const deterministicRoutes = sourceLimitedPathways(pathwayProfile);
++  const validation = validatePathwayRoutes(pathwayProfile, generated.data?.routes, {
++    family,
++    deterministic: deterministicRoutes,
++  });
++  const routesWereCorrected = validation.replaced || validation.used_deterministic;
++  const data = {
++    ...generated.data,
++    routes: validation.routes,
++    confidence: routesWereCorrected
++      ? Math.max(Number(generated.data?.confidence || 0), 0.82)
++      : Number(generated.data?.confidence || 0.82),
++    callback_flag: validation.routes.length ? false : Boolean(generated.data?.callback_flag),
++    route_validation: {
++      family: validation.family,
++      incoming: validation.incoming_count,
++      kept: validation.kept_count,
++      rejected: validation.rejected,
++      replaced: validation.replaced,
++      used_deterministic: validation.used_deterministic,
++    },
++    leak_guard_applied: routesWereCorrected,
++  };
+ 
+   return {
+     ...generated,
+@@ -1134,6 +1163,7 @@ export async function generatePathways(profile, question = '') {
+       entrancePrep,
+       academicPrep,
+       schoolStudy,
++      family,
+       evidenceProvider: webEvidence.provider,
+       evidenceCount: evidence.length,
+     }),
+@@ -1186,19 +1216,16 @@ function academicPathwayProfile(profile = {}, question = '', context = {}) {
+   };
+ }
+ 
+-function hasVocationalLeak(routes = []) {
+-  const text = JSON.stringify(routes || []).toLowerCase();
+-  return /beauty|salon|mehandi|pmkvy|assistant beautician|wellness|data science|data analyst|portfolio sprint|fresher|internship|apprenticeship|vacancy|employer outreach|hirer outreach|job outreach|placement job/.test(text);
+-}
+-
+ function enrichPathwayData(data = {}, profile = {}, context = {}) {
+   const routes = Array.isArray(data.routes) ? data.routes : [];
+   const cleanedRoutes = context.academicMode ? routes.map((route) => sanitizeAcademicRoute(route)) : routes;
+   const missingFacts = missingProfileFacts(profile, context);
+   const persona = personaForProfile(profile, context);
++  const family = context.family || goalFamily(profile, context);
+   return {
+     ...data,
+     persona,
++    this_week_actions: buildThisWeekActions(profile, family),
+     missing_profile_facts: missingFacts,
+     recommendation_trace: {
+       persona,
+@@ -1235,19 +1262,29 @@ function enrichRouteTrace(route = {}, index = 0, profile = {}, context = {}, per
+   const matchedFacts = profileFacts(profile, context).slice(0, 7);
+   const blockers = routeBlockers(normalizedRoute, profile, context, missingFacts);
+   const filters = routeFilters(normalizedRoute, profile, context);
++  const family = context.family || goalFamily(profile, context);
++  const nextAction = nextActionForRoute(normalizedRoute, profile, context, blockers);
++  const decorated = decorateRouteExplanation(normalizedRoute, {
++    profile,
++    family,
++    matchedFacts,
++    blockers,
++    nextAction,
++  });
+   return {
+-    ...normalizedRoute,
++    ...decorated,
+     id: normalizedRoute.id || `route-${index + 1}`,
+     confidence: Number(normalizedRoute.confidence || 0.72),
+     trace: {
+       persona,
++      family,
+       matched_facts: matchedFacts,
+       missing_facts: missingFacts,
+       filters,
+       blockers,
+       explanation: traceExplanation(normalizedRoute, matchedFacts, blockers),
+     },
+-    next_action: nextActionForRoute(normalizedRoute, profile, context, blockers),
++    next_action: nextAction,
+   };
+ }
+ 
+@@ -1256,19 +1293,25 @@ function normalizeRoute(route = {}, index = 0, context = {}) {
+   const routeName =
+     safeRouteText(normalized.name) ||
+     safeRouteText(normalized.title) ||
++    safeRouteText(normalized.route_name) ||
++    safeRouteText(normalized.route_title) ||
+     safeRouteText(normalized.source_title) ||
+     safeRouteText(normalized.tradeoff) ||
++    safeRouteText(normalized.route_description) ||
+     (context.academicMode ? `Study route ${index + 1}` : `Pathway route ${index + 1}`);
+   return {
+     ...normalized,
+     id: safeRouteText(normalized.id) || `route-${index + 1}`,
+     name: routeName,
+-    source_url: safeRouteUrl(normalized.source_url || normalized.url || normalized.link),
++    source_url: safeRouteUrl(normalized.source_url || normalized.url || normalized.link || normalized.route_link),
+     source_title: safeRouteText(normalized.source_title || normalized.source || normalized.provider, 'verified evidence'),
+-    tradeoff: safeRouteText(normalized.tradeoff || normalized.why || normalized.description, 'Good fit based on the learner profile.'),
++    tradeoff: safeRouteText(
++      normalized.tradeoff || normalized.why || normalized.why_this_route || normalized.description || normalized.route_description,
++      'Good fit based on the learner profile.',
++    ),
+     time: safeRouteText(normalized.time || normalized.timeline || normalized.duration, 'To be confirmed'),
+     distance: safeRouteText(normalized.distance || normalized.mode || normalized.delivery, 'Phone-first'),
+-    income: safeRouteText(normalized.income || normalized.outcome || normalized.result, 'Progress toward goal'),
++    income: safeRouteText(normalized.income || normalized.outcome || normalized.result || normalized.expected_outcome, 'Progress toward goal'),
+     confidence: normalizeConfidence(normalized.confidence),
+     focus_subjects: normalizeStringList(normalized.focus_subjects || normalized.subjects || normalized.skills),
+   };
+diff --git a/VidyaSetu-MVP/scripts/persona-e2e-test.mjs b/VidyaSetu-MVP/scripts/persona-e2e-test.mjs
+index 065785a..75860d5 100644
+--- a/VidyaSetu-MVP/scripts/persona-e2e-test.mjs
++++ b/VidyaSetu-MVP/scripts/persona-e2e-test.mjs
+@@ -171,8 +171,30 @@ const personas = [
+     expectIntent: 'proof_to_work',
+     text: 'Main Imran Hyderabad se hoon. Bike mechanic ka kaam seekha hai workshop mein, certificate nahi hai. Local job ya RPL certificate chahiye, 18 km commute, roz 1 hour, phone hai.',
+   },
++  {
++    id: 'enterprise_poultry',
++    kind: 'enterprise',
++    expectIntent: 'self_employment',
++    text: 'Mera naam Mohan hai. Main Balangir Odisha se hoon. Apna poultry farm business start karna chahta hoon, mujhe setup, budget aur loan/scheme guidance chahiye. 15 km tak ja sakta hoon, Android phone hai, Hindi mein.',
++  },
+ ];
+ 
++// Per-persona content-quality rules applied to the pathway+journey output.
++// require: at least one match must be present. forbid: none may be present.
++// require/requireAlso are checked against pathway routes + journey text.
++// forbidInRoutes is checked against pathway ROUTE cards only (journey prose may
++// legitimately say things like "no job outreach is unlocked").
++const CONTENT_RULES = {
++  switch_ds_to_jee: { require: /jee|iit|entrance/i, requireAlso: /mock|practice|error.?log|syllabus|concept/i, forbidInRoutes: /beauty|salon|mehandi|placement job/i },
++  class12: { require: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b/i, forbidInRoutes: /salon|beautician|mehandi|placement job|data entry job/i },
++  hindi_class12_question: { require: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b|परीक्षा|पेपर/i, forbidInRoutes: /salon|beautician|mehandi|placement job/i },
++  class10_coding: { require: /ncert|diksha|practice|\btest\b|chapter|revision/i, forbidInRoutes: /salon|beautician|mehandi|placement job|data entry job/i },
++  btech_ds: { require: /python|sql|project|portfolio|resume|github|internship|fresher|outreach|data science/i, forbidInRoutes: /computer basics|beauty|salon|tailor/i },
++  informal_mechanic: { require: /proof|sample|rpl|local work|apprentice|certificate/i },
++  dropout_tailor: { require: /stitch|silai|tailor|sample|customer|rpl|local|proof/i },
++  enterprise_poultry: { require: /setup|budget|scheme|loan|buyer|customer|\brisk\b|mudra|30/i, forbidInRoutes: /employer outreach|hirer outreach|placement job/i },
++};
++
+ const filterIds = new Set(process.argv.slice(2).filter(Boolean));
+ const selectedPersonas = filterIds.size ? personas.filter((persona) => filterIds.has(persona.id)) : personas;
+ 
+@@ -216,6 +238,36 @@ function expectedEnough(persona, result) {
+   }
+   if (persona.kind === 'study' && result.jobCount > 0) failures.push('study persona produced jobs');
+   if (persona.kind === 'study' && !result.studyJobGuard) failures.push('study persona missing job-search guardrail');
++
++  const rule = CONTENT_RULES[persona.id];
++  if (rule && persona.kind !== 'location_guard') {
++    const haystack = `${result.pathwayText || ''} ${result.journeyText || ''}`;
++    if (rule.require && !rule.require.test(haystack)) {
++      failures.push(`content missing required terms: ${rule.require}`);
++    }
++    if (rule.requireAlso && !rule.requireAlso.test(haystack)) {
++      failures.push(`content missing required terms: ${rule.requireAlso}`);
++    }
++    if (rule.forbidInRoutes && rule.forbidInRoutes.test(result.pathwayText || '')) {
++      failures.push(`route cards contain forbidden terms: ${rule.forbidInRoutes}`);
++    }
++  }
++
++  if (result.routeCount > 0 && result.routesHaveExplanations === false) {
++    failures.push('routes missing explanation fields (why/next/outcome/locked)');
++  }
++
++  if (persona.kind !== 'clarify') {
++    if (Number(result.thisWeekCount || 0) < 5) failures.push(`too few this-week actions (${result.thisWeekCount || 0})`);
++    if (result.thisWeekValid === false) failures.push('this-week actions missing title/how/source');
++  }
++
++  if (result.moduleCount > 0) {
++    if (!(result.moduleCount >= 3)) failures.push('journey has fewer than 3 modules');
++    if (!result.journeyModulesValid) failures.push('journey modules missing lessons/completion/lesson_details/proof/unlock');
++    if (!result.journeyHasStartHere) failures.push('journey missing start_here/today_task');
++    if (!result.journeyHasProofAndUnlock) failures.push('journey missing proof tasks or unlock logic');
++  }
+   if (persona.id === 'btech_ds' && !JSON.stringify(result).toLowerCase().includes('data science')) {
+     failures.push('data science not preserved');
+   }
+@@ -288,6 +340,18 @@ async function runPersona(persona, index) {
+   out.callback = Boolean(pathway.callback_flag);
+   out.callbackMessage = pathway.callback_message || '';
+   out.routes = (pathway.routes || []).map((route) => route.name).slice(0, 3);
++  out.locationRequired = Boolean(pathway.location_required) || out.locationRequired;
++  out.pathwayText = JSON.stringify(pathway.routes || []).toLowerCase();
++  const thisWeek = Array.isArray(pathway.this_week_actions) ? pathway.this_week_actions : [];
++  out.thisWeekCount = thisWeek.length;
++  out.thisWeekValid =
++    thisWeek.length > 0 &&
++    thisWeek.every((item) => item && item.title && item.how) &&
++    thisWeek.filter((item) => /^https?:\/\//.test(item.source_url || '')).length >= 3;
++  out.routeValidation = pathway.route_validation || null;
++  out.routesHaveExplanations = (pathway.routes || []).every(
++    (route) => route.why_this_route && route.next_action && route.expected_outcome && route.locked_until,
++  );
+ 
+   const firstRoute = pathway.routes?.[0] || null;
+   if (firstRoute) {
+@@ -295,6 +359,25 @@ async function runPersona(persona, index) {
+     out.journeyMode = journey.journey?.mode;
+     out.moduleCount = journey.journey?.modules?.length || 0;
+     out.readiness = journey.journey?.readiness_score;
++    const journeyModules = Array.isArray(journey.journey?.modules) ? journey.journey.modules : [];
++    out.journeyText = JSON.stringify(journey.journey || {}).toLowerCase();
++    out.journeyHasStartHere = Boolean(journey.journey?.start_here && journey.journey?.today_task);
++    out.journeyModulesValid =
++      journeyModules.length >= 3 &&
++      journeyModules.every(
++        (module) =>
++          Array.isArray(module.lessons) &&
++          module.lessons.length > 0 &&
++          Boolean(module.completion_criteria) &&
++          Array.isArray(module.lesson_details) &&
++          module.lesson_details.length > 0 &&
++          Boolean(module.proof_task) &&
++          Boolean(module.unlocks),
++      );
++    out.journeyHasProofAndUnlock =
++      journeyModules.every((module) => Boolean(module.proof_task)) &&
++      journeyModules.every((module) => Boolean(module.unlocks)) &&
++      Boolean(journey.journey?.progress?.placement_unlock_rule || journey.journey?.progress?.unlock_label);
+     if (persona.kind !== 'study') {
+       const passport = await post('/api/passport', {
+         profile,
+diff --git a/VidyaSetu-MVP/scripts/slice5-journey-progress-benchmark.mjs b/VidyaSetu-MVP/scripts/slice5-journey-progress-benchmark.mjs
+index 9f65411..9aaf890 100644
+--- a/VidyaSetu-MVP/scripts/slice5-journey-progress-benchmark.mjs
++++ b/VidyaSetu-MVP/scripts/slice5-journey-progress-benchmark.mjs
+@@ -58,6 +58,7 @@ const cases = [
+     modulesToComplete: 1,
+     expectedMode: 'academic_exam_prep',
+     expectPassportReady: true,
++    expectedContent: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b/i,
+     profile: {
+       name: 'Rohit',
+       class_level: 'Class 12',
+@@ -91,6 +92,7 @@ const cases = [
+     modulesToComplete: 2,
+     expectedMode: 'data_science_pathway',
+     expectPassportReady: true,
++    expectedContent: /python|sql|project|portfolio|resume|github|notebook|outreach/i,
+     profile: {
+       name: 'Anshuman',
+       class_level: 'BTech',
+@@ -124,6 +126,7 @@ const cases = [
+     modulesToComplete: 2,
+     expectedMode: 'informal_skill_validation',
+     expectPassportReady: true,
++    expectedContent: /stitch|silai|tailor|sample|customer|rpl|local|proof/i,
+     profile: {
+       name: 'Shabnam',
+       class_level: 'School dropout',
+@@ -230,6 +233,46 @@ async function runCase(testCase, index) {
+     }))),
+   );
+   assertCheck(checks, 'journey mode correct', journey.mode === testCase.expectedMode, journey.mode || '');
++  assertCheck(
++    checks,
++    'journey has start-here and today task',
++    Boolean(journey.start_here && journey.start_here.today_task && journey.today_task && journey.selected_pathway_summary),
++    JSON.stringify(journey.start_here || {}),
++  );
++  assertCheck(
++    checks,
++    'modules include learner-clarity enrichment',
++    modules.length >= 3 &&
++      modules.every(
++        (module) =>
++          Array.isArray(module.lessons) &&
++          module.lessons.length > 0 &&
++          Boolean(module.completion_criteria) &&
++          Boolean(module.why_it_matters) &&
++          Boolean(module.proof_task) &&
++          Boolean(module.unlocks) &&
++          Array.isArray(module.lesson_details) &&
++          module.lesson_details.length > 0 &&
++          module.lesson_details.every((lesson) => Boolean(lesson.completion_criteria) && Boolean(lesson.proof_required)),
++      ),
++    JSON.stringify(modules.map((module) => ({ id: module.id, ld: module.lesson_details?.length || 0, why: Boolean(module.why_it_matters) }))),
++  );
++  assertCheck(
++    checks,
++    'journey has proof tasks and unlock logic',
++    modules.every((module) => Boolean(module.proof_task)) &&
++      modules.every((module) => Boolean(module.unlocks)) &&
++      Boolean(journey.progress?.placement_unlock_rule || journey.progress?.unlock_label),
++    journey.progress?.unlock_label || '',
++  );
++  if (testCase.expectedContent) {
++    assertCheck(
++      checks,
++      'journey content matches goal family',
++      testCase.expectedContent.test(JSON.stringify(journey).toLowerCase()),
++      String(testCase.expectedContent),
++    );
++  }
+   if (requirePersistence) {
+     assertCheck(checks, 'progress persisted ok', progressResponse.ok === true || progressResponse.proof?.persistence?.ok === true, JSON.stringify(progressResponse.proof || {}));
+   } else {
+diff --git a/VidyaSetu-MVP/src/App.jsx b/VidyaSetu-MVP/src/App.jsx
+index 8be2364..b5f6db0 100644
+--- a/VidyaSetu-MVP/src/App.jsx
++++ b/VidyaSetu-MVP/src/App.jsx
+@@ -1,4 +1,5 @@
+ import { useEffect, useMemo, useRef, useState } from 'react';
++import { getTranslations } from './i18n.js';
+ import {
+   Bell,
+   BookOpen,
+@@ -531,6 +532,10 @@ function App() {
+   const [mode, setMode] = useState('landing');
+   const [phone, setPhone] = useState('');
+   const [selectedLanguage, setSelectedLanguage] = useState('');
++  // The learner's explicit language choice. Set only by the login picker and
++  // returning-learner restore; never overwritten by later language detection,
++  // so the UI chrome stays in the language they chose.
++  const [uiLanguage, setUiLanguage] = useState('');
+   const [profile, setProfile] = useState(emptyProfile());
+   const [messages, setMessages] = useState([initialAssistantMessage]);
+   const [input, setInput] = useState('');
+@@ -638,6 +643,7 @@ function App() {
+     const starter = starterMessageForLanguage(nextProfile.preferred_language || selectedLanguage || 'English');
+     setProfile(nextProfile);
+     setSelectedLanguage(nextProfile.preferred_language || selectedLanguage || 'English');
++    setUiLanguage((current) => current || nextProfile.preferred_language || selectedLanguage || 'English');
+     setMessages(workspace.messages?.length ? workspace.messages : data.messages?.length ? data.messages : [starter]);
+     setReturning(Boolean(data.returning));
+     setPathway(workspace.pathway || null);
+@@ -1229,6 +1235,7 @@ function App() {
+       const starter = starterMessageForLanguage(demoLanguage);
+       const demoMessages = [starter, { role: 'user', content: FIELD_DEMO_PROMPT }];
+       setSelectedLanguage(demoLanguage);
++      setUiLanguage(demoLanguage);
+       setProfile(baseProfile);
+       setMessages(demoMessages);
+       setVoiceStatus('Field demo: Odia voice note transcript loaded.');
+@@ -1386,6 +1393,7 @@ function App() {
+                 key={option.name}
+                 onClick={() => {
+                   setSelectedLanguage(option.name);
++                  setUiLanguage(option.name);
+                   setProfile((current) => profileWithPreferredLanguage(current, option.name));
+                   setMessages([starterMessageForLanguage(option.name)]);
+                 }}
+@@ -1438,21 +1446,29 @@ function App() {
+     );
+   }
+ 
++  // The learner's explicit language choice at login drives the UI chrome and
++  // must persist even if a later chat message is typed in another language.
++  const t = getTranslations(uiLanguage || selectedLanguage || profile?.preferred_language || profile?.language);
+   const visibleNavItems = [
+-    ['counselor', 'Meera'],
+-    ['pathways', 'My Pathway'],
+-    ['journey', 'Learning Journey'],
+-    ['passport', 'Skill Passport'],
+-    ['jobs', 'Opportunities'],
++    ['counselor', t.nav.counselor],
++    ['pathways', t.nav.pathways],
++    ['journey', t.nav.journey],
++    ['passport', t.nav.passport],
++    ['jobs', t.nav.jobs],
+   ];
+-  const activeMeta = tabMeta[activeTab] || tabMeta.profile;
++  const baseMeta = tabMeta[activeTab] || tabMeta.profile;
++  const activeMeta = {
++    ...baseMeta,
++    title: t.title[activeTab] || baseMeta.title,
++    subtitle: t.subtitle[activeTab] || baseMeta.subtitle,
++  };
+   const ActiveIcon = activeMeta.Icon || LayoutDashboard;
+   const mobileNavItems = [
+-    ['counselor', 'Meera'],
+-    ['pathways', 'Pathway'],
+-    ['journey', 'Journey'],
+-    ['passport', 'Passport'],
+-    ['jobs', 'Jobs'],
++    ['counselor', t.navShort.counselor],
++    ['pathways', t.navShort.pathways],
++    ['journey', t.navShort.journey],
++    ['passport', t.navShort.passport],
++    ['jobs', t.navShort.jobs],
+   ];
+ 
+   return (
+@@ -1490,7 +1506,7 @@ function App() {
+           }}
+           type="button"
+         >
+-          This is not me
++          {t.btn.notMe}
+         </button>
+         <div className="sb-meera">
+           <CounselorAvatar compact />
+@@ -1563,6 +1579,7 @@ function App() {
+               setSelectedRoute={setSelectedRoute}
+               generatePathway={generatePathway}
+               createJourney={createJourney}
++              t={t}
+             />
+           )}
+           {activeTab === 'journey' && (
+@@ -1579,6 +1596,7 @@ function App() {
+               updateProofArtifact={updateProofArtifact}
+               saveJourneyProgress={saveJourneyProgress}
+               progressState={progressState}
++              t={t}
+             />
+           )}
+           {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} />}
+@@ -2150,7 +2168,8 @@ function TracePanel({ trace, nextAction }) {
+   );
+ }
+ 
+-function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney }) {
++function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney, t = getTranslations('English') }) {
++  const thisWeekActions = Array.isArray(pathway?.this_week_actions) ? pathway.this_week_actions : [];
+   const routes = pathway?.routes || [];
+   const activeRoute = selectedRoute || routes[0] || null;
+   const academicMode = routes.some((route) => (
+@@ -2190,32 +2209,18 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
+             : 'Generate a route after Meera has the learner goal, language, time, location or mobility, and proof details.'}
+         </p>
+         {activeRoute && (
+-          <div className="prototype-route-explain">
+-            <span>{academicMode ? 'Study-first guard active' : 'Personalized recommendation'}</span>
+-            <strong>{academicMode ? 'VidyaSetu will not show job/training cards before the exam plan.' : 'This route is ranked from the current learner profile.'}</strong>
+-            <small>
+-              Source: {uiText(activeRoute.source_title, 'verified evidence')}
+-              {uiUrl(activeRoute.source_url) ? ' | Official source available' : ''}
+-            </small>
+-            {uiUrl(activeRoute.source_url) && <a href={uiUrl(activeRoute.source_url)} rel="noreferrer" target="_blank">Open official source</a>}
++          <div className="route-outcome-grid">
++            <span><b>{t.pathway.whyThisRoute}</b>{uiText(activeRoute.why_this_route, uiText(activeRoute.tradeoff, 'Matches the learner profile collected by Meera.'))}</span>
++            <span><b>{t.pathway.whatYouGet}</b>{uiText(activeRoute.expected_outcome, uiText(activeRoute.income, 'Clear progress toward your goal.'))}</span>
++            <span><b>{t.pathway.doThisNext}</b>{uiText(activeRoute.next_action, 'Start the weekly plan and finish the first task.')}</span>
++            <span><b>{t.pathway.unlocksAfter}</b>{uiText(activeRoute.locked_until, 'proof, location if offline, and consent.')}</span>
+           </div>
+         )}
+-      </div>
+-      <div className="two">
+-        <div className="card">
+-          <span className="tag green">✓ Suitable for you</span>
+-          <h3>Why this pathway</h3>
+-          {facts.slice(0, 4).map((fact) => (
+-            <div className="task ok" key={fact}><span className="cb">✓</span>{fact}</div>
+-          ))}
+-        </div>
+-        <div className="card">
+-          <span className="tag amber">🔒 Locked for now</span>
+-          <h3>What's blocked and why</h3>
+-          {blockers.slice(0, 3).map((blocker) => (
+-            <div className="task" key={blocker}><span className="cb">🔒</span>{blocker}</div>
+-          ))}
+-        </div>
++        {activeRoute && uiUrl(activeRoute.source_url) && (
++          <a className="pathway-source-link" href={uiUrl(activeRoute.source_url)} rel="noreferrer" target="_blank">
++            {t.btn.open}: {uiText(activeRoute.source_title, 'official source')}
++          </a>
++        )}
+       </div>
+       {routes.length > 1 && (
+         <div className="reslinks route-choice-strip">
+@@ -2223,18 +2228,47 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
+             const selected = sameRoute(activeRoute, route);
+             return (
+               <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
+-                {index === 0 ? 'Recommended' : `Option ${index + 1}`}: {uiText(route.name, 'Route')}
++                {index === 0 ? t.pathway.recommended : `${t.pathway.option} ${index + 1}`}: {uiText(route.name, 'Route')}
+               </button>
+             );
+           })}
+         </div>
+       )}
++      {thisWeekActions.length > 0 && (
++        <div className="card this-week-card">
++          <span className="tag green">✓ {t.thisWeek.title}</span>
++          <h3>{t.thisWeek.title}</h3>
++          <p className="this-week-subtitle">{t.thisWeek.subtitle}</p>
++          <div className="this-week-list">
++            {thisWeekActions.map((item, index) => {
++              const url = uiUrl(item.source_url);
++              return (
++                <div className="this-week-item" key={uiText(item.id, `tw-${index}`)}>
++                  <span className="this-week-num">{index + 1}</span>
++                  <div className="this-week-body">
++                    <strong>{uiText(item.title, 'Action')}</strong>
++                    <small><b>{t.thisWeek.how}:</b> {uiText(item.how)}</small>
++                    <div className="this-week-meta">
++                      <span className="this-week-when">{t.thisWeek.byWhen}: {uiText(item.by_when, t.thisWeek.title)}</span>
++                      {url ? (
++                        <a href={url} rel="noreferrer" target="_blank">{t.btn.open}: {uiText(item.source_title, 'official source')}</a>
++                      ) : (
++                        <span className="this-week-inapp">{t.thisWeek.inApp}</span>
++                      )}
++                    </div>
++                  </div>
++                </div>
++              );
++            })}
++          </div>
++        </div>
++      )}
+       <div className="action-row">
+         <button className="primary-button" onClick={generatePathway}>
+-          Refresh recommendations
++          {t.btn.refreshRecommendations}
+         </button>
+         <button className="ghost-button" disabled={!activeRoute} onClick={() => createJourney(activeRoute)}>
+-          Start this week
++          {t.btn.startThisWeek}
+         </button>
+         <span>
+           {pathway?.callback_flag
+@@ -2261,6 +2295,7 @@ function JourneyTab({
+   updateProofArtifact,
+   saveJourneyProgress,
+   progressState = {},
++  t = getTranslations('English'),
+ }) {
+   const modules = Array.isArray(journey?.modules) ? journey.modules : [];
+   const delivery = journey?.delivery && typeof journey.delivery === 'object' ? journey.delivery : {};
+@@ -2308,67 +2343,52 @@ function JourneyTab({
+       </div>
+       <div className="action-row">
+         <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
+-          {academicMode ? 'Refresh study plan' : 'Create / refresh journey'}
++          {academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
+         </button>
+         <span>{selectedRoute ? `Course: ${selectedRoute.name}` : 'Choose a pathway first.'}</span>
+       </div>
+       {!journey && <EmptyState text="After choosing a route, VidyaSetu creates weekly lessons, practice tasks, proof requirements, and support rules." />}
+       {journey && (
+         <>
+-          <div className="helper-panel">
+-            <strong>How to complete this course</strong>
+-            <p>
+-              Start from Week 1. Complete a lesson or practice task, tap it done, then write a short proof note or paste a proof link.
+-              Saving progress unlocks the next week and keeps this learner profile ready on the same phone login.
+-            </p>
+-            <small>
+-              Built from the complete learner journey contract: weekly goal, daily micro-tasks, proof task,
+-              low-data version, voice/WhatsApp version, completion criteria, and exact unlock rule.
+-            </small>
+-          </div>
++          <p className="journey-tip">
++            Open Week 1, finish a lesson or task, tap it done, then save a short proof. Saving unlocks the next week.
++          </p>
+           <div className="journey-readiness-grid">
+             <span><b>{completionPercent}%</b>Course completion</span>
+-            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>Proof notes saved</span>
++            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>Proof saved</span>
+             <span><b>{passportEligible ? 'Ready' : 'Draft'}</b>{academicMode ? 'Study record' : 'Skill Passport'}</span>
+           </div>
+-          <div className="delivery-grid">
+-            <span><b>Channel</b>{delivery.primary_channel || 'WhatsApp micro-lessons'}</span>
+-            <span><b>Lesson size</b>{delivery.lesson_length || '5-10 minutes/day'}</span>
+-            <span><b>{academicMode ? 'Study completion' : 'Readiness'}</b>{academicMode ? `${completionPercent}% completed` : `${journey.readiness_score}%`}</span>
+-            <span><b>Low-data</b>{delivery.low_data_alternative || 'Audio/text recap with small proof upload'}</span>
+-          </div>
+-          <div className="journey-contract-grid">
+-            <section>
+-              <span>4-week MVP</span>
+-              <strong>{duration.mvp || `${modules.length || 4}-week learner journey`}</strong>
+-              <p>{learningContract.week_shape || 'Every week has lessons, practice, proof, and an unlock rule.'}</p>
+-            </section>
+-            <section>
+-              <span>12-week full version</span>
+-              <strong>Depth after proof</strong>
+-              <p>{duration.full || 'After MVP, VidyaSetu extends the same pathway into deeper practice and stronger proof.'}</p>
+-            </section>
+-            <section>
+-              <span>Proof gate</span>
+-              <strong>{academicMode ? 'Study proof' : 'Opportunity proof'}</strong>
+-              <p>{learningContract.proof_gate || progress.placement_unlock_rule || 'Proof is required before the next step unlocks.'}</p>
+-            </section>
+-            <section>
+-              <span>Opportunity unlock</span>
+-              <strong>Only the right next step</strong>
+-              <p>{learningContract.opportunity_unlock || 'Next route unlocks after proof, location if offline, and consent.'}</p>
+-            </section>
+-          </div>
+-          {firstIncompleteModule && (
+-            <div className="today-card">
+-              <span>Start here</span>
+-              <strong>Week {firstIncompleteModule.week}: {firstIncompleteModule.title}</strong>
+-              <p>{firstIncompleteModule.goal}</p>
+-              {Array.isArray(firstIncompleteModule.daily_micro_tasks) && firstIncompleteModule.daily_micro_tasks.length > 0 && (
+-                <small>Today: {firstIncompleteModule.daily_micro_tasks[0]}</small>
+-              )}
++          {journey.selected_pathway_summary && (
++            <div className="pathway-summary-line">
++              <b>{t.journey.yourPathway}:</b> {uiText(journey.selected_pathway_summary.route_name, selectedRoute?.name)}
++              {uiText(journey.selected_pathway_summary.what_you_get) ? ` — ${uiText(journey.selected_pathway_summary.what_you_get)}` : ''}
+             </div>
+           )}
++          {(firstIncompleteModule || journey.start_here) && (() => {
++            const startModule = firstIncompleteModule || {};
++            const start = journey.start_here || {};
++            const startWeek = startModule.week || start.week || 1;
++            const startTitle = uiText(startModule.title, uiText(start.title, 'Week 1'));
++            const startWhy = uiText(startModule.why_it_matters, uiText(startModule.goal, uiText(start.why_it_matters)));
++            const startToday = uiText(
++              Array.isArray(startModule.daily_micro_tasks) && startModule.daily_micro_tasks.length ? startModule.daily_micro_tasks[0] : '',
++              uiText(start.today_task, 'Start the first lesson and finish one small task.'),
++            );
++            const startHow = uiText(startModule.checkpoint, uiText(startModule.completion_criteria, uiText(start.how_to_complete, 'Finish the lesson/practice, tap it done, then save a short proof note.')));
++            const startProof = uiText(startModule.proof_task, uiText(startModule.proof, uiText(start.proof_required, 'a short note or photo of what you did')));
++            const startUnlocks = uiText(startModule.unlocks, uiText(startModule.unlock_after_completion, uiText(start.unlocks_next, 'the next week')));
++            return (
++              <div className="today-card">
++                <span>{t.journey.startHere}</span>
++                <strong>{t.journey.week} {startWeek}: {startTitle}</strong>
++                {startWhy ? <p>{startWhy}</p> : null}
++                <small><b>{t.journey.todaysTask}:</b> {startToday}</small>
++                <small><b>{t.journey.howToComplete}:</b> {startHow}</small>
++                <small><b>{t.journey.proofRequired}:</b> {startProof}</small>
++                <small><b>{t.journey.unlocksNext}:</b> {startUnlocks}</small>
++              </div>
++            );
++          })()}
+           <div className="study-progress">
+             <div>
+               <strong>{completedCount}/{totalItems}</strong>
+@@ -2412,18 +2432,7 @@ function JourneyTab({
+                   </div>
+                   <h3>{module.title}</h3>
+                   <p>{module.goal}</p>
+-                  <div className="week-outcome-grid">
+-                    <span><b>Completion</b>{module.completion_criteria || 'Finish lessons, practice, and proof note.'}</span>
+-                    <span><b>Unlocks</b>{module.unlock_after_completion || module.unlock || 'Next safe step'}</span>
+-                  </div>
+-                  {dailyMicroTasks.length > 0 && (
+-                    <div className="micro-task-list">
+-                      <strong>Daily micro-tasks</strong>
+-                      {dailyMicroTasks.map((task) => (
+-                        <span key={`${module.id}-${task}`}>{task}</span>
+-                      ))}
+-                    </div>
+-                  )}
++                  <small className="module-unlock-hint">{t.journey.unlocksNext}: {module.unlocks || module.unlock_after_completion || module.unlock || 'next step'}</small>
+                   <div className="module-progress-line">
+                     <strong>{moduleDone}/{moduleItems.length} complete</strong>
+                     <i><b style={{ width: `${modulePercent}%` }} /></i>
+@@ -2474,24 +2483,14 @@ function JourneyTab({
+                     <button className="ghost-button" disabled={locked} onClick={() => saveJourneyProgress?.('proof_note_saved')}>
+                       Save proof for Week {module.week}
+                     </button>
+-                    <small>{proofReady ? 'Proof saved. Next unlock is active after all items are complete.' : `Unlocks: ${module.unlock}`}</small>
+-                  </div>
+-                  <div className="journey-support-notes">
+-                    <span><b>Low-data</b>{module.low_data_alternative || delivery.low_data_alternative || 'Use text/audio recap and compressed proof.'}</span>
+-                    <span><b>Voice/WhatsApp</b>{module.voice_whatsapp_version || delivery.voice_whatsapp_version || 'Voice note lessons and photo proof are supported.'}</span>
+-                    <span><b>Support</b>{module.family_support_note || 'Ask one trusted person to review proof.'}</span>
+-                    <span><b>Safety</b>{module.safety_commute_note || 'Offline next steps stay locked until location, safety, and consent are clear.'}</span>
+-                    <span><b>Dropout trigger</b>{module.dropout_prevention_trigger || 'If check-ins are missed, restart with one small visible win.'}</span>
+-                    {progressMetrics.length > 0 && <span><b>Metrics</b>{progressMetrics.join(', ')}</span>}
++                    <small>{proofReady ? 'Proof saved. Next week unlocks after all items are complete.' : `Unlocks: ${module.unlock}`}</small>
+                   </div>
+                 </article>
+               );
+             })}
+           </div>
+-          <div className="source-box">
+-            <strong>{progress.unlock_label || 'Placement unlock rule'}</strong>
+-            <p>{progress.placement_unlock_rule || 'Complete the listed lessons and proof tasks to unlock the next step.'}</p>
+-            <p><b>Next:</b> {progress.next_action || 'Complete Week 1 lesson, practice, and proof note.'}</p>
++          <div className="journey-next-line">
++            <b>{t.journey.todaysTask}:</b> {progress.next_action || 'Complete the Week 1 lesson and save a short proof note.'}
+           </div>
+           <div className="action-row">
+             <button className="ghost-button" onClick={() => saveJourneyProgress?.('manual_progress_saved')}>
+diff --git a/VidyaSetu-MVP/src/i18n.js b/VidyaSetu-MVP/src/i18n.js
+new file mode 100644
+index 0000000..01ba447
+--- /dev/null
++++ b/VidyaSetu-MVP/src/i18n.js
+@@ -0,0 +1,236 @@
++// Lightweight UI-chrome localization for VidyaSetu.
++// Covers navigation, page headers, primary buttons, and the pathway/journey
++// panels a first-generation learner must read to use the app without a helper.
++// English is the fallback; Hindi, Hinglish, and Odia (the persona languages)
++// are fully covered for the chrome. Other languages fall back to English chrome
++// while the counselor still replies in the learner's language.
++
++const en = {
++  nav: { counselor: 'Meera', pathways: 'My Pathway', journey: 'Learning Journey', passport: 'Skill Passport', jobs: 'Opportunities' },
++  navShort: { counselor: 'Meera', pathways: 'Pathway', journey: 'Journey', passport: 'Passport', jobs: 'Jobs' },
++  title: {
++    counselor: 'Talk to Meera',
++    pathways: 'Your personalised pathway',
++    journey: 'Learning journey',
++    passport: 'Skill Passport',
++    jobs: 'Opportunities',
++  },
++  subtitle: {
++    counselor: 'She builds your profile from a normal chat - type or speak, in your language.',
++    pathways: 'Meera decides the shortest credible route to your goal - and what unlocks next.',
++    journey: 'Concrete daily tasks. Each week ends with a proof task.',
++    passport: 'Verified skills with evidence - yours to share, only when you choose.',
++    jobs: 'Found live and verified - never fabricated. Everything shows when it was checked.',
++  },
++  btn: {
++    notMe: 'This is not me',
++    addLearner: 'Add new learner on this phone',
++    refreshRecommendations: 'Refresh recommendations',
++    startThisWeek: 'Start this week',
++    createJourney: 'Create / refresh journey',
++    refreshStudyPlan: 'Refresh study plan',
++    open: 'Open',
++  },
++  pathway: {
++    whyPathway: 'Why this pathway',
++    blocked: "What's blocked and why",
++    whyThisRoute: 'Why this route',
++    whatYouGet: 'What you get',
++    doThisNext: 'Do this next',
++    unlocksAfter: 'Unlocks after',
++    recommended: 'Recommended',
++    option: 'Option',
++  },
++  journey: {
++    yourPathway: 'Your pathway',
++    startHere: 'Start here',
++    todaysTask: "Today's task",
++    howToComplete: 'How to complete',
++    proofRequired: 'Proof required',
++    unlocksNext: 'Unlocks next',
++    week: 'Week',
++  },
++  thisWeek: {
++    title: 'Do this week',
++    subtitle: 'Real steps you can take right now — each one is on an official site or near you.',
++    byWhen: 'By when',
++    how: 'How',
++    inApp: 'In this app',
++  },
++};
++
++const hi = {
++  nav: { counselor: 'मीरा', pathways: 'मेरा रास्ता', journey: 'सीखने की यात्रा', passport: 'स्किल पासपोर्ट', jobs: 'अवसर' },
++  navShort: { counselor: 'मीरा', pathways: 'रास्ता', journey: 'यात्रा', passport: 'पासपोर्ट', jobs: 'अवसर' },
++  title: {
++    counselor: 'मीरा से बात करें',
++    pathways: 'आपका व्यक्तिगत रास्ता',
++    journey: 'सीखने की यात्रा',
++    passport: 'स्किल पासपोर्ट',
++    jobs: 'अवसर',
++  },
++  subtitle: {
++    counselor: 'सामान्य बातचीत से मीरा आपकी प्रोफ़ाइल बनाती है — अपनी भाषा में बोलें या लिखें।',
++    pathways: 'मीरा आपके लक्ष्य तक का सबसे छोटा भरोसेमंद रास्ता और अगला कदम तय करती है।',
++    journey: 'रोज़ के ठोस काम। हर हफ़्ते के अंत में एक प्रूफ़ टास्क।',
++    passport: 'सबूत के साथ आपके हुनर — सिर्फ़ तभी साझा करें जब आप चाहें।',
++    jobs: 'लाइव और सत्यापित — कभी झूठे नहीं। हर चीज़ कब जाँची गई, दिखता है।',
++  },
++  btn: {
++    notMe: 'यह मैं नहीं हूँ',
++    addLearner: 'इस फ़ोन पर नया लर्नर जोड़ें',
++    refreshRecommendations: 'सुझाव फिर से लाएँ',
++    startThisWeek: 'इस हफ़्ते शुरू करें',
++    createJourney: 'यात्रा बनाएँ / ताज़ा करें',
++    refreshStudyPlan: 'पढ़ाई योजना ताज़ा करें',
++    open: 'खोलें',
++  },
++  pathway: {
++    whyPathway: 'यह रास्ता क्यों',
++    blocked: 'अभी क्या रुका है और क्यों',
++    whyThisRoute: 'यह रास्ता क्यों',
++    whatYouGet: 'आपको क्या मिलेगा',
++    doThisNext: 'अगला कदम',
++    unlocksAfter: 'किसके बाद खुलेगा',
++    recommended: 'सुझाया गया',
++    option: 'विकल्प',
++  },
++  journey: {
++    yourPathway: 'आपका रास्ता',
++    startHere: 'यहाँ से शुरू करें',
++    todaysTask: 'आज का काम',
++    howToComplete: 'कैसे पूरा करें',
++    proofRequired: 'ज़रूरी प्रूफ़',
++    unlocksNext: 'आगे क्या खुलेगा',
++    week: 'सप्ताह',
++  },
++  thisWeek: {
++    title: 'इस हफ़्ते यह करें',
++    subtitle: 'अभी उठाए जा सकने वाले असली कदम — हर एक किसी आधिकारिक साइट पर या आपके पास है।',
++    byWhen: 'कब तक',
++    how: 'कैसे',
++    inApp: 'इसी ऐप में',
++  },
++};
++
++const hinglish = {
++  nav: { counselor: 'Meera', pathways: 'Mera Rasta', journey: 'Seekhne ki Yatra', passport: 'Skill Passport', jobs: 'Mauke' },
++  navShort: { counselor: 'Meera', pathways: 'Rasta', journey: 'Yatra', passport: 'Passport', jobs: 'Mauke' },
++  title: {
++    counselor: 'Meera se baat karein',
++    pathways: 'Aapka personalised rasta',
++    journey: 'Seekhne ki yatra',
++    passport: 'Skill Passport',
++    jobs: 'Mauke (Opportunities)',
++  },
++  subtitle: {
++    counselor: 'Normal chat se Meera aapki profile banati hai — apni bhasha mein type ya bol sakte ho.',
++    pathways: 'Meera aapke goal tak ka sabse chhota bharosemand rasta aur agla kadam decide karti hai.',
++    journey: 'Roz ke thos kaam. Har hafte ke end mein ek proof task.',
++    passport: 'Saboot ke saath aapke skills — share tabhi jab aap chaaho.',
++    jobs: 'Live aur verified — kabhi fake nahi. Sab kuch kab check hua, dikhta hai.',
++  },
++  btn: {
++    notMe: 'Yeh main nahi hoon',
++    addLearner: 'Is phone par naya learner add karein',
++    refreshRecommendations: 'Suggestions refresh karein',
++    startThisWeek: 'Is hafte shuru karein',
++    createJourney: 'Journey banayein / refresh karein',
++    refreshStudyPlan: 'Study plan refresh karein',
++    open: 'Kholein',
++  },
++  pathway: {
++    whyPathway: 'Yeh rasta kyun',
++    blocked: 'Abhi kya ruka hai aur kyun',
++    whyThisRoute: 'Yeh rasta kyun',
++    whatYouGet: 'Aapko kya milega',
++    doThisNext: 'Agla kadam',
++    unlocksAfter: 'Kiske baad khulega',
++    recommended: 'Recommended',
++    option: 'Option',
++  },
++  journey: {
++    yourPathway: 'Aapka rasta',
++    startHere: 'Yahan se shuru karein',
++    todaysTask: 'Aaj ka kaam',
++    howToComplete: 'Kaise poora karein',
++    proofRequired: 'Zaroori proof',
++    unlocksNext: 'Aage kya khulega',
++    week: 'Hafta',
++  },
++  thisWeek: {
++    title: 'Is hafte yeh karein',
++    subtitle: 'Abhi utha sakne wale asli kadam — har ek official site par ya aapke paas hai.',
++    byWhen: 'Kab tak',
++    how: 'Kaise',
++    inApp: 'Isi app mein',
++  },
++};
++
++const or = {
++  nav: { counselor: 'ମୀରା', pathways: 'ମୋ ବାଟ', journey: 'ଶିଖିବା ଯାତ୍ରା', passport: 'ସ୍କିଲ୍ ପାସପୋର୍ଟ', jobs: 'ସୁଯୋଗ' },
++  navShort: { counselor: 'ମୀରା', pathways: 'ବାଟ', journey: 'ଯାତ୍ରା', passport: 'ପାସପୋର୍ଟ', jobs: 'ସୁଯୋଗ' },
++  title: {
++    counselor: 'ମୀରା ସହ କଥା ହୁଅନ୍ତୁ',
++    pathways: 'ଆପଣଙ୍କ ନିଜସ୍ୱ ବାଟ',
++    journey: 'ଶିଖିବା ଯାତ୍ରା',
++    passport: 'ସ୍କିଲ୍ ପାସପୋର୍ଟ',
++    jobs: 'ସୁଯୋଗ',
++  },
++  subtitle: {
++    counselor: 'ସାଧାରଣ କଥାବାର୍ତ୍ତାରୁ ମୀରା ଆପଣଙ୍କ ପ୍ରୋଫାଇଲ୍ ତିଆରି କରେ — ନିଜ ଭାଷାରେ କୁହନ୍ତୁ କିମ୍ବା ଲେଖନ୍ତୁ।',
++    pathways: 'ମୀରା ଆପଣଙ୍କ ଲକ୍ଷ୍ୟ ପର୍ଯ୍ୟନ୍ତ ସବୁଠାରୁ ଛୋଟ ବିଶ୍ୱାସଯୋଗ୍ୟ ବାଟ ଓ ପରବର୍ତ୍ତୀ ପଦକ୍ଷେପ ସ୍ଥିର କରେ।',
++    journey: 'ପ୍ରତିଦିନର ନିର୍ଦ୍ଦିଷ୍ଟ କାମ। ପ୍ରତି ସପ୍ତାହ ଶେଷରେ ଗୋଟିଏ ପ୍ରମାଣ କାମ।',
++    passport: 'ପ୍ରମାଣ ସହ ଆପଣଙ୍କ ଦକ୍ଷତା — ଆପଣ ଚାହିଁଲେ ହିଁ ଶେୟାର କରନ୍ତୁ।',
++    jobs: 'ଲାଇଭ୍ ଓ ଯାଞ୍ଚିତ — କେବେ ମିଥ୍ୟା ନୁହେଁ। ସବୁ କେବେ ଯାଞ୍ଚ ହେଲା ଦେଖାଯାଏ।',
++  },
++  btn: {
++    notMe: 'ଏହା ମୁଁ ନୁହେଁ',
++    addLearner: 'ଏହି ଫୋନରେ ନୂଆ ଶିକ୍ଷାର୍ଥୀ ଯୋଡ଼ନ୍ତୁ',
++    refreshRecommendations: 'ସୁପାରିଶ ପୁଣି ଆଣନ୍ତୁ',
++    startThisWeek: 'ଏହି ସପ୍ତାହ ଆରମ୍ଭ କରନ୍ତୁ',
++    createJourney: 'ଯାତ୍ରା ତିଆରି / ସତେଜ କରନ୍ତୁ',
++    refreshStudyPlan: 'ପଢ଼ା ଯୋଜନା ସତେଜ କରନ୍ତୁ',
++    open: 'ଖୋଲନ୍ତୁ',
++  },
++  pathway: {
++    whyPathway: 'ଏହି ବାଟ କାହିଁକି',
++    blocked: 'ବର୍ତ୍ତମାନ କ’ଣ ଅଟକିଛି ଓ କାହିଁକି',
++    whyThisRoute: 'ଏହି ବାଟ କାହିଁକି',
++    whatYouGet: 'ଆପଣ କ’ଣ ପାଇବେ',
++    doThisNext: 'ପରବର୍ତ୍ତୀ ପଦକ୍ଷେପ',
++    unlocksAfter: 'କେବେ ଖୋଲିବ',
++    recommended: 'ସୁପାରିଶ',
++    option: 'ବିକଳ୍ପ',
++  },
++  journey: {
++    yourPathway: 'ଆପଣଙ୍କ ବାଟ',
++    startHere: 'ଏଠାରୁ ଆରମ୍ଭ କରନ୍ତୁ',
++    todaysTask: 'ଆଜିର କାମ',
++    howToComplete: 'କିପରି ସମ୍ପୂର୍ଣ୍ଣ କରିବେ',
++    proofRequired: 'ଆବଶ୍ୟକ ପ୍ରମାଣ',
++    unlocksNext: 'ଆଗକୁ କ’ଣ ଖୋଲିବ',
++    week: 'ସପ୍ତାହ',
++  },
++  thisWeek: {
++    title: 'ଏହି ସପ୍ତାହ ଏହା କରନ୍ତୁ',
++    subtitle: 'ବର୍ତ୍ତମାନ ନେଇପାରିବା ଭଳି ପ୍ରକୃତ ପଦକ୍ଷେପ — ପ୍ରତ୍ୟେକ ଆଧିକାରିକ ସାଇଟରେ କିମ୍ବା ଆପଣଙ୍କ ପାଖରେ।',
++    byWhen: 'କେବେ ସୁଦ୍ଧା',
++    how: 'କିପରି',
++    inApp: 'ଏହି ଆପ୍‌ରେ',
++  },
++};
++
++const DICTS = { en, hi, hinglish, or };
++
++export function uiLangCode(languageName = '') {
++  const raw = String(languageName || '').toLowerCase();
++  if (/hinglish|hindi \+ english|hindi\+english/.test(raw)) return 'hinglish';
++  if (/odia|oriya|ଓଡ଼ିଆ/.test(raw)) return 'or';
++  if (/hindi|हिंदी|हिन्दी/.test(raw)) return 'hi';
++  return 'en';
++}
++
++export function getTranslations(languageName = '') {
++  return DICTS[uiLangCode(languageName)] || en;
++}
+diff --git a/VidyaSetu-MVP/src/styles.css b/VidyaSetu-MVP/src/styles.css
+index 9a9ecce..988261e 100644
+--- a/VidyaSetu-MVP/src/styles.css
++++ b/VidyaSetu-MVP/src/styles.css
+@@ -2087,6 +2087,179 @@ button:disabled {
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+ }
+ 
++.route-outcome-grid {
++  display: grid;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  gap: 10px;
++  margin-top: 14px;
++}
++
++.route-outcome-grid span {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++  border: 1px solid var(--border);
++  border-radius: 12px;
++  padding: 10px 12px;
++  background: #f8fbff;
++  color: #344054;
++  font-size: 0.82rem;
++  line-height: 1.4;
++}
++
++.route-outcome-grid span b {
++  font-size: 0.72rem;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++  color: #275efe;
++}
++
++.pathway-summary-line {
++  margin: 14px 0 4px;
++  padding: 10px 14px;
++  border: 1px solid rgba(39, 94, 254, 0.18);
++  border-radius: 12px;
++  background: #f4f8ff;
++  color: #1d2939;
++  font-size: 0.86rem;
++  line-height: 1.45;
++}
++
++.pathway-summary-line b {
++  color: #275efe;
++}
++
++@media (max-width: 640px) {
++  .route-outcome-grid {
++    grid-template-columns: 1fr;
++  }
++}
++
++.journey-tip {
++  margin: 8px 0 12px;
++  color: #475467;
++  font-size: 0.86rem;
++  line-height: 1.45;
++}
++
++.module-unlock-hint {
++  display: block;
++  margin: 2px 0 8px;
++  color: #275efe;
++  font-size: 0.78rem;
++  font-weight: 700;
++}
++
++.journey-next-line {
++  margin: 14px 0;
++  padding: 10px 14px;
++  border: 1px solid rgba(39, 94, 254, 0.18);
++  border-radius: 12px;
++  background: #f4f8ff;
++  color: #1d2939;
++  font-size: 0.88rem;
++  line-height: 1.45;
++}
++
++.journey-next-line b {
++  color: #275efe;
++}
++
++.pathway-source-link {
++  display: inline-block;
++  margin-top: 10px;
++  font-size: 0.82rem;
++  font-weight: 700;
++  color: #275efe;
++}
++
++.this-week-card {
++  margin-top: 16px;
++}
++
++.this-week-subtitle {
++  margin: 4px 0 12px;
++  color: #475467;
++  font-size: 0.86rem;
++}
++
++.this-week-list {
++  display: grid;
++  gap: 10px;
++}
++
++.this-week-item {
++  display: flex;
++  gap: 12px;
++  align-items: flex-start;
++  border: 1px solid var(--border);
++  border-radius: 12px;
++  padding: 12px 14px;
++  background: #f8fbff;
++}
++
++.this-week-num {
++  flex: 0 0 auto;
++  width: 26px;
++  height: 26px;
++  border-radius: 50%;
++  background: #275efe;
++  color: #fff;
++  font-weight: 800;
++  font-size: 0.82rem;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++}
++
++.this-week-body {
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.this-week-body strong {
++  color: #1d2939;
++  font-size: 0.92rem;
++}
++
++.this-week-body small {
++  color: #475467;
++  font-size: 0.82rem;
++  line-height: 1.45;
++}
++
++.this-week-meta {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 6px 14px;
++  align-items: center;
++  margin-top: 2px;
++}
++
++.this-week-when {
++  font-size: 0.76rem;
++  font-weight: 800;
++  color: #275efe;
++  text-transform: uppercase;
++  letter-spacing: 0.03em;
++}
++
++.this-week-meta a {
++  font-size: 0.82rem;
++  font-weight: 700;
++  color: #275efe;
++}
++
++.this-week-inapp {
++  font-size: 0.76rem;
++  font-weight: 700;
++  color: #0f766e;
++  background: rgba(15, 118, 110, 0.1);
++  padding: 2px 8px;
++  border-radius: 999px;
++}
++
+ .micro-task-list {
+   display: grid;
+   gap: 7px;

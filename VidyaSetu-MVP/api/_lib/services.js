@@ -2,6 +2,11 @@ import {
   ACADEMIC_RESOURCE_DOCS,
   KB_DOCS,
   sourceLimitedPathways,
+  validatePathwayRoutes,
+  buildLocationGuardrail,
+  decorateRouteExplanation,
+  goalFamily,
+  buildThisWeekActions,
 } from './mvp.js';
 import { detectLanguageStyle, languageInstruction, phrase } from './language.js';
 
@@ -1003,7 +1008,14 @@ export async function generateProfile(transcript) {
 
 export async function generatePathways(profile, question = '') {
   const outputLanguage = `${languageInstruction(profile, question)} Keep official scheme, exam, employer, and source names unchanged. Translate or localize route names, tradeoffs, time, distance, income, callback messages, lesson titles, and learner-facing suggestions into that language/style.`;
-  const offScope = /canada|loan|marriage|medical diagnosis|legal/i.test(question);
+  const enterpriseContext =
+    profile.learner_goal?.type === 'self_employment_enterprise' ||
+    /business|enterprise|scheme|mudra|pmegp|pmfme|udyam|setup|\bshop\b|farm|poultry|mushroom|dairy|self.?employ|apna kaam/i.test(
+      question,
+    );
+  const offScope =
+    /canada|marriage|medical diagnosis|legal advice/i.test(question) ||
+    (/\bloan\b/i.test(question) && !enterpriseContext);
   if (offScope) {
     const guardData = enrichPathwayData(
       {
@@ -1042,15 +1054,14 @@ export async function generatePathways(profile, question = '') {
   const pathwayProfile = academicMode
     ? academicPathwayProfile(profile, question, { entrancePrep, academicPrep, schoolStudy, goal })
     : profile;
-  const hasJobMobility = goal.intent === 'job' && profile.relocation_preference;
+  const relocationText = String(profile.relocation_preference || '').toLowerCase();
+  const negativeMobility = /\bno\b|nahi|not |local|same city|same town|won'?t|cannot|can'?t/.test(relocationText);
+  const positiveMobility =
+    !negativeMobility && /remote|anywhere|india.?wide|relocat|pan.?india|wfh|work from home|open to/.test(relocationText);
+  const hasJobMobility = goal.intent === 'job' && positiveMobility;
   if (goal.needs_location_for_offline && !profile.location && !hasJobMobility) {
     const guardData = enrichPathwayData(
-      {
-        routes: [],
-        confidence: 0.7,
-        callback_flag: true,
-        callback_message: phrase(profile, question, 'need_location', {}),
-      },
+      buildLocationGuardrail(profile, { message: phrase(profile, question, 'need_location', {}) }),
       profile,
       { goal, academicMode: false, evidenceProvider: 'location_guardrail', evidenceCount: 0 },
     );
@@ -1070,7 +1081,9 @@ export async function generatePathways(profile, question = '') {
 
   const aspiration = (pathwayProfile.aspirations || []).join(' ') || 'career skills';
   const location = pathwayProfile.relocation_preference || pathwayProfile.location || 'India';
-  const webEvidence = await discoverPathwayEvidence(
+  const liveEvidenceEnabled = process.env.DISABLE_PATHWAY_WEB_SEARCH !== 'true';
+  const webEvidence = liveEvidenceEnabled
+    ? await discoverPathwayEvidence(
     entrancePrep
       ? `${profile.academic_goal?.exam || 'JEE entrance exam'} official syllabus mock test practice ${profile.academic_goal?.subjects?.join(' ') || ''}`
       : academicMode
@@ -1082,8 +1095,9 @@ export async function generatePathways(profile, question = '') {
           : goal.intent === 'college'
             ? `${location} ${aspiration} internship project placement college opportunity`
             : `${location} ${aspiration} government scheme training scholarship job official PMKVY NCS`,
-    academicMode ? ACADEMIC_RESOURCE_DOCS : KB_DOCS,
-  );
+        academicMode ? ACADEMIC_RESOURCE_DOCS : KB_DOCS,
+      )
+    : { data: [], ok: false, provider: 'web_search_disabled', error: null };
   const evidence = [
     ...(academicMode ? ACADEMIC_RESOURCE_DOCS : KB_DOCS),
     ...(webEvidence.data || []).slice(0, 5).map((item) => ({
@@ -1116,15 +1130,30 @@ export async function generatePathways(profile, question = '') {
     system: `${outputLanguage} ${pathwaySystem}`,
     prompt: `Learner profile:\n${JSON.stringify(profile)}\n\nEvidence:\n${JSON.stringify(evidence)}\n\nQuestion: ${question || 'Generate a personalized pathway map.'}`,
   });
-  const data = academicMode && hasVocationalLeak(generated.data?.routes)
-    ? {
-        ...generated.data,
-        routes: sourceLimitedPathways(pathwayProfile),
-        confidence: Math.max(Number(generated.data?.confidence || 0), 0.82),
-        callback_flag: false,
-        leak_guard_applied: true,
-      }
-    : generated.data;
+  const family = goalFamily(pathwayProfile, { entrancePrep, academicPrep, schoolStudy });
+  const deterministicRoutes = sourceLimitedPathways(pathwayProfile);
+  const validation = validatePathwayRoutes(pathwayProfile, generated.data?.routes, {
+    family,
+    deterministic: deterministicRoutes,
+  });
+  const routesWereCorrected = validation.replaced || validation.used_deterministic;
+  const data = {
+    ...generated.data,
+    routes: validation.routes,
+    confidence: routesWereCorrected
+      ? Math.max(Number(generated.data?.confidence || 0), 0.82)
+      : Number(generated.data?.confidence || 0.82),
+    callback_flag: validation.routes.length ? false : Boolean(generated.data?.callback_flag),
+    route_validation: {
+      family: validation.family,
+      incoming: validation.incoming_count,
+      kept: validation.kept_count,
+      rejected: validation.rejected,
+      replaced: validation.replaced,
+      used_deterministic: validation.used_deterministic,
+    },
+    leak_guard_applied: routesWereCorrected,
+  };
 
   return {
     ...generated,
@@ -1134,6 +1163,7 @@ export async function generatePathways(profile, question = '') {
       entrancePrep,
       academicPrep,
       schoolStudy,
+      family,
       evidenceProvider: webEvidence.provider,
       evidenceCount: evidence.length,
     }),
@@ -1186,19 +1216,16 @@ function academicPathwayProfile(profile = {}, question = '', context = {}) {
   };
 }
 
-function hasVocationalLeak(routes = []) {
-  const text = JSON.stringify(routes || []).toLowerCase();
-  return /beauty|salon|mehandi|pmkvy|assistant beautician|wellness|data science|data analyst|portfolio sprint|fresher|internship|apprenticeship|vacancy|employer outreach|hirer outreach|job outreach|placement job/.test(text);
-}
-
 function enrichPathwayData(data = {}, profile = {}, context = {}) {
   const routes = Array.isArray(data.routes) ? data.routes : [];
   const cleanedRoutes = context.academicMode ? routes.map((route) => sanitizeAcademicRoute(route)) : routes;
   const missingFacts = missingProfileFacts(profile, context);
   const persona = personaForProfile(profile, context);
+  const family = context.family || goalFamily(profile, context);
   return {
     ...data,
     persona,
+    this_week_actions: buildThisWeekActions(profile, family),
     missing_profile_facts: missingFacts,
     recommendation_trace: {
       persona,
@@ -1235,19 +1262,29 @@ function enrichRouteTrace(route = {}, index = 0, profile = {}, context = {}, per
   const matchedFacts = profileFacts(profile, context).slice(0, 7);
   const blockers = routeBlockers(normalizedRoute, profile, context, missingFacts);
   const filters = routeFilters(normalizedRoute, profile, context);
+  const family = context.family || goalFamily(profile, context);
+  const nextAction = nextActionForRoute(normalizedRoute, profile, context, blockers);
+  const decorated = decorateRouteExplanation(normalizedRoute, {
+    profile,
+    family,
+    matchedFacts,
+    blockers,
+    nextAction,
+  });
   return {
-    ...normalizedRoute,
+    ...decorated,
     id: normalizedRoute.id || `route-${index + 1}`,
     confidence: Number(normalizedRoute.confidence || 0.72),
     trace: {
       persona,
+      family,
       matched_facts: matchedFacts,
       missing_facts: missingFacts,
       filters,
       blockers,
       explanation: traceExplanation(normalizedRoute, matchedFacts, blockers),
     },
-    next_action: nextActionForRoute(normalizedRoute, profile, context, blockers),
+    next_action: nextAction,
   };
 }
 
@@ -1256,19 +1293,25 @@ function normalizeRoute(route = {}, index = 0, context = {}) {
   const routeName =
     safeRouteText(normalized.name) ||
     safeRouteText(normalized.title) ||
+    safeRouteText(normalized.route_name) ||
+    safeRouteText(normalized.route_title) ||
     safeRouteText(normalized.source_title) ||
     safeRouteText(normalized.tradeoff) ||
+    safeRouteText(normalized.route_description) ||
     (context.academicMode ? `Study route ${index + 1}` : `Pathway route ${index + 1}`);
   return {
     ...normalized,
     id: safeRouteText(normalized.id) || `route-${index + 1}`,
     name: routeName,
-    source_url: safeRouteUrl(normalized.source_url || normalized.url || normalized.link),
+    source_url: safeRouteUrl(normalized.source_url || normalized.url || normalized.link || normalized.route_link),
     source_title: safeRouteText(normalized.source_title || normalized.source || normalized.provider, 'verified evidence'),
-    tradeoff: safeRouteText(normalized.tradeoff || normalized.why || normalized.description, 'Good fit based on the learner profile.'),
+    tradeoff: safeRouteText(
+      normalized.tradeoff || normalized.why || normalized.why_this_route || normalized.description || normalized.route_description,
+      'Good fit based on the learner profile.',
+    ),
     time: safeRouteText(normalized.time || normalized.timeline || normalized.duration, 'To be confirmed'),
     distance: safeRouteText(normalized.distance || normalized.mode || normalized.delivery, 'Phone-first'),
-    income: safeRouteText(normalized.income || normalized.outcome || normalized.result, 'Progress toward goal'),
+    income: safeRouteText(normalized.income || normalized.outcome || normalized.result || normalized.expected_outcome, 'Progress toward goal'),
     confidence: normalizeConfidence(normalized.confidence),
     focus_subjects: normalizeStringList(normalized.focus_subjects || normalized.subjects || normalized.skills),
   };
