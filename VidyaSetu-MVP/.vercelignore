@@ -10,3 +10,5 @@ uploads/
 node_modules/
 dist/
 .git/
+.env
+.env.*
