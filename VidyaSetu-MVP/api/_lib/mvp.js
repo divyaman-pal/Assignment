@@ -2202,6 +2202,320 @@ const FAMILY_EXPLANATIONS = {
   },
 };
 
+const FAMILY_EXPLANATIONS_I18N = {
+  hinglish: {
+    entrance_exam: {
+      why: 'Yeh rasta exam track par rakhta hai: syllabus, concepts, practice, mocks aur error-log. Job ya random training abhi distract nahi karegi.',
+      next: 'Study plan kholo aur aaj pehla syllabus/diagnostic block shuru karo.',
+      locked: 'Exam-prep mode mein job, training aur outreach cards locked rahenge.',
+      risk: 'Sirf video dekhna progress nahi hai; har block ke end mein solved questions aur error-log chahiye.',
+      outcome: 'Career step se pehle syllabus coverage, accuracy aur mock score better hoga.',
+    },
+    board_exam: {
+      why: 'Yeh rasta official NCERT/DIKSHA aur sample papers use karta hai, taki job route se pehle board marks improve ho.',
+      next: 'NCERT/revision block shuru karo aur aaj ek practice set solve karo.',
+      locked: 'Board exam preparation ke dauran job aur outreach cards locked rahenge.',
+      risk: 'Random videos se mistakes repeat hoti hain; har week mistake log rakho.',
+      outcome: 'Board marks aur next pathway eligibility dono strong honge.',
+    },
+    school_study: {
+      why: 'Yeh rasta aapki class aur subjects ke hisaab se NCERT/DIKSHA practice se weak chapters fix karta hai.',
+      next: 'Ek weak chapter chuno aur aaj pehla practice set finish karo.',
+      locked: 'School study help ke liye job/outreach cards nahi dikhaye jaate.',
+      risk: 'Mistake tracking ke bina same errors test mein repeat honge.',
+      outcome: 'Concepts clear, marks better, aur daily study habit steady hogi.',
+    },
+    data_science_job: {
+      why: 'Yeh rasta data-science hiring stack banata hai: Python, SQL, real project/portfolio, resume aur consent-based outreach.',
+      next: 'Readiness gap-check karo, phir aaj pehla portfolio project task shuru karo.',
+      locked: 'Employer outreach sirf verifiable project/proof aur consent ke baad khulega.',
+      risk: 'Sirf course certificate se shortlisting mushkil hoti hai; shareable project proof zyada important hai.',
+      outcome: 'Fresher/analyst/internship roles ke liye shortlist-ready profile.',
+    },
+    college: {
+      why: 'Yeh rasta college profile ko internship/project-ready proof mein badalta hai: portfolio, resume aur outreach.',
+      next: 'Profile/portfolio gap map banao, phir aaj ek project proof add karo.',
+      locked: 'Outreach resume/portfolio proof aur consent ke baad khulega.',
+      risk: 'Project proof ke bina applications silent reject ho sakti hain.',
+      outcome: 'Internships, projects aur fresher roles ke liye stronger shortlisting.',
+    },
+    informal_skill: {
+      why: 'Yeh rasta existing hands-on skill ko proof banata hai: photo/video/RPL. Beginner course zaroori nahi.',
+      next: 'Aaj ek sample-work proof photo/video/voice note capture karo.',
+      locked: 'Local work/outreach enough proof ya RPL-grade evidence aur consent ke baad khulega.',
+      risk: 'Certificate na hona barrier nahi; unverified claim barrier hai. Clear sample proof rakho.',
+      outcome: 'Trusted Skill Passport jo local work, RPL ya apprenticeship unlock karega.',
+    },
+    enterprise: {
+      why: 'Yeh rasta paise kharch karne se pehle setup, budget, scheme/loan eligibility, buyers aur risk check karta hai.',
+      next: 'Aaj one-page setup plan aur simple budget sheet likho.',
+      locked: 'Loan/scheme aur scaling steps written plan aur worker verification ke baad khulenge.',
+      risk: 'Income guarantee nahi hoti; chhota start karo aur official sources se scheme verify karo.',
+      outcome: 'Setup se first sales tak verified, low-risk plan.',
+    },
+    job: {
+      why: 'Yeh direct, location-aware job search hai jisme resume/proof readiness aur consent-based outreach hai.',
+      next: 'Role/commute confirm karo, resume/proof gap fix karo, phir aaj leads shortlist karo.',
+      locked: 'Outreach sirf wahi fields use karega jinke liye aap consent doge.',
+      risk: 'Offline roles ke liye travel se pehle verified location aur safe commute chahiye.',
+      outcome: 'Real interview tak tracked application pipeline.',
+    },
+    vocational: {
+      why: 'Yeh rasta local/online training ke saath phone-first practice deta hai, taki centre verify hote waqt proof banta rahe.',
+      next: 'Ek local aur ek online option shortlist karo, phir aaj pehla practice task shuru karo.',
+      locked: 'Offline centre/commute steps location aur safety confirm hone tak locked rahenge.',
+      risk: 'Course seat ka wait dropout time ban sakta hai; phone-first practice abhi shuru karo.',
+      outcome: 'Verified training plus apprenticeship/entry work ke liye early proof.',
+    },
+    generic: {
+      why: 'Yeh aapke current profile se goal tak ka sabse chhota bharosemand step hai.',
+      next: 'Weekly plan banao aur aaj pehla proof task finish karo.',
+      locked: 'Next step proof, location (agar offline hai), aur consent ke baad khulega.',
+      risk: 'Time, location aur proof confirm karo taki plan realistic rahe.',
+      outcome: 'Aapke goal ki taraf clear, visible progress.',
+    },
+  },
+  hi: {
+    entrance_exam: {
+      why: 'यह रास्ता आपको exam track पर रखता है: syllabus, concepts, practice, mocks और error-log. अभी job या random training distract नहीं करेगी.',
+      next: 'Study plan खोलें और आज पहला syllabus/diagnostic block शुरू करें.',
+      locked: 'Exam-prep mode में job, training और outreach cards locked रहेंगे.',
+      risk: 'सिर्फ video देखना progress नहीं है; हर block के अंत में solved questions और error-log जरूरी है.',
+      outcome: 'Career step से पहले syllabus coverage, accuracy और mock score बेहतर होंगे.',
+    },
+    board_exam: {
+      why: 'यह रास्ता official NCERT/DIKSHA और sample papers से board marks सुधारता है, job route से पहले.',
+      next: 'NCERT/revision block शुरू करें और आज एक practice set solve करें.',
+      locked: 'Board exam preparation के दौरान job और outreach cards locked रहेंगे.',
+      risk: 'Random videos से mistakes repeat होती हैं; हर week mistake log रखें.',
+      outcome: 'Board marks और next pathway eligibility मजबूत होगी.',
+    },
+    school_study: {
+      why: 'यह रास्ता आपकी class और subjects के हिसाब से NCERT/DIKSHA practice से weak chapters ठीक करता है.',
+      next: 'एक weak chapter चुनें और आज पहला practice set finish करें.',
+      locked: 'School study help में job/outreach cards नहीं दिखाए जाते.',
+      risk: 'Mistake tracking के बिना वही errors test में repeat होंगे.',
+      outcome: 'Concepts clear होंगे, marks बेहतर होंगे, और daily study habit बनेगी.',
+    },
+    data_science_job: {
+      why: 'यह रास्ता Data Science hiring stack बनाता है: Python, SQL, real project/portfolio, resume और consent-based outreach.',
+      next: 'Readiness gap-check करें, फिर आज पहला portfolio project task शुरू करें.',
+      locked: 'Employer outreach verifiable project/proof और consent के बाद ही खुलेगा.',
+      risk: 'सिर्फ course certificate से shortlisting मुश्किल है; shareable project proof ज्यादा जरूरी है.',
+      outcome: 'Fresher/analyst/internship roles के लिए shortlist-ready profile.',
+    },
+    college: {
+      why: 'यह रास्ता college profile को internship/project-ready proof में बदलता है: portfolio, resume और outreach.',
+      next: 'Profile/portfolio gap map बनाएं, फिर आज एक project proof जोड़ें.',
+      locked: 'Outreach resume/portfolio proof और consent के बाद खुलेगा.',
+      risk: 'Project proof के बिना applications silent reject हो सकती हैं.',
+      outcome: 'Internships, projects और fresher roles के लिए stronger shortlisting.',
+    },
+    informal_skill: {
+      why: 'यह रास्ता आपकी existing hands-on skill को proof बनाता है: photo/video/RPL. Beginner course जरूरी नहीं.',
+      next: 'आज एक sample-work proof photo/video/voice note capture करें.',
+      locked: 'Local work/outreach enough proof या RPL-grade evidence और consent के बाद खुलेगा.',
+      risk: 'Certificate न होना barrier नहीं; unverified claim barrier है. Clear sample proof रखें.',
+      outcome: 'Trusted Skill Passport जो local work, RPL या apprenticeship unlock करेगा.',
+    },
+    enterprise: {
+      why: 'यह रास्ता पैसे खर्च करने से पहले setup, budget, scheme/loan eligibility, buyers और risk check करता है.',
+      next: 'आज one-page setup plan और simple budget sheet लिखें.',
+      locked: 'Loan/scheme और scaling steps written plan और worker verification के बाद खुलेंगे.',
+      risk: 'Income guarantee नहीं होती; छोटा start करें और official sources से scheme verify करें.',
+      outcome: 'Setup से first sales तक verified, low-risk plan.',
+    },
+    job: {
+      why: 'यह direct, location-aware job search है जिसमें resume/proof readiness और consent-based outreach है.',
+      next: 'Role/commute confirm करें, resume/proof gap fix करें, फिर आज leads shortlist करें.',
+      locked: 'Outreach केवल वही fields use करेगा जिनके लिए आप consent देंगे.',
+      risk: 'Offline roles के लिए travel से पहले verified location और safe commute चाहिए.',
+      outcome: 'Real interview तक tracked application pipeline.',
+    },
+    vocational: {
+      why: 'यह रास्ता local/online training के साथ phone-first practice देता है, ताकि centre verify होते समय proof बनता रहे.',
+      next: 'एक local और एक online option shortlist करें, फिर आज पहला practice task शुरू करें.',
+      locked: 'Offline centre/commute steps location और safety confirm होने तक locked रहेंगे.',
+      risk: 'Course seat का wait dropout time बन सकता है; phone-first practice अभी शुरू करें.',
+      outcome: 'Verified training plus apprenticeship/entry work के लिए early proof.',
+    },
+    generic: {
+      why: 'यह आपके current profile से goal तक का सबसे छोटा भरोसेमंद step है.',
+      next: 'Weekly plan बनाएं और आज पहला proof task finish करें.',
+      locked: 'Next step proof, location (अगर offline है), और consent के बाद खुलेगा.',
+      risk: 'Time, location और proof confirm करें ताकि plan realistic रहे.',
+      outcome: 'आपके goal की तरफ clear, visible progress.',
+    },
+  },
+  or: {
+    entrance_exam: {
+      why: 'ଏହି ବାଟ exam track ରେ ରଖେ: syllabus, concepts, practice, mocks ଏବଂ error-log. ଏବେ job/training distraction ନୁହେଁ.',
+      next: 'Study plan ଖୋଲନ୍ତୁ ଏବଂ ଆଜି ପ୍ରଥମ syllabus/diagnostic block ଆରମ୍ଭ କରନ୍ତୁ.',
+      locked: 'Exam-prep mode ରେ job, training ଏବଂ outreach cards locked ରହିବ.',
+      risk: 'କେବଳ video ଦେଖିବା progress ନୁହେଁ; ପ୍ରତି block ଶେଷରେ solved questions ଏବଂ error-log ଦରକାର.',
+      outcome: 'Career step ପୂର୍ବରୁ syllabus coverage, accuracy ଏବଂ mock score ଭଲ ହେବ.',
+    },
+    board_exam: {
+      why: 'ଏହି ବାଟ official NCERT/DIKSHA ଏବଂ sample papers ଦ୍ୱାରା board marks ସୁଧାରେ.',
+      next: 'NCERT/revision block ଆରମ୍ଭ କରନ୍ତୁ ଏବଂ ଆଜି ଗୋଟିଏ practice set solve କରନ୍ତୁ.',
+      locked: 'Board exam preparation ସମୟରେ job ଏବଂ outreach cards locked ରହିବ.',
+      risk: 'Random videos ଦେଖିଲେ mistakes repeat ହୁଏ; ପ୍ରତି week mistake log ରଖନ୍ତୁ.',
+      outcome: 'Board marks ଏବଂ next pathway eligibility ମଜବୁତ ହେବ.',
+    },
+    school_study: {
+      why: 'ଏହି ବାଟ ଆପଣଙ୍କ class/subjects ଅନୁସାରେ NCERT/DIKSHA practice ଦ୍ୱାରା weak chapters ଠିକ କରେ.',
+      next: 'ଗୋଟିଏ weak chapter ବାଛନ୍ତୁ ଏବଂ ଆଜି ପ୍ରଥମ practice set finish କରନ୍ତୁ.',
+      locked: 'School study help ପାଇଁ job/outreach cards ଦେଖାଯାଏ ନାହିଁ.',
+      risk: 'Mistake tracking ନଥିଲେ ସେହି errors test ରେ repeat ହେବ.',
+      outcome: 'Concepts clear, marks better, ଏବଂ daily study habit steady ହେବ.',
+    },
+    data_science_job: {
+      why: 'ଏହି ବାଟ Data Science hiring stack ତିଆରି କରେ: Python, SQL, project/portfolio, resume ଏବଂ consent-based outreach.',
+      next: 'Readiness gap-check କରନ୍ତୁ, ପରେ ଆଜି ପ୍ରଥମ portfolio project task ଆରମ୍ଭ କରନ୍ତୁ.',
+      locked: 'Employer outreach କେବଳ verifiable project/proof ଏବଂ consent ପରେ ଖୁଲିବ.',
+      risk: 'କେବଳ course certificate ରେ shortlisting କଷ୍ଟକର; shareable project proof ଅଧିକ ଜରୁରୀ.',
+      outcome: 'Fresher/analyst/internship roles ପାଇଁ shortlist-ready profile.',
+    },
+    college: {
+      why: 'ଏହି ବାଟ college profile କୁ internship/project-ready proof କରେ: portfolio, resume ଏବଂ outreach.',
+      next: 'Profile/portfolio gap map କରନ୍ତୁ, ପରେ ଆଜି ଗୋଟିଏ project proof ଯୋଡନ୍ତୁ.',
+      locked: 'Outreach resume/portfolio proof ଏବଂ consent ପରେ ଖୁଲିବ.',
+      risk: 'Project proof ନଥିଲେ applications silent reject ହୋଇପାରେ.',
+      outcome: 'Internships, projects ଏବଂ fresher roles ପାଇଁ stronger shortlisting.',
+    },
+    informal_skill: {
+      why: 'ଏହି ବାଟ existing hands-on skill କୁ proof କରେ: photo/video/RPL. Beginner course ଦରକାର ନୁହେଁ.',
+      next: 'ଆଜି ଗୋଟିଏ sample-work proof photo/video/voice note capture କରନ୍ତୁ.',
+      locked: 'Local work/outreach enough proof କିମ୍ବା RPL-grade evidence ଏବଂ consent ପରେ ଖୁଲିବ.',
+      risk: 'Certificate ନଥିବା barrier ନୁହେଁ; unverified claim barrier. Clear sample proof ରଖନ୍ତୁ.',
+      outcome: 'Trusted Skill Passport ଯାହା local work, RPL କିମ୍ବା apprenticeship unlock କରିବ.',
+    },
+    enterprise: {
+      why: 'ଏହି ବାଟ ଟଙ୍କା ଖର୍ଚ୍ଚ ପୂର୍ବରୁ setup, budget, scheme/loan eligibility, buyers ଏବଂ risk check କରେ.',
+      next: 'ଆଜି one-page setup plan ଏବଂ simple budget sheet ଲେଖନ୍ତୁ.',
+      locked: 'Loan/scheme ଏବଂ scaling steps written plan ଓ worker verification ପରେ ଖୁଲିବ.',
+      risk: 'Income guarantee ନାହିଁ; ଛୋଟ ଆରମ୍ଭ କରନ୍ତୁ ଏବଂ official sources ରୁ scheme verify କରନ୍ତୁ.',
+      outcome: 'Setup ରୁ first sales ପର୍ଯ୍ୟନ୍ତ verified, low-risk plan.',
+    },
+    job: {
+      why: 'ଏହା direct, location-aware job search; resume/proof readiness ଏବଂ consent-based outreach ସହିତ.',
+      next: 'Role/commute confirm କରନ୍ତୁ, resume/proof gap fix କରନ୍ତୁ, ପରେ ଆଜି leads shortlist କରନ୍ତୁ.',
+      locked: 'Outreach କେବଳ consent ଦେଇଥିବା fields use କରିବ.',
+      risk: 'Offline roles ପାଇଁ travel ପୂର୍ବରୁ verified location ଏବଂ safe commute ଦରକାର.',
+      outcome: 'Real interview ପର୍ଯ୍ୟନ୍ତ tracked application pipeline.',
+    },
+    vocational: {
+      why: 'ଏହି ବାଟ local/online training ସହ phone-first practice ଦେଏ, ଯେତେବେଳେ centre verify ହୁଏ proof ବନେ.',
+      next: 'ଗୋଟିଏ local ଏବଂ ଗୋଟିଏ online option shortlist କରନ୍ତୁ, ପରେ ଆଜି ପ୍ରଥମ practice task ଆରମ୍ଭ କରନ୍ତୁ.',
+      locked: 'Offline centre/commute steps location ଏବଂ safety confirm ହେଉଅ ପର୍ଯ୍ୟନ୍ତ locked ରହିବ.',
+      risk: 'Course seat ପାଇଁ wait କଲେ dropout time ହୋଇପାରେ; phone-first practice ଏବେ ଆରମ୍ଭ କରନ୍ତୁ.',
+      outcome: 'Verified training plus apprenticeship/entry work ପାଇଁ early proof.',
+    },
+    generic: {
+      why: 'ଏହା current profile ରୁ goal ପର୍ଯ୍ୟନ୍ତ ସବୁଠାରୁ ଛୋଟ credible step.',
+      next: 'Weekly plan ବନାନ୍ତୁ ଏବଂ ଆଜି ପ୍ରଥମ proof task finish କରନ୍ତୁ.',
+      locked: 'Next step proof, location (offline ହେଲେ), ଏବଂ consent ପରେ ଖୁଲିବ.',
+      risk: 'Time, location ଏବଂ proof confirm କରନ୍ତୁ ଯାହାଦ୍ୱାରା plan realistic ରହିବ.',
+      outcome: 'ଆପଣଙ୍କ goal ଦିଗରେ clear, visible progress.',
+    },
+  },
+};
+
+const TEXT_REPLACEMENTS = {
+  hinglish: [
+    [/This is the foundation week:/gi, 'Yeh foundation week hai:'],
+    [/Builds on the previous week so that/gi, 'Pichhle week ke baad yeh help karega:'],
+    [/Finish Week (\d+) lessons\/practice and save/gi, 'Week $1 lessons/practice finish karo aur save karo:'],
+    [/Finish the lesson\/practice, tap it done, then save a short proof note or photo\./gi, 'Lesson/practice finish karo, done tap karo, phir chhota proof note ya photo save karo.'],
+    [/Start the first lesson and complete one small practice task today\./gi, 'Aaj pehla lesson shuru karo aur ek chhota practice task complete karo.'],
+    [/a short note or photo of what you completed/gi, 'jo complete kiya uska chhota note ya photo'],
+    [/photo\/video or voice note/gi, 'photo/video ya voice note'],
+    [/photo or note/gi, 'photo ya note'],
+    [/sample work/gi, 'sample work'],
+    [/mistake list/gi, 'mistake list'],
+    [/error-log/gi, 'error-log'],
+    [/solved questions/gi, 'solved questions'],
+    [/practice set/gi, 'practice set'],
+    [/weak chapter/gi, 'weak chapter'],
+    [/resume/gi, 'resume'],
+    [/proof/gi, 'proof'],
+    [/lesson/gi, 'lesson'],
+    [/task/gi, 'task'],
+    [/next step/gi, 'agla step'],
+    [/the next week/gi, 'agle week'],
+  ],
+  hi: [
+    [/This is the foundation week:/gi, 'यह foundation week है:'],
+    [/Builds on the previous week so that/gi, 'पिछले week के बाद यह मदद करेगा:'],
+    [/Finish Week (\d+) lessons\/practice and save/gi, 'Week $1 के lessons/practice पूरा करें और save करें:'],
+    [/Finish the lesson\/practice, tap it done, then save a short proof note or photo\./gi, 'Lesson/practice पूरा करें, done tap करें, फिर छोटा proof note या photo save करें.'],
+    [/Start the first lesson and complete one small practice task today\./gi, 'आज पहला lesson शुरू करें और एक छोटा practice task पूरा करें.'],
+    [/a short note or photo of what you completed/gi, 'जो पूरा किया उसका छोटा note या photo'],
+    [/photo\/video or voice note/gi, 'photo/video या voice note'],
+    [/photo or note/gi, 'photo या note'],
+    [/sample work/gi, 'sample work'],
+    [/mistake list/gi, 'mistake list'],
+    [/error-log/gi, 'error-log'],
+    [/solved questions/gi, 'solved questions'],
+    [/practice set/gi, 'practice set'],
+    [/weak chapter/gi, 'weak chapter'],
+    [/resume/gi, 'resume'],
+    [/proof/gi, 'proof'],
+    [/lesson/gi, 'lesson'],
+    [/task/gi, 'task'],
+    [/next step/gi, 'अगला step'],
+    [/the next week/gi, 'अगले week'],
+  ],
+  or: [
+    [/This is the foundation week:/gi, 'ଏହା foundation week:'],
+    [/Builds on the previous week so that/gi, 'ପୂର୍ବ week ପରେ ଏହା ସହାଯ୍ୟ କରେ:'],
+    [/Finish Week (\d+) lessons\/practice and save/gi, 'Week $1 lessons/practice ସମାପ୍ତ କରନ୍ତୁ ଏବଂ save କରନ୍ତୁ:'],
+    [/Finish the lesson\/practice, tap it done, then save a short proof note or photo\./gi, 'Lesson/practice ସମାପ୍ତ କରନ୍ତୁ, done tap କରନ୍ତୁ, ପରେ ଛୋଟ proof note କିମ୍ବା photo save କରନ୍ତୁ.'],
+    [/Start the first lesson and complete one small practice task today\./gi, 'ଆଜି ପ୍ରଥମ lesson ଆରମ୍ଭ କରନ୍ତୁ ଏବଂ ଗୋଟିଏ ଛୋଟ practice task ସମାପ୍ତ କରନ୍ତୁ.'],
+    [/a short note or photo of what you completed/gi, 'କରିଥିବା କାମର ଛୋଟ note କିମ୍ବା photo'],
+    [/photo\/video or voice note/gi, 'photo/video କିମ୍ବା voice note'],
+    [/photo or note/gi, 'photo କିମ୍ବା note'],
+    [/sample work/gi, 'sample work'],
+    [/mistake list/gi, 'mistake list'],
+    [/error-log/gi, 'error-log'],
+    [/solved questions/gi, 'solved questions'],
+    [/practice set/gi, 'practice set'],
+    [/weak chapter/gi, 'weak chapter'],
+    [/resume/gi, 'resume'],
+    [/proof/gi, 'proof'],
+    [/lesson/gi, 'lesson'],
+    [/task/gi, 'task'],
+    [/next step/gi, 'ପରବର୍ତ୍ତୀ step'],
+    [/the next week/gi, 'ଆଗାମୀ week'],
+  ],
+};
+
+function learnerLanguageCode(profile = {}, explicitLanguage = '') {
+  const raw = String(explicitLanguage || profile.preferred_language || profile.language || '').toLowerCase();
+  if (/hinglish|hindi\s*\+\s*english|hindi\+english/.test(raw)) return 'hinglish';
+  if (/odia|oriya|ଓଡ଼ିଆ|ଓଡିଆ/.test(raw)) return 'or';
+  if (/hindi|हिंदी|हिन्दी/.test(raw)) return 'hi';
+  return 'en';
+}
+
+function localizeLearnerText(value = '', language = 'en') {
+  if (language === 'en' || value === null || value === undefined) return value;
+  if (typeof value !== 'string') return value;
+  return (TEXT_REPLACEMENTS[language] || []).reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), value);
+}
+
+function localizeLearnerArray(values = [], language = 'en') {
+  return Array.isArray(values) ? values.map((value) => localizeLearnerText(value, language)) : values;
+}
+
+function familyExplanation(family = 'generic', language = 'en') {
+  const fallback = FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic;
+  return {
+    ...fallback,
+    ...((FAMILY_EXPLANATIONS_I18N[language] || {})[family] || (FAMILY_EXPLANATIONS_I18N[language] || {}).generic || {}),
+  };
+}
+
 function coerceText(value, fallback = '') {
   if (value === null || value === undefined) return fallback;
   if (typeof value === 'string') return value.trim() || fallback;
@@ -2356,7 +2670,8 @@ export function buildLocationGuardrail(profile = {}, options = {}) {
 
 export function decorateRouteExplanation(route = {}, context = {}) {
   const family = context.family || goalFamily(context.profile || {});
-  const defaults = FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic;
+  const language = learnerLanguageCode(context.profile || {}, context.language);
+  const defaults = familyExplanation(family, language);
   const facts = Array.isArray(context.matchedFacts) ? context.matchedFacts : [];
   const blockers = Array.isArray(context.blockers) ? context.blockers : [];
   const factLine = facts
@@ -2364,16 +2679,27 @@ export function decorateRouteExplanation(route = {}, context = {}) {
     .map((fact) => (typeof fact === 'string' ? fact : `${fact.label}: ${fact.value}`))
     .filter(Boolean)
     .join('; ');
-  const why = coerceText(route.why_this_route) || coerceText(route.tradeoff) || defaults.why;
+  const tradeoff = localizeLearnerText(coerceText(route.tradeoff), language);
+  const why = localizeLearnerText(coerceText(route.why_this_route), language) || tradeoff || defaults.why;
   return {
     ...route,
+    tradeoff,
+    time: localizeLearnerText(coerceText(route.time), language) || route.time,
+    distance: localizeLearnerText(coerceText(route.distance), language) || route.distance,
+    income: localizeLearnerText(coerceText(route.income), language) || route.income,
     why_this_route: factLine && !/matched:/i.test(why) ? `${why} (matched: ${factLine})` : why,
     matched_profile_facts:
       Array.isArray(route.matched_profile_facts) && route.matched_profile_facts.length ? route.matched_profile_facts : facts,
-    next_action: coerceText(route.next_action) || coerceText(context.nextAction) || defaults.next,
-    locked_until: coerceText(route.locked_until) || coerceText(blockers[0]) || defaults.locked,
-    risk: coerceText(route.risk) || coerceText(route.tradeoff_risk) || defaults.risk,
-    expected_outcome: coerceText(route.expected_outcome) || coerceText(route.income) || defaults.outcome,
+    next_action:
+      localizeLearnerText(coerceText(route.next_action), language) ||
+      localizeLearnerText(coerceText(context.nextAction), language) ||
+      defaults.next,
+    locked_until:
+      localizeLearnerText(coerceText(route.locked_until), language) ||
+      localizeLearnerText(coerceText(blockers[0]), language) ||
+      defaults.locked,
+    risk: localizeLearnerText(coerceText(route.risk) || coerceText(route.tradeoff_risk), language) || defaults.risk,
+    expected_outcome: localizeLearnerText(coerceText(route.expected_outcome) || coerceText(route.income), language) || defaults.outcome,
   };
 }
 
@@ -2381,11 +2707,51 @@ export function decorateRouteExplanation(route = {}, context = {}) {
 // Learner journey enrichment (makes each week clear and actionable)
 // ---------------------------------------------------------------------------
 
-function familyOutcome(family = 'generic') {
-  return (FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic).outcome;
+function familyOutcome(family = 'generic', profile = {}) {
+  return familyExplanation(family, learnerLanguageCode(profile)).outcome;
 }
 
 export function buildProofTask(family = 'generic', profile = {}) {
+  const language = learnerLanguageCode(profile);
+  const localized = {
+    hinglish: {
+      entrance_exam: 'aaj ke solved questions ka photo plus error-log entry',
+      board_exam: 'NCERT/sample-paper questions ka photo aur score',
+      school_study: 'solved practice ka photo aur mistake list',
+      data_science_job: 'project notebook/dashboard link ya screenshot with 3-line summary',
+      college: 'resume, portfolio, ya project proof link/screenshot',
+      informal_skill: 'sample work ka photo/video ya voice note',
+      enterprise: 'setup plan, budget sheet, ya buyer list',
+      job: 'resume/proof aur contacted leads ki shortlist',
+      vocational: 'practice sample ka photo ya note',
+      generic: 'jo complete kiya uska chhota note ya photo',
+    },
+    hi: {
+      entrance_exam: 'आज के solved questions का photo और error-log entry',
+      board_exam: 'NCERT/sample-paper questions का photo और score',
+      school_study: 'solved practice का photo और mistake list',
+      data_science_job: 'project notebook/dashboard link या screenshot with 3-line summary',
+      college: 'resume, portfolio, या project proof link/screenshot',
+      informal_skill: 'sample work का photo/video या voice note',
+      enterprise: 'setup plan, budget sheet, या buyer list',
+      job: 'resume/proof और contacted leads की shortlist',
+      vocational: 'practice sample का photo या note',
+      generic: 'जो पूरा किया उसका छोटा note या photo',
+    },
+    or: {
+      entrance_exam: 'ଆଜିର solved questions photo plus error-log entry',
+      board_exam: 'NCERT/sample-paper questions photo ଏବଂ score',
+      school_study: 'solved practice photo ଏବଂ mistake list',
+      data_science_job: 'project notebook/dashboard link କିମ୍ବା screenshot with 3-line summary',
+      college: 'resume, portfolio, କିମ୍ବା project proof link/screenshot',
+      informal_skill: 'sample work photo/video କିମ୍ବା voice note',
+      enterprise: 'setup plan, budget sheet, କିମ୍ବା buyer list',
+      job: 'resume/proof ଏବଂ contacted leads shortlist',
+      vocational: 'practice sample photo କିମ୍ବା note',
+      generic: 'କରିଥିବା କାମର ଛୋଟ note କିମ୍ବା photo',
+    },
+  };
+  if (localized[language]?.[family]) return localized[language][family];
   switch (family) {
     case 'entrance_exam':
       return 'a photo of today’s solved questions plus your error-log entry';
@@ -2411,10 +2777,50 @@ export function buildProofTask(family = 'generic', profile = {}) {
 }
 
 export function buildTodayTask(family = 'generic', profile = {}, route = {}, firstModule = {}) {
+  const language = learnerLanguageCode(profile);
   const micro =
     Array.isArray(firstModule.daily_micro_tasks) && firstModule.daily_micro_tasks.length ? coerceText(firstModule.daily_micro_tasks[0]) : '';
   if (micro) return micro.replace(/^day\s*1:\s*/i, '');
   const subjects = profile.academic_goal?.subjects?.length ? profile.academic_goal.subjects.join(', ') : 'your first topic';
+  const localized = {
+    hinglish: {
+      entrance_exam: `${profile.academic_goal?.exam || 'exam'} syllabus ko red/yellow/green mark karo aur ${subjects} mein ek short diagnostic set solve karo.`,
+      board_exam: `${subjects} mein ek weak chapter chuno, NCERT explanation padho, phir 5 questions solve karo.`,
+      school_study: `${subjects} mein ek weak chapter chuno aur short practice set finish karke mistakes mark karo.`,
+      data_science_job: 'Python, SQL, stats, project, resume readiness gap-check karo aur pehle project ke liye one public dataset chuno.',
+      college: 'Current skills/projects list karo aur internship/project target ki one-line likho.',
+      informal_skill: 'Apni skill explain karte hue 60-second voice/video record karo aur ek sample-work photo lo.',
+      enterprise: 'Setup steps, space/equipment aur rough starting budget likho.',
+      job: 'Target role, safe commute/relocation aur resume/proof gap confirm karo.',
+      vocational: 'Ek local aur ek online training option shortlist karo aur commute/time limits set karo.',
+      generic: 'Pehla lesson shuru karo aur aaj ek chhota practice task complete karo.',
+    },
+    hi: {
+      entrance_exam: `${profile.academic_goal?.exam || 'exam'} syllabus को red/yellow/green mark करें और ${subjects} में एक short diagnostic set solve करें.`,
+      board_exam: `${subjects} में एक weak chapter चुनें, NCERT explanation पढ़ें, फिर 5 questions solve करें.`,
+      school_study: `${subjects} में एक weak chapter चुनें और short practice set finish करके mistakes mark करें.`,
+      data_science_job: 'Python, SQL, stats, project, resume readiness gap-check करें और पहले project के लिए one public dataset चुनें.',
+      college: 'Current skills/projects list करें और internship/project target की one-line लिखें.',
+      informal_skill: 'अपनी skill explain करते हुए 60-second voice/video record करें और एक sample-work photo लें.',
+      enterprise: 'Setup steps, space/equipment और rough starting budget लिखें.',
+      job: 'Target role, safe commute/relocation और resume/proof gap confirm करें.',
+      vocational: 'एक local और एक online training option shortlist करें और commute/time limits set करें.',
+      generic: 'पहला lesson शुरू करें और आज एक छोटा practice task पूरा करें.',
+    },
+    or: {
+      entrance_exam: `${profile.academic_goal?.exam || 'exam'} syllabus କୁ red/yellow/green mark କରନ୍ତୁ ଏବଂ ${subjects} ରେ short diagnostic set solve କରନ୍ତୁ.`,
+      board_exam: `${subjects} ରେ ଗୋଟିଏ weak chapter ବାଛନ୍ତୁ, NCERT explanation ପଢନ୍ତୁ, ପରେ 5 questions solve କରନ୍ତୁ.`,
+      school_study: `${subjects} ରେ ଗୋଟିଏ weak chapter ବାଛନ୍ତୁ ଏବଂ short practice set finish କରି mistakes mark କରନ୍ତୁ.`,
+      data_science_job: 'Python, SQL, stats, project, resume readiness gap-check କରନ୍ତୁ ଏବଂ ପ୍ରଥମ project ପାଇଁ one public dataset ବାଛନ୍ତୁ.',
+      college: 'Current skills/projects list କରନ୍ତୁ ଏବଂ internship/project target one-line ଲେଖନ୍ତୁ.',
+      informal_skill: 'ନିଜ skill explain କରି 60-second voice/video record କରନ୍ତୁ ଏବଂ sample-work photo ନିଅନ୍ତୁ.',
+      enterprise: 'Setup steps, space/equipment ଏବଂ rough starting budget ଲେଖନ୍ତୁ.',
+      job: 'Target role, safe commute/relocation ଏବଂ resume/proof gap confirm କରନ୍ତୁ.',
+      vocational: 'ଗୋଟିଏ local ଏବଂ ଗୋଟିଏ online training option shortlist କରନ୍ତୁ ଏବଂ commute/time limits set କରନ୍ତୁ.',
+      generic: 'ପ୍ରଥମ lesson ଆରମ୍ଭ କରନ୍ତୁ ଏବଂ ଆଜି ଗୋଟିଏ ଛୋଟ practice task complete କରନ୍ତୁ.',
+    },
+  };
+  if (localized[language]?.[family]) return localized[language][family];
   switch (family) {
     case 'entrance_exam':
       return `Mark the ${profile.academic_goal?.exam || 'exam'} syllabus as red/yellow/green and solve one short diagnostic set in ${subjects}.`;
@@ -2439,11 +2845,12 @@ export function buildTodayTask(family = 'generic', profile = {}, route = {}, fir
   }
 }
 
-function whyModuleMatters(family = 'generic', module = {}, index = 0) {
+function whyModuleMatters(family = 'generic', module = {}, index = 0, profile = {}) {
+  const language = learnerLanguageCode(profile);
   const goal = coerceText(module.goal);
-  const base = (FAMILY_EXPLANATIONS[family] || FAMILY_EXPLANATIONS.generic).outcome;
-  if (index === 0) return `This is the foundation week: ${goal || base}`;
-  return goal ? `Builds on the previous week so that ${goal.charAt(0).toLowerCase()}${goal.slice(1)}` : base;
+  const base = familyOutcome(family, profile);
+  if (index === 0) return localizeLearnerText(`This is the foundation week: ${goal || base}`, language);
+  return localizeLearnerText(goal ? `Builds on the previous week so that ${goal.charAt(0).toLowerCase()}${goal.slice(1)}` : base, language);
 }
 
 function lessonResourceFor(family = 'generic') {
@@ -2465,7 +2872,8 @@ function lessonResourceFor(family = 'generic') {
 }
 
 function buildLessonDetail(lesson, index = 0, module = {}, family = 'generic', profile = {}) {
-  const language = coerceText(profile.preferred_language) || coerceText(profile.language) || 'your language';
+  const languageName = coerceText(profile.preferred_language) || coerceText(profile.language) || 'your language';
+  const language = learnerLanguageCode(profile);
   const academic = /entrance_exam|board_exam|school_study/.test(family);
   const title = coerceText(lesson, `Lesson ${index + 1}`);
   return {
@@ -2473,34 +2881,58 @@ function buildLessonDetail(lesson, index = 0, module = {}, family = 'generic', p
     type: academic ? (index === 0 ? 'concept' : 'practice') : index === 0 ? 'watch_or_listen' : 'do',
     estimated_time: academic ? '20-30 min' : '10-15 min',
     instructions: academic
-      ? `Open "${title}" in ${language}. Read or listen once, then solve at least 3 questions on it without looking at answers.`
-      : `Open "${title}" in ${language}. Watch/listen once, then do the small task by hand or in your own words.`,
-    completion_criteria: `You can explain "${title}" in one line and finished its small task.`,
+      ? localizeLearnerText(`Open "${title}" in ${languageName}. Read or listen once, then solve at least 3 questions on it without looking at answers.`, language)
+      : localizeLearnerText(`Open "${title}" in ${languageName}. Watch/listen once, then do the small task by hand or in your own words.`, language),
+    completion_criteria: localizeLearnerText(`You can explain "${title}" in one line and finished its small task.`, language),
     proof_required: coerceText(module.proof_task) || coerceText(module.proof) || buildProofTask(family, profile),
     resource: lessonResourceFor(family),
   };
 }
 
 export function enrichModule(module = {}, family = 'generic', profile = {}, index = 0) {
-  const lessons = Array.isArray(module.lessons) ? module.lessons : [];
+  const language = learnerLanguageCode(profile);
+  const lessons = localizeLearnerArray(Array.isArray(module.lessons) ? module.lessons : [], language);
+  const dailyMicroTasks = localizeLearnerArray(Array.isArray(module.daily_micro_tasks) ? module.daily_micro_tasks : [], language);
+  const practiceTasks = localizeLearnerArray(Array.isArray(module.practice_tasks) ? module.practice_tasks : [], language);
+  const proofTasks = localizeLearnerArray(Array.isArray(module.proof_tasks) ? module.proof_tasks : [], language);
   const proofTask =
-    coerceText(module.proof_task) ||
-    coerceText(module.proof) ||
-    (Array.isArray(module.proof_tasks) ? coerceText(module.proof_tasks[0]) : '') ||
+    localizeLearnerText(coerceText(module.proof_task), language) ||
+    localizeLearnerText(coerceText(module.proof), language) ||
+    (proofTasks.length ? coerceText(proofTasks[0]) : '') ||
     buildProofTask(family, profile);
   return {
     ...module,
-    why_it_matters: coerceText(module.why_it_matters) || whyModuleMatters(family, module, index),
-    daily_plan: Array.isArray(module.daily_plan) && module.daily_plan.length ? module.daily_plan : module.daily_micro_tasks || [],
+    title: localizeLearnerText(module.title, language),
+    goal: localizeLearnerText(module.goal, language),
+    lessons,
+    daily_micro_tasks: dailyMicroTasks,
+    practice_tasks: practiceTasks,
+    proof: localizeLearnerText(module.proof, language),
+    proof_tasks: proofTasks,
+    completion_criteria: localizeLearnerText(module.completion_criteria, language),
+    low_data_alternative: localizeLearnerText(module.low_data_alternative, language),
+    voice_whatsapp_version: localizeLearnerText(module.voice_whatsapp_version, language),
+    counselor_response_after_completion: localizeLearnerText(module.counselor_response_after_completion, language),
+    worker_check: localizeLearnerText(module.worker_check, language),
+    why_it_matters: localizeLearnerText(coerceText(module.why_it_matters), language) || whyModuleMatters(family, module, index, profile),
+    daily_plan: Array.isArray(module.daily_plan) && module.daily_plan.length ? localizeLearnerArray(module.daily_plan, language) : dailyMicroTasks,
     proof_task: proofTask,
     checkpoint:
-      coerceText(module.checkpoint) ||
-      coerceText(module.completion_criteria) ||
-      `Finish Week ${module.week || index + 1} lessons/practice and save ${proofTask}.`,
-    unlocks: coerceText(module.unlocks) || coerceText(module.unlock_after_completion) || coerceText(module.unlock) || 'the next step',
+      localizeLearnerText(coerceText(module.checkpoint), language) ||
+      localizeLearnerText(coerceText(module.completion_criteria), language) ||
+      localizeLearnerText(`Finish Week ${module.week || index + 1} lessons/practice and save ${proofTask}.`, language),
+    unlocks:
+      localizeLearnerText(coerceText(module.unlocks) || coerceText(module.unlock_after_completion) || coerceText(module.unlock), language) ||
+      localizeLearnerText('the next step', language),
     lesson_details:
       Array.isArray(module.lesson_details) && module.lesson_details.length
-        ? module.lesson_details
+        ? module.lesson_details.map((detail) => ({
+            ...detail,
+            title: localizeLearnerText(detail.title, language),
+            instructions: localizeLearnerText(detail.instructions, language),
+            completion_criteria: localizeLearnerText(detail.completion_criteria, language),
+            proof_required: localizeLearnerText(detail.proof_required, language),
+          }))
         : lessons.map((lesson, lessonIndex) => buildLessonDetail(lesson, lessonIndex, module, family, profile)),
   };
 }
@@ -2531,7 +2963,159 @@ function action(id, type, title, how, source, byWhen = 'This week') {
   return { id, type, title, how, source_title: source.title, source_url: source.url, by_when: byWhen };
 }
 
-export function buildThisWeekActions(profile = {}, family = goalFamily(profile)) {
+const THIS_WEEK_ACTION_I18N = {
+  hinglish: {
+    'tw-skill-passport': {
+      title: 'Meera ke saath Skill Passport banao (resume zaroori nahi)',
+      how: 'Meera se chat karte raho. Woh aapke jawab ko share karne layak proof mein badalti hai; formal resume likhna zaroori nahi.',
+    },
+    'tw-ncs': {
+      title: 'Free National Career Service account banao',
+      how: ({ place }) => `Link kholo, phone number se sign up karo, aur district ${place} set karo taki nearby jobs/job-melas mil sakein.`,
+    },
+    'tw-digilocker': {
+      title: 'Documents ke liye DigiLocker set up karo',
+      how: 'Phone + Aadhaar se DigiLocker banao taki marksheets/certificates safe aur one-tap shareable rahen.',
+    },
+    'tw-set-area': {
+      title: 'Meera ko exact block / panchayat batao',
+      how: ({ place }) => `Abhi hum "${place}" ke paas options dikhate hain. Block ya panchayat share karo taki centre/work sach mein reach ke andar ho.`,
+    },
+    'tw-jee-syllabus': { title: 'Aaj official exam syllabus download karo', how: 'Official exam site kholo, latest syllabus save karo, aur jo chapters start nahi hue unhe tick karo.' },
+    'tw-ncert-start': { title: 'Ek NCERT chapter shuru karo aur 10 questions solve karo', how: 'Sabse weak topic chuno, NCERT explanation padho, phir 10 questions solve karke har mistake note karo.' },
+    'tw-mock': { title: 'Is week ek timed practice set do', how: 'Ek timed section karo, phir har wrong answer ko revision note (error log) banao.' },
+    'tw-ncert-board': { title: 'Ek NCERT chapter + back exercises finish karo', how: 'Chapter padho, solved examples redo karo, exercise complete karo, aur wrong answers mistake log mein mark karo.' },
+    'tw-sample-paper': { title: 'Ek CBSE/board sample-paper section solve karo', how: 'Sample paper download karo, one section time mein solve karo, phir marking scheme se compare karo.' },
+    'tw-scholarship': { title: 'NSP par scholarship eligibility check karo', how: 'National Scholarship Portal kholo, pre/post-matric eligibility check karo, aur application deadline note karo.', by_when: 'Portal deadline se pehle' },
+    'tw-diksha-chapter': { title: 'Aaj ek DIKSHA chapter + practice karo', how: 'DIKSHA kholo, weak chapter ka short lesson dekho, phir practice questions solve karo.' },
+    'tw-ncert-school': { title: '8 NCERT questions solve karo aur mistakes list karo', how: 'Ek subject chuno, NCERT se 8 questions solve karo, aur kis type mein galti hui likho.' },
+    'tw-scholarship-school': { title: 'Teacher/parent ke saath NSP scholarship check karo', how: 'Guardian ke saath National Scholarship Portal kholo aur dekho aapki class kis scholarship ke liye eligible hai.', by_when: 'Portal deadline se pehle' },
+    'tw-ds-project': { title: 'Ek public dataset chuno aur mini-project shuru karo', how: 'Simple dataset choose karo, clean karo, aur 6-line summary likho; yeh portfolio proof banega.' },
+    'tw-ncs-analyst': { title: 'NCS par "data entry / analyst" roles search karo', how: ({ place }) => `NCS par register karo aur ${place} plus remote filter ke saath analyst/data roles search karo.` },
+    'tw-skillindia-course': { title: 'Ek free Python/SQL module mein enrol karo', how: 'Ek short Python ya SQL module start karo taki skill current aur certifiable ho.' },
+    'tw-portfolio': { title: 'Ek project se do strong resume bullets likho', how: 'College project lo aur profile ke liye do clear result-focused lines likho.' },
+    'tw-ncs-intern': { title: 'NCS par internships/projects search karo', how: ({ place }) => `${place} aur remote ke aas-paas internship/apprenticeship listings search karo.` },
+    'tw-skillindia-cert': { title: 'Ek free certified short course add karo', how: 'Goal se matching ek course chuno taki profile mein verifiable certificate aaye.' },
+    'tw-sample-proof': { title: 'Aaj ek sample-work photo/video capture karo', how: 'Apna ek work sample banao aur clear photo ya 30-second video proof ke roop mein save karo.' },
+    'tw-rpl': { title: 'Skill India par RPL recognition check karo', how: 'Dekho kya existing skill ko long course ke bina RPL certificate mil sakta hai.' },
+    'tw-local-work': { title: ({ place }) => `${place} ke paas 3 shops/customers se chhota kaam poochho`, how: 'Teen nearby shops ya past customers list karo aur ek chhota paid task/trial poochho; proof ke saath earning shuru karo.' },
+    'tw-setup-plan': { title: 'One-page setup plan + rough budget likho', how: 'Space, equipment aur realistic starting cost list karo; risk kam rakhne ke liye small start karo.' },
+    'tw-udyam': { title: 'Udyam par free MSME ID register karo', how: 'Free Udyam registration baad mein schemes aur buyer trust unlock kar sakta hai.' },
+    'tw-pmegp': { title: 'PMEGP/PMFME loan-scheme eligibility check karo', how: 'Scheme portal kholo, eligibility aur documents check karo, phir hi paise kharch karo.', by_when: 'Is week' },
+    'tw-buyers': { title: ({ place }) => `${place} ke paas 5 possible buyers/customers list karo`, how: 'Paanch nearby people/shops likho jo kharid sakte hain, aur fair first price note karo.' },
+    'tw-ncs-job': { title: 'NCS par register karo aur 5 local roles shortlist karo', how: ({ place }) => `Sign up karo, district ${place} aur commute limit set karo, phir apply ke liye five roles shortlist karo.` },
+    'tw-proof': { title: 'Meera se one-page proof summary banwao', how: 'Meera ke questions answer karo; woh truthful proof summary banati hai taki formal resume zaroori na ho.' },
+    'tw-walkin': { title: ({ place }) => `${place} ke paas 2 local enquiries ke liye prepare karo`, how: 'Do nearby workplaces chuno aur visit se pehle Meera ke saath 30-second introduction practice karo.' },
+    'tw-pmkvy-center': { title: 'Nearest PMKVY/Skill India training centre dhoondo', how: ({ place }) => `Centre locator kholo aur ${place} ke closest centre, course aur fees note karo.` },
+    'tw-skillindia-start': { title: 'Abhi ek free foundation module start karo', how: 'Phone-first short module shuru karo taki local centre confirm hote waqt proof banta rahe.' },
+    'tw-practice-proof': { title: 'Ek practice task karo aur proof save karo', how: 'Ek chhota hands-on task complete karo aur first proof ke roop mein photo/note save karo.' },
+    'tw-skillindia-explore': { title: 'Ek free Skill India course explore karo', how: 'Skill India Digital kholo aur interest se matching ek short course start karo.' },
+    'tw-ncs-explore': { title: 'Local opportunities ke liye NCS register karo', how: ({ place }) => `NCS account banao aur district ${place} set karo.` },
+  },
+  hi: {
+    'tw-skill-passport': { title: 'Meera के साथ Skill Passport बनाएं (resume जरूरी नहीं)', how: 'Meera से chat करते रहें. वह आपके जवाब को share करने लायक proof में बदलती है; formal resume लिखना जरूरी नहीं.' },
+    'tw-ncs': { title: 'Free National Career Service account बनाएं', how: ({ place }) => `Link खोलें, phone number से sign up करें, और district ${place} set करें ताकि nearby jobs/job-melas मिलें.` },
+    'tw-digilocker': { title: 'Documents के लिए DigiLocker set up करें', how: 'Phone + Aadhaar से DigiLocker बनाएं ताकि marksheets/certificates safe और one-tap shareable रहें.' },
+    'tw-set-area': { title: 'Meera को exact block / panchayat बताएं', how: ({ place }) => `अभी हम "${place}" के पास options दिखाते हैं. Block या panchayat share करें ताकि centre/work सच में reach के अंदर हो.` },
+    'tw-jee-syllabus': { title: 'आज official exam syllabus download करें', how: 'Official exam site खोलें, latest syllabus save करें, और जो chapters start नहीं हुए उन्हें tick करें.' },
+    'tw-ncert-start': { title: 'एक NCERT chapter शुरू करें और 10 questions solve करें', how: 'सबसे weak topic चुनें, NCERT explanation पढ़ें, फिर 10 questions solve करके हर mistake note करें.' },
+    'tw-mock': { title: 'इस week एक timed practice set दें', how: 'एक timed section करें, फिर हर wrong answer को revision note (error log) बनाएं.' },
+    'tw-ncert-board': { title: 'एक NCERT chapter + back exercises finish करें', how: 'Chapter पढ़ें, solved examples redo करें, exercise complete करें, और wrong answers mistake log में mark करें.' },
+    'tw-sample-paper': { title: 'एक CBSE/board sample-paper section solve करें', how: 'Sample paper download करें, one section time में solve करें, फिर marking scheme से compare करें.' },
+    'tw-scholarship': { title: 'NSP पर scholarship eligibility check करें', how: 'National Scholarship Portal खोलें, pre/post-matric eligibility check करें, और application deadline note करें.', by_when: 'Portal deadline से पहले' },
+    'tw-diksha-chapter': { title: 'आज एक DIKSHA chapter + practice करें', how: 'DIKSHA खोलें, weak chapter का short lesson देखें, फिर practice questions solve करें.' },
+    'tw-ncert-school': { title: '8 NCERT questions solve करें और mistakes list करें', how: 'एक subject चुनें, NCERT से 8 questions solve करें, और किस type में गलती हुई लिखें.' },
+    'tw-scholarship-school': { title: 'Teacher/parent के साथ NSP scholarship check करें', how: 'Guardian के साथ National Scholarship Portal खोलें और देखें आपकी class किस scholarship के लिए eligible है.', by_when: 'Portal deadline से पहले' },
+    'tw-ds-project': { title: 'एक public dataset चुनें और mini-project शुरू करें', how: 'Simple dataset choose करें, clean करें, और 6-line summary लिखें; यह portfolio proof बनेगा.' },
+    'tw-ncs-analyst': { title: 'NCS पर "data entry / analyst" roles search करें', how: ({ place }) => `NCS पर register करें और ${place} plus remote filter के साथ analyst/data roles search करें.` },
+    'tw-skillindia-course': { title: 'एक free Python/SQL module में enrol करें', how: 'एक short Python या SQL module start करें ताकि skill current और certifiable हो.' },
+    'tw-portfolio': { title: 'एक project से दो strong resume bullets लिखें', how: 'College project लें और profile के लिए दो clear result-focused lines लिखें.' },
+    'tw-ncs-intern': { title: 'NCS पर internships/projects search करें', how: ({ place }) => `${place} और remote के आसपास internship/apprenticeship listings search करें.` },
+    'tw-skillindia-cert': { title: 'एक free certified short course add करें', how: 'Goal से matching एक course चुनें ताकि profile में verifiable certificate आए.' },
+    'tw-sample-proof': { title: 'आज एक sample-work photo/video capture करें', how: 'अपना एक work sample बनाएं और clear photo या 30-second video proof के रूप में save करें.' },
+    'tw-rpl': { title: 'Skill India पर RPL recognition check करें', how: 'देखें क्या existing skill को long course के बिना RPL certificate मिल सकता है.' },
+    'tw-local-work': { title: ({ place }) => `${place} के पास 3 shops/customers से छोटा काम पूछें`, how: 'तीन nearby shops या past customers list करें और एक छोटा paid task/trial पूछें; proof के साथ earning शुरू करें.' },
+    'tw-setup-plan': { title: 'One-page setup plan + rough budget लिखें', how: 'Space, equipment और realistic starting cost list करें; risk कम रखने के लिए small start करें.' },
+    'tw-udyam': { title: 'Udyam पर free MSME ID register करें', how: 'Free Udyam registration बाद में schemes और buyer trust unlock कर सकता है.' },
+    'tw-pmegp': { title: 'PMEGP/PMFME loan-scheme eligibility check करें', how: 'Scheme portal खोलें, eligibility और documents check करें, फिर ही पैसे खर्च करें.', by_when: 'इस week' },
+    'tw-buyers': { title: ({ place }) => `${place} के पास 5 possible buyers/customers list करें`, how: 'पांच nearby people/shops लिखें जो खरीद सकते हैं, और fair first price note करें.' },
+    'tw-ncs-job': { title: 'NCS पर register करें और 5 local roles shortlist करें', how: ({ place }) => `Sign up करें, district ${place} और commute limit set करें, फिर apply के लिए five roles shortlist करें.` },
+    'tw-proof': { title: 'Meera से one-page proof summary बनवाएं', how: 'Meera के questions answer करें; वह truthful proof summary बनाती है ताकि formal resume जरूरी न हो.' },
+    'tw-walkin': { title: ({ place }) => `${place} के पास 2 local enquiries के लिए prepare करें`, how: 'दो nearby workplaces चुनें और visit से पहले Meera के साथ 30-second introduction practice करें.' },
+    'tw-pmkvy-center': { title: 'Nearest PMKVY/Skill India training centre ढूंढें', how: ({ place }) => `Centre locator खोलें और ${place} के closest centre, course और fees note करें.` },
+    'tw-skillindia-start': { title: 'अभी एक free foundation module start करें', how: 'Phone-first short module शुरू करें ताकि local centre confirm होते समय proof बनता रहे.' },
+    'tw-practice-proof': { title: 'एक practice task करें और proof save करें', how: 'एक छोटा hands-on task complete करें और first proof के रूप में photo/note save करें.' },
+    'tw-skillindia-explore': { title: 'एक free Skill India course explore करें', how: 'Skill India Digital खोलें और interest से matching एक short course start करें.' },
+    'tw-ncs-explore': { title: 'Local opportunities के लिए NCS register करें', how: ({ place }) => `NCS account बनाएं और district ${place} set करें.` },
+  },
+  or: {
+    'tw-skill-passport': { title: 'Meera ସହ Skill Passport ବନାନ୍ତୁ (resume ଦରକାର ନାହିଁ)', how: 'Meera ସହ chat କରନ୍ତୁ. ସେ ଆପଣଙ୍କ answers କୁ shareable proof କରେ; formal resume ଲେଖିବା ଦରକାର ନୁହେଁ.' },
+    'tw-ncs': { title: 'Free National Career Service account ବନାନ୍ତୁ', how: ({ place }) => `Link ଖୋଲନ୍ତୁ, phone number ରେ sign up କରନ୍ତୁ, ଏବଂ district ${place} set କରନ୍ତୁ ଯାହାଦ୍ୱାରା nearby jobs/job-melas ମିଳିବ.` },
+    'tw-digilocker': { title: 'Documents ପାଇଁ DigiLocker set up କରନ୍ତୁ', how: 'Phone + Aadhaar ରେ DigiLocker ବନାନ୍ତୁ ଯେଣ୍ଞା marksheets/certificates safe ଏବଂ one-tap shareable ରହେ.' },
+    'tw-set-area': { title: 'Meera କୁ exact block / panchayat କୁହନ୍ତୁ', how: ({ place }) => `ଏବେ ଆମେ "${place}" ପାଖର options ଦେଖାଉଛୁ. Block କିମ୍ବା panchayat share କରନ୍ତୁ ଯାହାଦ୍ୱାରା centre/work ସତରେ reach ଭିତରେ ରହିବ.` },
+    'tw-jee-syllabus': { title: 'ଆଜି official exam syllabus download କରନ୍ତୁ', how: 'Official exam site ଖୋଲନ୍ତୁ, latest syllabus save କରନ୍ତୁ, ଏବଂ start ହୋଇନଥିବା chapters tick କରନ୍ତୁ.' },
+    'tw-ncert-start': { title: 'ଗୋଟିଏ NCERT chapter ଆରମ୍ଭ କରନ୍ତୁ ଏବଂ 10 questions solve କରନ୍ତୁ', how: 'ସବୁଠାରୁ weak topic ବାଛନ୍ତୁ, NCERT explanation ପଢନ୍ତୁ, ପରେ 10 questions solve କରି ପ୍ରତି mistake note କରନ୍ତୁ.' },
+    'tw-mock': { title: 'ଏହି week ଗୋଟିଏ timed practice set କରନ୍ତୁ', how: 'ଗୋଟିଏ timed section କରନ୍ତୁ, ପରେ ପ୍ରତି wrong answer କୁ revision note (error log) କରନ୍ତୁ.' },
+    'tw-ncert-board': { title: 'ଗୋଟିଏ NCERT chapter + back exercises finish କରନ୍ତୁ', how: 'Chapter ପଢନ୍ତୁ, solved examples redo କରନ୍ତୁ, exercise complete କରନ୍ତୁ, ଏବଂ wrong answers mistake log ରେ mark କରନ୍ତୁ.' },
+    'tw-sample-paper': { title: 'ଗୋଟିଏ CBSE/board sample-paper section solve କରନ୍ତୁ', how: 'Sample paper download କରନ୍ତୁ, one section time ଭିତରେ solve କରନ୍ତୁ, ପରେ marking scheme ସହ compare କରନ୍ତୁ.' },
+    'tw-scholarship': { title: 'NSP ରେ scholarship eligibility check କରନ୍ତୁ', how: 'National Scholarship Portal ଖୋଲନ୍ତୁ, pre/post-matric eligibility check କରନ୍ତୁ, ଏବଂ application deadline note କରନ୍ତୁ.', by_when: 'Portal deadline ପୂର୍ବରୁ' },
+    'tw-diksha-chapter': { title: 'ଆଜି ଗୋଟିଏ DIKSHA chapter + practice କରନ୍ତୁ', how: 'DIKSHA ଖୋଲନ୍ତୁ, weak chapter ର short lesson ଦେଖନ୍ତୁ, ପରେ practice questions solve କରନ୍ତୁ.' },
+    'tw-ncert-school': { title: '8 NCERT questions solve କରନ୍ତୁ ଏବଂ mistakes list କରନ୍ତୁ', how: 'ଗୋଟିଏ subject ବାଛନ୍ତୁ, NCERT ରୁ 8 questions solve କରନ୍ତୁ, ଏବଂ କେଉଁ type ରେ mistake ହେଲା ଲେଖନ୍ତୁ.' },
+    'tw-scholarship-school': { title: 'Teacher/parent ସହ NSP scholarship check କରନ୍ତୁ', how: 'Guardian ସହ National Scholarship Portal ଖୋଲନ୍ତୁ ଏବଂ ଆପଣଙ୍କ class କେଉଁ scholarship ପାଇଁ eligible ଦେଖନ୍ତୁ.', by_when: 'Portal deadline ପୂର୍ବରୁ' },
+    'tw-ds-project': { title: 'ଗୋଟିଏ public dataset ବାଛନ୍ତୁ ଏବଂ mini-project ଆରମ୍ଭ କରନ୍ତୁ', how: 'Simple dataset choose କରନ୍ତୁ, clean କରନ୍ତୁ, ଏବଂ 6-line summary ଲେଖନ୍ତୁ; ଏହା portfolio proof ହେବ.' },
+    'tw-ncs-analyst': { title: 'NCS ରେ "data entry / analyst" roles search କରନ୍ତୁ', how: ({ place }) => `NCS ରେ register କରନ୍ତୁ ଏବଂ ${place} plus remote filter ସହ analyst/data roles search କରନ୍ତୁ.` },
+    'tw-skillindia-course': { title: 'ଗୋଟିଏ free Python/SQL module ରେ enrol କରନ୍ତୁ', how: 'ଗୋଟିଏ short Python କିମ୍ବା SQL module start କରନ୍ତୁ ଯାହାଦ୍ୱାରା skill current ଏବଂ certifiable ହେବ.' },
+    'tw-portfolio': { title: 'ଗୋଟିଏ project ରୁ ଦୁଇଟି strong resume bullets ଲେଖନ୍ତୁ', how: 'College project ନିଅନ୍ତୁ ଏବଂ profile ପାଇଁ ଦୁଇଟି clear result-focused lines ଲେଖନ୍ତୁ.' },
+    'tw-ncs-intern': { title: 'NCS ରେ internships/projects search କରନ୍ତୁ', how: ({ place }) => `${place} ଏବଂ remote ପାଖର internship/apprenticeship listings search କରନ୍ତୁ.` },
+    'tw-skillindia-cert': { title: 'ଗୋଟିଏ free certified short course add କରନ୍ତୁ', how: 'Goal ସହ matching ଗୋଟିଏ course ବାଛନ୍ତୁ ଯାହାଦ୍ୱାରା profile ରେ verifiable certificate ଆସିବ.' },
+    'tw-sample-proof': { title: 'ଆଜି ଗୋଟିଏ sample-work photo/video capture କରନ୍ତୁ', how: 'ନିଜ work sample ବନାନ୍ତୁ ଏବଂ clear photo କିମ୍ବା 30-second video proof ଭାବେ save କରନ୍ତୁ.' },
+    'tw-rpl': { title: 'Skill India ରେ RPL recognition check କରନ୍ତୁ', how: 'ଦେଖନ୍ତୁ existing skill କୁ long course ବିନା RPL certificate ମିଳିପାରେ କି.' },
+    'tw-local-work': { title: ({ place }) => `${place} ପାଖର 3 shops/customers ଠାରୁ ଛୋଟ କାମ ପଚାରନ୍ତୁ`, how: 'ତିନୋଟି nearby shops କିମ୍ବା past customers list କରନ୍ତୁ ଏବଂ ଗୋଟିଏ ଛୋଟ paid task/trial ପଚାରନ୍ତୁ.' },
+    'tw-setup-plan': { title: 'One-page setup plan + rough budget ଲେଖନ୍ତୁ', how: 'Space, equipment ଏବଂ realistic starting cost list କରନ୍ତୁ; risk କମ ରଖିବା ପାଇଁ small start କରନ୍ତୁ.' },
+    'tw-udyam': { title: 'Udyam ରେ free MSME ID register କରନ୍ତୁ', how: 'Free Udyam registration ପରେ schemes ଏବଂ buyer trust unlock କରିପାରେ.' },
+    'tw-pmegp': { title: 'PMEGP/PMFME loan-scheme eligibility check କରନ୍ତୁ', how: 'Scheme portal ଖୋଲନ୍ତୁ, eligibility ଏବଂ documents check କରନ୍ତୁ, ପରେ ମାତ୍ର ଟଙ୍କା ଖର୍ଚ୍ଚ କରନ୍ତୁ.', by_when: 'ଏହି week' },
+    'tw-buyers': { title: ({ place }) => `${place} ପାଖର 5 possible buyers/customers list କରନ୍ତୁ`, how: 'ପାଞ୍ଚ nearby people/shops ଲେଖନ୍ତୁ ଯେଉଁମାନେ କିଣିପାରନ୍ତି, ଏବଂ fair first price note କରନ୍ତୁ.' },
+    'tw-ncs-job': { title: 'NCS ରେ register କରନ୍ତୁ ଏବଂ 5 local roles shortlist କରନ୍ତୁ', how: ({ place }) => `Sign up କରନ୍ତୁ, district ${place} ଏବଂ commute limit set କରନ୍ତୁ, ପରେ apply ପାଇଁ five roles shortlist କରନ୍ତୁ.` },
+    'tw-proof': { title: 'Meera ଠାରୁ one-page proof summary ବନାନ୍ତୁ', how: 'Meera ଙ୍କ questions answer କରନ୍ତୁ; ସେ truthful proof summary ବନାଇଥାଏ ଯାହାଦ୍ୱାରା formal resume ଦରକାର ନହେଁ.' },
+    'tw-walkin': { title: ({ place }) => `${place} ପାଖର 2 local enquiries ପାଇଁ prepare କରନ୍ତୁ`, how: 'ଦୁଇଟି nearby workplaces ବାଛନ୍ତୁ ଏବଂ visit ପୂର୍ବରୁ Meera ସହ 30-second introduction practice କରନ୍ତୁ.' },
+    'tw-pmkvy-center': { title: 'Nearest PMKVY/Skill India training centre ଖୋଜନ୍ତୁ', how: ({ place }) => `Centre locator ଖୋଲନ୍ତୁ ଏବଂ ${place} ର closest centre, course ଏବଂ fees note କରନ୍ତୁ.` },
+    'tw-skillindia-start': { title: 'ଏବେ ଗୋଟିଏ free foundation module start କରନ୍ତୁ', how: 'Phone-first short module ଆରମ୍ଭ କରନ୍ତୁ ଯାହାଦ୍ୱାରା local centre confirm ହେଉଥିବାବେଳେ proof ବନେ.' },
+    'tw-practice-proof': { title: 'ଗୋଟିଏ practice task କରନ୍ତୁ ଏବଂ proof save କରନ୍ତୁ', how: 'ଗୋଟିଏ ଛୋଟ hands-on task complete କରନ୍ତୁ ଏବଂ first proof ଭାବେ photo/note save କରନ୍ତୁ.' },
+    'tw-skillindia-explore': { title: 'ଗୋଟିଏ free Skill India course explore କରନ୍ତୁ', how: 'Skill India Digital ଖୋଲନ୍ତୁ ଏବଂ interest ସହ matching short course start କରନ୍ତୁ.' },
+    'tw-ncs-explore': { title: 'Local opportunities ପାଇଁ NCS register କରନ୍ତୁ', how: ({ place }) => `NCS account ବନାନ୍ତୁ ଏବଂ district ${place} set କରନ୍ତୁ.` },
+  },
+};
+
+function resolveLocalizedField(value, context = {}) {
+  return typeof value === 'function' ? value(context) : value;
+}
+
+function localizeByWhen(value = 'This week', language = 'en') {
+  if (language === 'en') return value;
+  const lower = String(value || '').toLowerCase();
+  if (/portal deadline/.test(lower)) {
+    if (language === 'hi') return 'Portal deadline से पहले';
+    if (language === 'or') return 'Portal deadline ପୂର୍ବରୁ';
+    return 'Portal deadline se pehle';
+  }
+  if (language === 'hi') return 'इस week';
+  if (language === 'or') return 'ଏହି week';
+  return 'Is week';
+}
+
+function localizeThisWeekAction(item = {}, language = 'en', context = {}) {
+  if (language === 'en') return item;
+  const copy = (THIS_WEEK_ACTION_I18N[language] || {})[item.id] || {};
+  return {
+    ...item,
+    title: resolveLocalizedField(copy.title, context) || localizeLearnerText(item.title, language),
+    how: resolveLocalizedField(copy.how, context) || localizeLearnerText(item.how, language),
+    by_when: copy.by_when || localizeByWhen(item.by_when, language),
+  };
+}
+
+export function buildThisWeekActions(profile = {}, family = goalFamily(profile), options = {}) {
+  const language = learnerLanguageCode(profile, options.language);
   const place = coerceText(profile.block) || coerceText(profile.location) || 'your area';
   const hasPreciseArea = Boolean(coerceText(profile.block));
 
@@ -2625,11 +3209,14 @@ export function buildThisWeekActions(profile = {}, family = goalFamily(profile))
     ],
   };
 
-  return [...base, ...(byFamily[family] || byFamily.generic)].slice(0, 10);
+  return [...base, ...(byFamily[family] || byFamily.generic)]
+    .slice(0, 10)
+    .map((item) => localizeThisWeekAction(item, language, { place, family, profile }));
 }
 
 export function enrichJourneyForLearner(profile = {}, route = {}, journey = {}) {
   const family = goalFamily(profile);
+  const language = learnerLanguageCode(profile);
   const baseModules = Array.isArray(journey.modules) ? journey.modules : [];
   const modules = baseModules.map((module, index) => enrichModule(module, family, profile, index));
   const first = modules[0] || {};
@@ -2645,20 +3232,35 @@ export function enrichJourneyForLearner(profile = {}, route = {}, journey = {}) 
       coerceText(first.checkpoint) ||
       coerceText(first.completion_criteria) ||
       'Finish the lesson/practice, tap it done, then save a short proof note or photo.',
-    proof_required: proofRequired,
-    unlocks_next: coerceText(first.unlocks) || coerceText(first.unlock_after_completion) || coerceText(first.unlock) || 'the next week',
+      proof_required: proofRequired,
+      unlocks_next: coerceText(first.unlocks) || coerceText(first.unlock_after_completion) || coerceText(first.unlock) || 'the next week',
   };
+  const learningContract =
+    journey.learning_contract && typeof journey.learning_contract === 'object' && !Array.isArray(journey.learning_contract)
+      ? Object.fromEntries(
+          Object.entries(journey.learning_contract).map(([key, value]) => [key, localizeLearnerText(value, language)]),
+        )
+      : journey.learning_contract;
+  const delivery =
+    journey.delivery && typeof journey.delivery === 'object' && !Array.isArray(journey.delivery)
+      ? Object.fromEntries(Object.entries(journey.delivery).map(([key, value]) => [key, localizeLearnerText(value, language)]))
+      : journey.delivery;
   return {
     ...journey,
+    title: localizeLearnerText(journey.title, language),
+    weekly_plan: localizeLearnerArray(journey.weekly_plan, language),
+    support_plan: localizeLearnerArray(journey.support_plan, language),
+    learning_contract: learningContract,
+    delivery,
     modules,
     start_here: startHere,
     today_task: todayTask,
     selected_pathway_summary: {
       route_name: coerceText(route.name) || coerceText(journey.route_name) || coerceText(journey.title) || 'Selected pathway',
       family,
-      what_you_get: familyOutcome(family),
-      time: coerceText(journey.duration?.mvp) || `${modules.length}-week plan`,
-      channel: coerceText(journey.delivery?.primary_channel) || 'WhatsApp + voice',
+      what_you_get: familyOutcome(family, profile),
+      time: localizeLearnerText(coerceText(journey.duration?.mvp) || `${modules.length}-week plan`, language),
+      channel: localizeLearnerText(coerceText(journey.delivery?.primary_channel) || 'WhatsApp + voice', language),
       proof_required: proofRequired,
       unlocks_next: startHere.unlocks_next,
     },

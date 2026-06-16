@@ -1225,7 +1225,7 @@ function enrichPathwayData(data = {}, profile = {}, context = {}) {
   return {
     ...data,
     persona,
-    this_week_actions: buildThisWeekActions(profile, family),
+    this_week_actions: buildThisWeekActions(profile, family, { language: profile.preferred_language || profile.language }),
     missing_profile_facts: missingFacts,
     recommendation_trace: {
       persona,
@@ -1267,6 +1267,7 @@ function enrichRouteTrace(route = {}, index = 0, profile = {}, context = {}, per
   const decorated = decorateRouteExplanation(normalizedRoute, {
     profile,
     family,
+    language: profile.preferred_language || profile.language,
     matchedFacts,
     blockers,
     nextAction,
@@ -1284,7 +1285,7 @@ function enrichRouteTrace(route = {}, index = 0, profile = {}, context = {}, per
       blockers,
       explanation: traceExplanation(normalizedRoute, matchedFacts, blockers),
     },
-    next_action: nextAction,
+    next_action: decorated.next_action || nextAction,
   };
 }
 
