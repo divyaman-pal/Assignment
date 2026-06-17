@@ -931,6 +931,9 @@ function primarySkill(aspirations = []) {
   if (/data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text)) return 'data science';
   if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text)) return 'plumbing';
   if (/electrician|electrical|wiring|wireman|iti electrician/.test(text)) return 'electrician';
+  if (/nursing|\banm\b|\bgnm\b|health aide|patient care|healthcare/.test(text)) return 'nursing';
+  if (/drone/.test(text)) return 'drone operations';
+  if (/agriculture|farming|kheti|farm/.test(text)) return 'agriculture skills';
   if (/mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text)) return 'mechanic repair';
   if (/repair|mobile|technician/.test(text)) return 'mobile repair';
   if (/video|content|creator/.test(text)) return 'video creation';
@@ -1028,8 +1031,10 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
               ? 'enterprise_setup'
           : ['job search', 'local office job', 'college pathway', 'informal skill validation', 'vocational training'].includes(skill)
             ? skill.replace(/\s+/g, '_')
-            : ['plumbing', 'electrician'].includes(skill)
+            : ['plumbing', 'electrician', 'nursing', 'agriculture skills', 'drone operations', 'hospitality cooking', 'beauty and wellness', 'mobile repair'].includes(skill)
               ? 'vocational_training'
+              : skill === 'career exploration'
+                ? 'career_exploration'
           : 'career_pathway',
     language,
     duration: {
@@ -1151,6 +1156,8 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   const profileText = `${aspirations.join(' ')} ${goalLabel} ${profile.class_level || ''} ${profile.education_status || ''}`.toLowerCase();
   const text = `${profileText} ${routeText}`.toLowerCase();
   const goalType = Array.isArray(profile) ? '' : profile.learner_goal?.type || '';
+  const goalIntent = Array.isArray(profile) ? '' : profile.learner_goal?.intent || '';
+  const explicitNonStudyGoal = ['training', 'job', 'career', 'college', 'proof_to_work', 'self_employment'].includes(goalIntent);
   const jobLikeGoal =
     ['job', 'career', 'proof_to_work'].includes(profile.learner_goal?.intent) ||
     ['job_search_only', 'formal_skill_job_search', 'college_job_search', 'local_office_job'].includes(goalType);
@@ -1173,12 +1180,27 @@ function journeyPrimarySkill(profile = {}, route = {}) {
     profile.academic_goal?.type === 'class_12_exam_prep' ||
     /class 12|12th|twelfth|board exam|\bcbse\b|sample paper/.test(text);
   const explicitBoardPrep =
-    profile.academic_goal?.type === 'class_12_exam_prep' ||
-    goalType === 'school_exam_prep' ||
-    /class 12 board|board exam preparation|cbse.*marks|marks.*cbse/.test(profileText);
+    !explicitNonStudyGoal &&
+    (profile.academic_goal?.type === 'class_12_exam_prep' ||
+      goalType === 'school_exam_prep' ||
+      /class 12 board|board exam preparation|cbse.*marks|marks.*cbse/.test(profileText));
 
   if (goalType === 'local_office_job' || ((jobLikeGoal || routeJobText) && localOfficeText && !dataScienceText)) return 'local office job';
   if (jobLikeGoal && dataScienceText) return 'data science';
+  if (goalType === 'self_employment_enterprise') return 'enterprise setup';
+  if (goalType === 'skill_pathway_exploration' || goalType === 'open_counseling') return 'career exploration';
+  if (goalIntent === 'training' || goalType === 'vocational_training') {
+    if (/nursing|\banm\b|\bgnm\b|health aide|patient care|healthcare/.test(text)) return 'nursing';
+    if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text)) return 'plumbing';
+    if (/electrician|electrical|wiring|wireman|iti electrician/.test(text)) return 'electrician';
+    if (/drone/.test(text)) return 'drone operations';
+    if (/agriculture|farming|kheti|farm/.test(text)) return 'agriculture skills';
+    if (/repair|mobile|technician/.test(text)) return 'mobile repair';
+    if (/cook|hotel|chef|hospitality|kitchen/.test(text)) return 'hospitality cooking';
+    if (/beauty|mehandi|wellness/.test(text)) return 'beauty and wellness';
+    if (/computer|digital|typing|data/.test(text)) return 'computer basics';
+    return 'vocational training';
+  }
   if (explicitBoardPrep && !profileExplicitEntranceText) {
     return 'class 12 exam preparation';
   }
@@ -1196,10 +1218,9 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   }
   if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text)) return 'plumbing';
   if (/electrician|electrical|wiring|wireman|iti electrician/.test(text)) return 'electrician';
-  if (profile.academic_goal?.type === 'school_study_support' || /study support|school study|class \d+.*study/.test(text)) {
+  if (!explicitNonStudyGoal && (profile.academic_goal?.type === 'school_study_support' || /study support|school study|class \d+.*study/.test(text))) {
     return 'school study support';
   }
-  if (goalType === 'self_employment_enterprise') return 'enterprise setup';
   if (goalType === 'informal_skill_validation') return 'informal skill validation';
   if (/poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|enterprise|self.?employment|apna kaam|business setup/.test(text)) return 'enterprise setup';
   if (dataScienceText) return 'data science';
@@ -1212,7 +1233,6 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   }
   if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) return 'job search';
   if (['college_career', 'college_internship_project'].includes(goalType)) return 'college pathway';
-  if (goalType === 'vocational_training') return 'vocational training';
   if (/repair|mobile|technician/.test(text)) return 'mobile repair';
   if (/video|content|creator/.test(text)) return 'video creation';
   if (/computer|digital|typing|data/.test(text)) return 'computer basics';
@@ -1335,6 +1355,90 @@ const SKILL_JOURNEY_PROFILES = {
         practice_tasks: ['Shortlist two official/source-backed options', 'Prepare one consent-safe enquiry script'],
         proof: 'Verified source shortlist + enquiry script',
         unlock: 'Worker-reviewed opportunity or training referral',
+      },
+    ],
+  },
+  nursing: {
+    id: 'nursing',
+    label: 'ANM/GNM nursing training',
+    entry_role: 'ANM/GNM trainee / healthcare assistant trainee',
+    caution: 'No clinical work, patient handling, injection, medicine, or night-shift promise without verified training, guardian consent where needed, and worker review.',
+    search_terms: 'ANM GNM nursing training basics Hindi patient care hygiene',
+    official_terms: 'ANM GNM nursing training Skill India NCS',
+    weeks: [
+      {
+        title: 'Eligibility and role reality',
+        goal: 'Learner understands ANM/GNM difference, age/document needs, fees risk, and what a beginner can safely do.',
+        lessons: ['ANM vs GNM in simple words', 'Documents and age questions', 'What is safe beginner practice'],
+        practice_tasks: ['Write current education and documents available', 'Record why nursing fits and what support is needed'],
+        proof: 'Nursing eligibility note',
+        unlock: 'Care basics and communication',
+      },
+      {
+        title: 'Care basics and communication',
+        goal: 'Learner practises safe, non-clinical care habits: hygiene, respectful speech, and observation notes.',
+        lessons: ['Hand hygiene and cleanliness', 'Respectful patient greeting', 'Observation note basics'],
+        practice_tasks: ['Make a hygiene checklist', 'Practise one respectful introduction by voice'],
+        proof: 'Hygiene checklist + voice greeting',
+        unlock: 'Training centre verification',
+      },
+      {
+        title: 'Training centre verification',
+        goal: 'Learner checks real local/online training options before any fees or commute.',
+        lessons: ['Questions to ask a centre', 'Fee and hostel safety', 'Commute and family discussion'],
+        practice_tasks: ['List two centres/sources to verify', 'Prepare five questions before calling or visiting'],
+        proof: 'Centre verification checklist',
+        unlock: 'Worker-reviewed next step',
+      },
+      {
+        title: 'Worker-reviewed next step',
+        goal: 'Learner chooses a safe next step: verified course enquiry, document preparation, or alternate health-care helper route.',
+        lessons: ['Compare verified options', 'Consent before sharing phone/address', 'Backup route if fees/age do not fit'],
+        practice_tasks: ['Mark each option verified, unsure, or reject', 'Write one consent-safe enquiry script'],
+        proof: 'Verified nursing route decision',
+        unlock: 'Counselor/worker callback or training referral',
+      },
+    ],
+  },
+  'career exploration': {
+    id: 'career-exploration',
+    label: 'Career decision counseling',
+    entry_role: 'chosen first realistic route after comparison',
+    caution: 'No job, course, exam, or loan recommendation is final until the learner compares fit, cost, time, location, and proof needed.',
+    search_terms: 'career options after school rural India Hindi skills jobs government exam',
+    official_terms: 'National Career Service career counselling Skill India courses',
+    weeks: [
+      {
+        title: 'Choice map',
+        goal: 'Learner names 2-3 possible directions and why each is attractive or risky.',
+        lessons: ['Study route vs training route vs job route', 'Income now vs bigger route later', 'Family and commute constraints'],
+        practice_tasks: ['Pick top three options', 'Mark each option as easy, medium, or hard for time/money/travel'],
+        proof: 'Three-option choice map',
+        unlock: 'Mini proof trials',
+      },
+      {
+        title: 'Mini proof trials',
+        goal: 'Learner tries one tiny task from each serious option before choosing.',
+        lessons: ['One study practice task', 'One skill practice task', 'One job-readiness task'],
+        practice_tasks: ['Finish two mini tasks', 'Record which task felt possible and why'],
+        proof: 'Mini trial notes',
+        unlock: 'Route comparison',
+      },
+      {
+        title: 'Route comparison',
+        goal: 'Learner compares cost, time, safety, documents, and proof for the top two routes.',
+        lessons: ['Cost and document check', 'Safe commute/location check', 'Proof needed before opportunity'],
+        practice_tasks: ['Compare top two routes in a table', 'Ask Meera one doubt about each route'],
+        proof: 'Top-two route comparison',
+        unlock: 'First four-week route',
+      },
+      {
+        title: 'First route decision',
+        goal: 'Learner chooses one four-week route without losing the other options.',
+        lessons: ['Choose first route', 'Save backup option', 'Worker review if risk is high'],
+        practice_tasks: ['Write one reason for the selected route', 'Set first-week time and proof task'],
+        proof: 'First route decision note',
+        unlock: 'Personalized pathway loop',
       },
     ],
   },
@@ -2929,13 +3033,17 @@ export function routeMatchesGoalFamily(profile = {}, route = {}, family = goalFa
 // belongs to a different vocation than the learner's.
 const VOCATIONS = {
   mobile_repair: /mobile repair|phone repair|smartphone repair|mobile technician|cellphone/i,
+  data_science: /data science|data analyst|analytics|machine learning|\bpython\b|\bsql\b|notebook|dashboard/i,
   mechanic: /\bmechanic\b|bike repair|motorcycle|two.?wheeler|automobile/i,
   beauty: /beauty|salon|mehandi|mehendi|wellness|beautician|parlour|parlor|makeup/i,
   tailoring: /tailor|silai|stitch|sewing|garment|boutique|alteration/i,
   cooking: /\bcook\b|\bchef\b|kitchen|hospitality|catering|\bhotel\b/i,
+  plumbing: /plumb|pipe fitter|sanitary|water fitting|bathroom fitting/i,
   electrician: /electrician|wireman|wiring|electrical/i,
+  nursing: /nursing|\banm\b|\bgnm\b|health aide|patient care|healthcare/i,
   computer: /computer basics|data entry|typing|office assistant|cyber cafe|\bcsc\b/i,
   agriculture: /agriculture|farming|kheti|\bcrop\b|\bagri\b|\bfarm\b/i,
+  drone: /\bdrone\b|agri.?tech/i,
   driving: /\bdriver\b|driving|\blicense\b/i,
   video: /video creation|content creator|videograph/i,
 };
@@ -2946,18 +3054,18 @@ function detectVocations(text = '') {
     .map(([key]) => key);
 }
 
-function crossVocationConflict(profile = {}, route = {}) {
-  const learnerText = `${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`.toLowerCase();
+function crossVocationConflict(profile = {}, route = {}, extraLearnerText = '') {
+  const learnerText = `${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')} ${profile.learner_goal?.label || ''} ${profile.learner_goal?.type || ''} ${extraLearnerText}`.toLowerCase();
   const learnerVocations = detectVocations(learnerText);
   if (!learnerVocations.length) return false;
   const routeVocations = detectVocations(routeTextOf(route));
   if (!routeVocations.length) return false;
-  return !routeVocations.some((vocation) => learnerVocations.includes(vocation));
+  return routeVocations.some((vocation) => !learnerVocations.includes(vocation));
 }
 
-export function rejectUnrelatedRoute(profile = {}, route = {}, family = goalFamily(profile)) {
+export function rejectUnrelatedRoute(profile = {}, route = {}, family = goalFamily(profile), options = {}) {
   if (!routeMatchesGoalFamily(profile, route, family)) return true;
-  if (['vocational', 'informal_skill', 'generic', 'job'].includes(family) && crossVocationConflict(profile, route)) return true;
+  if (['vocational', 'informal_skill', 'generic', 'job', 'data_science_job', 'college'].includes(family) && crossVocationConflict(profile, route, options.learner_text || '')) return true;
   return false;
 }
 
@@ -2966,7 +3074,8 @@ export function validatePathwayRoutes(profile = {}, routes = [], options = {}) {
   const deterministic =
     Array.isArray(options.deterministic) && options.deterministic.length ? options.deterministic : sourceLimitedPathways(profile);
   const incoming = (Array.isArray(routes) ? routes : []).filter((route) => route && typeof route === 'object' && !Array.isArray(route));
-  const kept = incoming.filter((route) => !rejectUnrelatedRoute(profile, route, family));
+  const deterministicText = deterministic.map((route) => routeTextOf(route)).join(' ');
+  const kept = incoming.filter((route) => !rejectUnrelatedRoute(profile, route, family, { learner_text: deterministicText }));
   const rejected = incoming.filter((route) => !kept.includes(route)).map((route) => coerceText(route.name, route.id || 'route'));
   const preferDeterministicFirst = deterministic[0]?.id === 'local-day-shift-office-job';
   let finalRoutes = preferDeterministicFirst ? [...deterministic] : [...kept];
@@ -3232,6 +3341,8 @@ function skillResourceTerms(skill = '', profile = {}, module = {}) {
       'hospitality cooking': 'kitchen helper basics hygiene Hindi',
       'agriculture skills': 'agriculture service basics Hindi farmer records',
       'drone operations': 'drone agriculture basics Hindi safety',
+      nursing: 'ANM GNM nursing training hygiene patient care Hindi',
+      'career exploration': 'career options rural India skills jobs study Hindi',
       'customer service': 'customer service communication basics Hindi',
       'data science': 'data analyst Python SQL beginner Hindi',
     }[skill] ||
@@ -3251,6 +3362,86 @@ function resourceCardsForModule(skill = '', profile = {}, module = {}, index = 0
   const week = index + 1;
   const searchQuery = `${terms.base} ${terms.moduleTitle}`;
   const officialQuery = `${terms.official} ${terms.place}`.trim();
+  if (/school study support|class 12 exam preparation|entrance exam preparation/.test(skill)) {
+    const isEntrance = /entrance/.test(skill);
+    const isBoard = /class 12/.test(skill);
+    const officialTitle = isEntrance
+      ? 'NCERT textbook + official syllabus check'
+      : isBoard
+        ? 'NCERT textbook + sample paper check'
+        : 'DIKSHA / NCERT chapter practice';
+    return [
+      {
+        title: officialTitle,
+        type: 'official_learning',
+        source_url: isBoard || isEntrance ? 'https://ncert.nic.in/textbook.php' : 'https://diksha.gov.in/',
+        search_query: `${terms.moduleTitle} ${profile.class_level || ''} ${profile.academic_goal?.subjects?.join(' ') || ''}`.trim(),
+        how_to_use:
+          'Open the exact class/subject/chapter. Read or listen to only one small part, then solve 3-5 questions in a notebook. Do not jump to job/course links from this study plan.',
+        proof_to_save: `Notebook photo, score, and mistake note from Week ${week}`,
+      },
+      {
+        title: 'Optional free video explanation search',
+        type: 'free_video_search',
+        source_url: externalSearchUrl('https://www.youtube.com/results?search_query=', searchQuery),
+        how_to_use:
+          'Use video only to understand the same chapter/topic. Pause, write the step, solve yourself, and save mistakes. Skip videos that push paid batches before basics are clear.',
+        proof_to_save: `One solved question or voice explanation from Week ${week}`,
+      },
+    ];
+  }
+  if (skill === 'enterprise setup') {
+    return [
+      {
+        title: 'KVK / local agriculture support check',
+        type: 'official_support_search',
+        source_url: 'https://kvk.icar.gov.in/',
+        search_query: `${terms.place} KVK poultry mushroom enterprise training`,
+        how_to_use:
+          'Find the nearest Krishi Vigyan Kendra or district support office. Note only the source name, phone/page if public, training topic, and whether the learner can reach it safely.',
+        proof_to_save: `Verified local support note for Week ${week}`,
+      },
+      {
+        title: 'Scheme / loan eligibility caution',
+        type: 'official_scheme_check',
+        source_url: week >= 2 ? 'https://udyamregistration.gov.in/' : 'https://www.pmfme.mofpi.gov.in/',
+        search_query: `${terms.place} poultry enterprise scheme loan eligibility`,
+        how_to_use:
+          'Check eligibility, documents, subsidy/loan conditions, and repayment risk. Do not tell the learner to borrow until a worker/family review confirms cost and buyer plan.',
+        proof_to_save: `Scheme eligibility and risk note for Week ${week}`,
+      },
+      {
+        title: 'Free setup basics video search',
+        type: 'free_video_search',
+        source_url: externalSearchUrl('https://www.youtube.com/results?search_query=', searchQuery),
+        how_to_use:
+          'Watch one practical setup video only for cost heads, space, hygiene, feed/input, buyers, and common risks. Save doubts instead of copying the plan blindly.',
+        proof_to_save: `Cost, buyer, supplier, and risk list for Week ${week}`,
+      },
+    ];
+  }
+  if (skill === 'career exploration') {
+    return [
+      {
+        title: 'NCS career counselling / job-family reference',
+        type: 'official_counselling',
+        source_url: 'https://www.ncs.gov.in/',
+        search_query: `${terms.place} career counselling skills training job`,
+        how_to_use:
+          'Use NCS to understand broad job families and counselling options. Do not pick a job yet; first compare study, skill, job, and enterprise routes.',
+        proof_to_save: `Three-option comparison note for Week ${week}`,
+      },
+      {
+        title: 'Skill India course family search',
+        type: 'official_course_search',
+        source_url: 'https://www.skillindiadigital.gov.in/',
+        search_query: officialQuery,
+        how_to_use:
+          'Search one or two course families that match the learner interest. Note duration, language, fee if any, and whether phone-only learning is possible.',
+        proof_to_save: `Course-family shortlist for Week ${week}`,
+      },
+    ];
+  }
   const cards = [
     {
       title: `Free video search: ${terms.moduleTitle}`,

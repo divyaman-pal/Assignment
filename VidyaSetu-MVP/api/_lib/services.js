@@ -1259,7 +1259,10 @@ function academicPathwayProfile(profile = {}, question = '', context = {}) {
 }
 
 function enrichPathwayData(data = {}, profile = {}, context = {}) {
-  const routes = Array.isArray(data.routes) ? data.routes : [];
+  const incomingRoutes = Array.isArray(data.routes) ? data.routes : [];
+  const routes = shouldUseDecisionCounselingRoutes(profile, context)
+    ? buildDecisionCounselingRoutes(profile)
+    : incomingRoutes;
   const cleanedRoutes = context.academicMode ? routes.map((route) => sanitizeAcademicRoute(route)) : routes;
   const missingFacts = missingProfileFacts(profile, context);
   const persona = personaForProfile(profile, context);
@@ -1322,6 +1325,80 @@ function enrichPathwayData(data = {}, profile = {}, context = {}) {
     },
     routes: visibleRoutes,
   };
+}
+
+function shouldUseDecisionCounselingRoutes(profile = {}, context = {}) {
+  const goal = context.goal || profile.learner_goal || {};
+  const text = `${goal.type || ''} ${goal.intent || ''} ${goal.label || ''} ${(profile.aspirations || []).join(' ')}`.toLowerCase();
+  return (
+    goal.type === 'open_counseling' ||
+    (goal.type === 'skill_pathway_exploration' &&
+      /confused|not sure|unsure|counsel|government exam|private job|design|compare|exploration|open counseling/.test(text))
+  );
+}
+
+function buildDecisionCounselingRoutes(profile = {}) {
+  const place = safeRouteText(profile.location || profile.relocation_preference, 'your district');
+  const time = safeRouteText(profile.time_available, 'time not fixed yet');
+  return [
+    {
+      id: 'decision-study-route',
+      name: 'Compare study / government-exam route first',
+      card_kind: 'explore',
+      archetype: 'study_or_exam_check',
+      source_url: 'https://diksha.gov.in/',
+      source_title: 'DIKSHA / official learning reference',
+      tradeoff: 'Good if the learner can study regularly; slow for immediate earning.',
+      time,
+      distance: 'Can start from phone; coaching/centre only after family and cost check.',
+      income: 'No immediate income; builds exam/study option.',
+      confidence: 0.78,
+      first_income_in: 'not immediate',
+      income_path: 'study proof -> exam readiness -> later option',
+      what_it_asks: 'Daily study time, subjects/exam, and whether family can support the preparation period.',
+      first_step: 'Try one 20-minute official lesson or previous-question practice and save the score.',
+      entry_ids: ['diksha_or_ncert_practice'],
+      requires_worker_confirmation: false,
+    },
+    {
+      id: 'decision-skill-route',
+      name: 'Compare skill-training route',
+      card_kind: 'build_bigger',
+      archetype: 'skill_training_check',
+      source_url: 'https://www.skillindiadigital.gov.in/',
+      source_title: 'Skill India Digital course reference',
+      tradeoff: 'Practical if phone/time are available; fees, certificate value, and local centre must be checked.',
+      time,
+      distance: `Online first, then only verified options near ${place}.`,
+      income: 'Possible after proof and safe local demand check.',
+      confidence: 0.79,
+      first_income_in: 'after proof, not guaranteed',
+      income_path: 'mini skill proof -> verified course/trainer -> local work or apprenticeship',
+      what_it_asks: 'One chosen skill interest, daily practice time, phone access, and fee/commute safety.',
+      first_step: 'Choose one skill family and complete a tiny proof task before paying for any course.',
+      entry_ids: ['skill_india_course_family'],
+      requires_worker_confirmation: true,
+    },
+    {
+      id: 'decision-job-route',
+      name: 'Compare local / private-job route',
+      card_kind: 'earn_fast',
+      archetype: 'job_readiness_check',
+      source_url: 'https://www.ncs.gov.in/',
+      source_title: 'National Career Service job/counselling reference',
+      tradeoff: 'Fastest only if location, commute, proof/resume, and safe job source are clear.',
+      time,
+      distance: `Only roles that match safe commute from ${place}.`,
+      income: 'Depends on verified role; no fake salary promise.',
+      confidence: 0.77,
+      first_income_in: 'only after verified match',
+      income_path: 'profile proof -> source review -> consent-based application',
+      what_it_asks: 'Location, commute, basic proof/resume, phone consent, and source verification.',
+      first_step: 'Write one-line target role and save what proof/resume is available.',
+      entry_ids: ['ncs_job_family_check'],
+      requires_worker_confirmation: true,
+    },
+  ];
 }
 
 function sanitizeAcademicRoute(route = {}) {
@@ -1541,7 +1618,9 @@ function simpleLanguageKind(profile = {}) {
   return 'en';
 }
 
-function realisticRoleForRoute(route = {}) {
+function realisticRoleForRoute(route = {}, profile = {}, family = '') {
+  const goalIntent = profile.learner_goal?.intent || '';
+  const goalType = profile.learner_goal?.type || '';
   const text = [
     route.name,
     route.title,
@@ -1554,6 +1633,23 @@ function realisticRoleForRoute(route = {}) {
     .map((value) => safeRouteText(value))
     .join(' ')
     .toLowerCase();
+  if (goalIntent === 'study' || /school_study|board_exam|entrance_exam/.test(family)) {
+    if (/jee|iit|entrance|neet|cuet/.test(text)) return 'exam learner building syllabus and mock-test proof';
+    if (/class 12|board|cbse|sample paper/.test(text)) return 'board student building chapter and sample-paper proof';
+    return 'school learner building chapter practice proof';
+  }
+  if (goalIntent === 'self_employment' || goalType === 'self_employment_enterprise' || /enterprise/.test(family)) {
+    if (/poultry|broiler|layer|chicken/.test(text)) return 'poultry micro-enterprise starter';
+    if (/mushroom/.test(text)) return 'mushroom micro-enterprise starter';
+    if (/food|pickle|papad|bakery|processing/.test(text)) return 'food-processing micro-enterprise starter';
+    return 'micro-enterprise starter';
+  }
+  if (goalType === 'skill_pathway_exploration' || goalType === 'open_counseling') {
+    return 'first route after study-skill-job comparison';
+  }
+  if (/nursing|\banm\b|\bgnm\b|health aide|patient care|healthcare/.test(text)) return 'ANM/GNM trainee / healthcare assistant trainee';
+  if (/drone/.test(text)) return 'agri-drone service trainee';
+  if (/agriculture|farming|kheti|\bfarm\b|crop/.test(text)) return 'agri service assistant trainee';
   if (/plumb|pipe fitter|sanitary|water fitting/.test(text)) return 'plumber helper / pipe fitting trainee';
   if (/electrician|electrical|wiring|wireman/.test(text)) return 'electrician helper / wiring trainee';
   if (/mobile|repair|technician/.test(text)) return 'mobile repair shop helper / trainee';
@@ -1566,8 +1662,11 @@ function realisticRoleForRoute(route = {}) {
 }
 
 function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], blockers = []) {
+  const family = goalFamily(profile, {});
   const kind = simpleLanguageKind(profile);
-  const role = realisticRoleForRoute(route);
+  const goalIntent = profile.learner_goal?.intent || '';
+  const goalType = profile.learner_goal?.type || '';
+  const role = realisticRoleForRoute(route, profile, family);
   const factText = matchedFacts
     .filter((fact) => /goal|skill|location|mobility|time|education|language/i.test(fact.label || ''))
     .slice(0, 4)
@@ -1575,22 +1674,59 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
     .join('; ');
   const checkFirst = blockers.length
     ? blockers[0]
-    : 'Verify training/source, location, fees if any, safety, and consent before sharing details.';
+    : goalIntent === 'study' || /school_study|board_exam|entrance_exam/.test(family)
+      ? 'Use official syllabus/DIKSHA/NCERT first, keep one notebook proof, and do not switch to jobs from this study plan.'
+      : goalIntent === 'self_employment' || goalType === 'self_employment_enterprise' || /enterprise/.test(family)
+        ? 'Verify local training/support, buyer demand, supplier cost, scheme eligibility, and loan risk before spending money.'
+        : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
+          ? 'Compare study, skill-training, job, and enterprise routes before choosing one.'
+          : 'Verify training/source, location, fees if any, safety, and consent before sharing details.';
+  const journeyPreview =
+    goalIntent === 'study' || /school_study|board_exam|entrance_exam/.test(family)
+      ? [
+          'Week 1: weak topic/chapter check and first notebook proof.',
+          'Week 2: official lesson + small practice set.',
+          'Week 3: mistake log, sample questions, and voice explanation.',
+          'Week 4: retest and next chapter/exam step; no job outreach.',
+        ]
+      : goalIntent === 'self_employment' || goalType === 'self_employment_enterprise' || /enterprise/.test(family)
+        ? [
+            'Week 1: setup idea, space, family support, and cost heads.',
+            'Week 2: scheme/loan eligibility check without borrowing yet.',
+            'Week 3: buyer, supplier, hygiene/safety, and loss-risk check.',
+            'Week 4: tiny pilot or stop/go decision after worker review.',
+          ]
+        : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
+          ? [
+              'Week 1: compare study, skill, job, and enterprise routes.',
+              'Week 2: try two small proof tasks before choosing.',
+              'Week 3: check time, cost, location, and family support.',
+              'Week 4: choose one first four-week route and save backup.',
+            ]
+          : [
+              'Week 1: skill ke basic words, tools, safety, aur pehla notebook/voice proof.',
+              'Week 2: safe practice task aur photo/note proof.',
+              'Week 3: helper/trainee role ke screening answers aur commute/consent check.',
+              'Week 4: Skill India/NCS/apprenticeship/source review; sirf verified next step.',
+            ];
+  const promiseLine =
+    goalIntent === 'study'
+      ? 'Yeh marks guarantee nahi hai. Meera sirf official resource, practice, proof, aur progress track karegi.'
+      : goalIntent === 'self_employment'
+        ? 'Yeh income ya loan approval guarantee nahi hai. Cost, buyer, scheme, aur risk verify hone ke baad hi next step hoga.'
+        : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
+          ? 'Yeh final recommendation nahi hai. Pehle options compare honge, phir learner ek route choose karega.'
+          : 'Yeh guaranteed job nahi hai. Contact, fee, salary, aur employer/source verify hone ke baad hi share/apply hoga.';
   if (kind === 'hinglish') {
     return {
       realistic_role: role,
       why_realistic: factText
-        ? `Meera ne yeh rasta in baaton se chuna: ${factText}. Isliye pehle ${role} ke liye basic skill + proof banega, seedha job promise nahi.`
-        : `Yeh ${role} ke liye starter rasta hai. Pehle skill proof banega, phir verified training/job source check hoga.`,
+        ? `Meera ne yeh rasta in baaton se chuna: ${factText}. Pehla target: ${role}.`
+        : `Yeh ${role} ke liye starter rasta hai. Pehle proof/check hoga, phir agla kadam.`,
       learner_conditions: `Daily time, phone access, location/commute, aur family safety ko dhyan mein rakhkar step banega.`,
       what_to_check: checkFirst,
-      journey_preview: [
-        'Week 1: skill ke basic words, tools, safety, aur pehla notebook/voice proof.',
-        'Week 2: safe practice task aur photo/note proof.',
-        'Week 3: helper/trainee role ke screening answers aur commute/consent check.',
-        'Week 4: Skill India/NCS/apprenticeship/source review; sirf verified next step.',
-      ],
-      not_a_promise: 'Yeh guaranteed job nahi hai. Contact, fee, salary, aur employer/source verify hone ke baad hi share/apply hoga.',
+      journey_preview: journeyPreview,
+      not_a_promise: promiseLine,
     };
   }
   if (kind === 'hi') {
@@ -1617,13 +1753,15 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
       : `This is a starter route toward ${role}. The learner builds proof first, then checks verified training/job sources.`,
     learner_conditions: 'The route must respect daily time, phone access, location/commute, family safety, and consent.',
     what_to_check: checkFirst,
-    journey_preview: [
-      'Week 1: basic words, tools, safety, and first notebook/voice proof.',
-      'Week 2: safe practice task with photo/note proof.',
-      'Week 3: helper/trainee screening answers plus commute and consent check.',
-      'Week 4: Skill India/NCS/apprenticeship/source review; only verified next step.',
-    ],
-    not_a_promise: 'This is not a guaranteed job. Contact, fee, salary, and employer/source must be verified before sharing or applying.',
+    journey_preview: journeyPreview,
+    not_a_promise:
+      goalIntent === 'study'
+        ? 'This is not a marks guarantee. Meera tracks official resources, practice, proof, and progress.'
+        : goalIntent === 'self_employment'
+          ? 'This is not an income or loan-approval guarantee. Cost, buyers, schemes, and risk must be verified before spending.'
+          : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
+            ? 'This is not a final recommendation. The learner compares options first, then chooses one route.'
+            : 'This is not a guaranteed job. Contact, fee, salary, and employer/source must be verified before sharing or applying.',
   };
 }
 

@@ -49,6 +49,12 @@ const personas = [
     text: 'Main Sameer Nagpur se hoon. Mujhe mobile repair training karni hai, mere paas Android phone hai, roz 1 hour practice kar sakta hoon aur 12 km tak commute kar sakta hoon.',
   },
   {
+    id: 'plumbing_training',
+    kind: 'training',
+    expectIntent: 'training',
+    text: 'Main Lakshmi Tamil Nadu se hoon. School nahi gayi. Plumbing ka kaam seekhna hai, phone shared hai, roz aadha ghanta hai, ghar se 5 km safe ja sakti hoon.',
+  },
+  {
     id: 'btech_ds',
     kind: 'job',
     expectIntent: 'job',
@@ -189,9 +195,13 @@ const CONTENT_RULES = {
   class12: { require: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b/i, forbidInRoutes: /salon|beautician|mehandi|placement job|data entry job/i },
   hindi_class12_question: { require: /ncert|diksha|sample paper|previous paper|revision|practice|\btest\b|परीक्षा|पेपर/i, forbidInRoutes: /salon|beautician|mehandi|placement job/i },
   class10_coding: { require: /ncert|diksha|practice|\btest\b|chapter|revision/i, forbidInRoutes: /salon|beautician|mehandi|placement job|data entry job/i },
-  btech_ds: { require: /python|sql|project|portfolio|resume|github|internship|fresher|outreach|data science/i, forbidInRoutes: /computer basics|beauty|salon|tailor/i },
+  btech_ds: { require: /python|sql|project|portfolio|resume|github|internship|fresher|outreach|data science/i, forbidInRoutes: /beauty|salon|tailor/i },
   informal_mechanic: { require: /proof|sample|rpl|local work|apprentice|certificate/i },
   dropout_tailor: { require: /stitch|silai|tailor|sample|customer|rpl|local|proof/i },
+  plumbing_training: { require: /plumb|pipe|fitting|helper|training|safety/i, forbidInRoutes: /beauty|salon|mehandi|computer basics|data entry/i },
+  nursing_training: { require: /nursing|anm|gnm|patient|hygiene|centre|center/i, forbidInRoutes: /ncert|cbse|board exam|sample paper|beauty|salon|computer basics/i },
+  agri_drone: { require: /agri|agriculture|drone|farm|field|service/i, forbidInRoutes: /beauty|salon|mehandi|computer basics|data entry/i },
+  open_counseling: { require: /compare|choice|study|skill|job|route/i, forbidInRoutes: /beauty|salon|mehandi|placement job/i },
   enterprise_poultry: { require: /setup|budget|scheme|loan|buyer|customer|\brisk\b|mudra|30/i, forbidInRoutes: /employer outreach|hirer outreach|placement job/i },
 };
 
@@ -248,7 +258,7 @@ function expectedEnough(persona, result) {
     if (rule.requireAlso && !rule.requireAlso.test(haystack)) {
       failures.push(`content missing required terms: ${rule.requireAlso}`);
     }
-    if (rule.forbidInRoutes && rule.forbidInRoutes.test(result.pathwayText || '')) {
+    if (rule.forbidInRoutes && rule.forbidInRoutes.test(result.routeCardText || result.pathwayText || '')) {
       failures.push(`route cards contain forbidden terms: ${rule.forbidInRoutes}`);
     }
   }
@@ -270,6 +280,14 @@ function expectedEnough(persona, result) {
   }
   if (persona.id === 'btech_ds' && !JSON.stringify(result).toLowerCase().includes('data science')) {
     failures.push('data science not preserved');
+  }
+  if (
+    persona.id === 'btech_ds' &&
+    /(^|[^a-z])computer basics[^.]{0,80}(course|training|route|pathway|skill course|job)|(^|[^a-z])(course|training|route|pathway|skill course)[^.]{0,80}computer basics/i.test(
+      result.routeCardText || '',
+    )
+  ) {
+    failures.push('data science route recommended computer basics');
   }
   if (persona.id === 'btech_ds' && !String(result.segment || '').startsWith('startup_outreach')) {
     failures.push(`segment ${result.segment || 'missing'} is not startup outreach`);
@@ -297,6 +315,23 @@ function expectedEnough(persona, result) {
     if (!/data entry|job|resume/i.test(JSON.stringify(result))) {
       failures.push('job switch details not preserved');
     }
+  }
+  if (persona.id === 'nursing_training') {
+    if (result.journeyMode !== 'vocational_training') failures.push(`nursing journey ${result.journeyMode || 'missing'} is not vocational_training`);
+    if (/ncert|cbse|board exam|sample paper/i.test(`${result.pathwayText || ''} ${result.journeyText || ''}`)) failures.push('nursing route leaked school/board-study content');
+  }
+  if (persona.id === 'agri_drone') {
+    if (result.journeyMode !== 'vocational_training') failures.push(`agri-drone journey ${result.journeyMode || 'missing'} is not vocational_training`);
+    if (/computer basics|data entry|beauty|salon/i.test(result.routeCardText || '')) failures.push('agri-drone route drifted to unrelated vocation');
+  }
+  if (persona.id === 'plumbing_training') {
+    if (result.journeyMode !== 'vocational_training') failures.push(`plumbing journey ${result.journeyMode || 'missing'} is not vocational_training`);
+    if (!/plumb|pipe|fitting/i.test(`${result.pathwayText || ''} ${result.journeyText || ''}`)) failures.push('plumbing content missing');
+    if (/beauty|salon|mehandi|computer basics|data entry/i.test(result.routeCardText || '')) failures.push('plumbing route drifted to unrelated vocation');
+  }
+  if (persona.id === 'open_counseling') {
+    if (result.journeyMode !== 'career_exploration') failures.push(`open counseling journey ${result.journeyMode || 'missing'} is not career_exploration`);
+    if (!/compare|choice|study|skill|job/i.test(result.pathwayText || '')) failures.push('open counseling did not produce comparison routes');
   }
   return failures;
 }
@@ -342,6 +377,16 @@ async function runPersona(persona, index) {
   out.routes = (pathway.routes || []).map((route) => route.name).slice(0, 3);
   out.locationRequired = Boolean(pathway.location_required) || out.locationRequired;
   out.pathwayText = JSON.stringify(pathway.routes || []).toLowerCase();
+  out.routeCardText = JSON.stringify(
+    (pathway.routes || []).map((route) => ({
+      name: route.name,
+      title: route.title,
+      tradeoff: route.tradeoff,
+      source_title: route.source_title,
+      income_path: route.income_path,
+      first_step: route.first_step,
+    })),
+  ).toLowerCase();
   out.pathwayDetailsValid = (pathway.routes || []).every((route) => {
     const detail = route.pathway_detail || {};
     return (
