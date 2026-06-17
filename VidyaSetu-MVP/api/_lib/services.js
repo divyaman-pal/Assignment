@@ -1417,14 +1417,15 @@ function personaForProfile(profile = {}, context = {}) {
   const goalType = profile.learner_goal?.type || profile.academic_goal?.type || '';
   const goalIntent = profile.learner_goal?.intent || '';
   const text = `${goalType} ${goalIntent} ${profile.class_level || ''} ${profile.education_status || ''} ${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`.toLowerCase();
+  if (/formal_skill_job_search|certified|certificate|iti|diploma|license/.test(text)) return 'formal_skill_job_search';
+  if (/job_search_only|job|naukri|placement/.test(text) || goalIntent === 'job') return 'job_search_only';
+  if (/training|course|vocational/.test(text) || goalIntent === 'training') return 'vocational_training';
+  if (goalType === 'informal_skill_validation' || goalIntent === 'proof_to_work') return 'informal_skill_rpl';
   if (context.entrancePrep || /jee|neet|entrance|polytechnic/.test(text)) return 'entrance_exam_prep';
   if (context.academicPrep || /class 12|board|marks|score/.test(text)) return 'board_exam_prep';
   if (context.schoolStudy || goalType === 'school_study_support' || goalIntent === 'study') return 'school_study_support';
   if (/internship|project/.test(text)) return 'college_internship';
   if (/college|btech|b\.tech|engineering|bca|mca|degree/.test(text)) return 'college_career';
-  if (/formal_skill_job_search|certified|certificate|iti|diploma|license/.test(text)) return 'formal_skill_job_search';
-  if (/job_search_only|job|naukri|placement/.test(text) || goalIntent === 'job') return 'job_search_only';
-  if (/training|course|vocational/.test(text) || goalIntent === 'training') return 'vocational_training';
   if (/informal|rpl|tailor|stitch|repair|farming|cooking/.test(text)) return 'informal_skill_rpl';
   if (/dropout|school chhod|income urgent/.test(text)) return 'dropout_income';
   return 'unsure_exploration';

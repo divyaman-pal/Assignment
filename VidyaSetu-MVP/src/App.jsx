@@ -2332,44 +2332,27 @@ function JourneyTab({
   const proofReadyCount = Number(progress.proof_ready_count || 0);
   const proofRequiredCount = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
   const passportEligible = Boolean(progress.passport_eligible);
+  const currentModule = firstIncompleteModule || modules[0] || null;
+  const currentTitle = currentModule ? `${t.journey.week} ${currentModule.week || 1}: ${uiText(currentModule.title)}` : '';
   return (
     <div className="workspace-card journey-workspace">
-      <p className="eyebrow">Weekly action plan</p>
-      <h2>{journey?.title || 'Choose a pathway, then create the first weekly plan.'}</h2>
-      <div className="guided-steps journey-stage-strip">
-        <span className="active"><b>1</b>Today&apos;s proof</span>
-        <span className={modules.length ? 'active' : ''}><b>2</b>Safe shortlist</span>
-        <span className={completionPercent > 0 ? 'active' : ''}><b>3</b>Consent next</span>
-      </div>
+      <p className="eyebrow">This week</p>
+      <h2>{currentTitle || journey?.title || 'Choose a pathway, then create the first weekly plan.'}</h2>
       <div className="action-row">
         <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
-          {academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
+          {journey ? 'Refresh plan' : academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
         </button>
         <span>{selectedRoute ? `Pathway: ${selectedRoute.name}` : 'Choose a pathway first.'}</span>
       </div>
       {!journey && <EmptyState text="Choose the route first. VidyaSetu will create only the weekly actions needed for that route." />}
       {journey && (
         <>
-          <p className="journey-tip">
-            Work on the first proof before applying anywhere. Outreach stays blocked until the learner approves what will be shared.
-          </p>
-          <div className="journey-readiness-grid">
-            <span><b>{completionPercent}%</b>Plan progress</span>
-            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>Proof saved</span>
-            <span><b>{passportEligible ? 'Ready' : 'Draft'}</b>{academicMode ? 'Study record' : 'Skill Passport'}</span>
-          </div>
-          {journey.selected_pathway_summary && (
-            <div className="pathway-summary-line">
-              <b>{t.journey.yourPathway}:</b> {uiText(journey.selected_pathway_summary.route_name, selectedRoute?.name)}
-              {uiText(journey.selected_pathway_summary.what_you_get) ? ` — ${uiText(journey.selected_pathway_summary.what_you_get)}` : ''}
-            </div>
-          )}
           {(firstIncompleteModule || journey.start_here) && (() => {
             const startModule = firstIncompleteModule || {};
             const start = journey.start_here || {};
             const startWeek = startModule.week || start.week || 1;
             const startTitle = uiText(startModule.title, uiText(start.title, 'Week 1'));
-            const startWhy = uiText(startModule.why_it_matters, uiText(startModule.goal, uiText(start.why_it_matters)));
+            const startWhy = uiText(startModule.goal, uiText(start.why_it_matters));
             const startToday = uiText(
               Array.isArray(startModule.daily_micro_tasks) && startModule.daily_micro_tasks.length ? startModule.daily_micro_tasks[0] : '',
               uiText(start.today_task, 'Start the first lesson and finish one small task.'),
@@ -2389,6 +2372,11 @@ function JourneyTab({
               </div>
             );
           })()}
+          <div className="journey-readiness-grid">
+            <span><b>{completionPercent}%</b>progress</span>
+            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>proof saved</span>
+            <span><b>{passportEligible ? 'Ready' : 'Draft'}</b>{academicMode ? 'Study record' : 'Skill Passport'}</span>
+          </div>
           <div className="study-progress">
             <div>
               <strong>{completedCount}/{totalItems}</strong>

@@ -7827,3 +7827,185 @@ body {
   color: #0f6f4d;
   background: #f0fbf7;
 }
+
+.crm-app-shell .journey-workspace {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.crm-app-shell .journey-workspace > .eyebrow {
+  margin: 0;
+  color: #275efe;
+}
+
+.crm-app-shell .journey-workspace > h2 {
+  max-width: 820px;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.12;
+}
+
+.crm-app-shell .journey-workspace > .action-row {
+  margin-top: 2px;
+}
+
+.crm-app-shell .journey-workspace > .action-row > span {
+  max-width: 560px;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crm-app-shell .journey-workspace .journey-today-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+  border-left: 4px solid #275efe;
+  padding: 18px;
+}
+
+.crm-app-shell .journey-workspace .journey-today-card > span {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.crm-app-shell .journey-workspace .journey-today-card strong {
+  font-size: 19px;
+}
+
+.crm-app-shell .journey-workspace .journey-today-card p {
+  max-width: 760px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.crm-app-shell .journey-workspace .journey-today-card small {
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.crm-app-shell .journey-workspace .journey-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-app-shell .journey-workspace .journey-readiness-grid span {
+  min-height: 74px;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.crm-app-shell .journey-workspace .study-progress {
+  margin-top: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.crm-app-shell .journey-workspace .module-grid {
+  grid-template-columns: minmax(280px, 1.15fr) minmax(190px, 0.85fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.crm-app-shell .journey-workspace .module-card {
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.crm-app-shell .journey-workspace .module-card:not(.locked) {
+  grid-row: span 3;
+}
+
+.crm-app-shell .journey-workspace .module-card.locked {
+  min-height: 0;
+  padding: 14px;
+  color: #475467;
+  background: #f8fafc;
+}
+
+.crm-app-shell .journey-workspace .module-card.locked .lesson-checklist,
+.crm-app-shell .journey-workspace .module-card.locked .proof-capture,
+.crm-app-shell .journey-workspace .module-card.locked .module-progress-line,
+.crm-app-shell .journey-workspace .module-card.locked .module-unlock-hint {
+  display: none;
+}
+
+.crm-app-shell .journey-workspace .module-card.locked h3 {
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.crm-app-shell .journey-workspace .module-card.locked p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.crm-app-shell .journey-workspace .lesson-checklist {
+  display: grid;
+  gap: 8px;
+}
+
+.crm-app-shell .journey-workspace .lesson-item {
+  justify-content: flex-start;
+  min-height: 48px;
+  border-radius: 10px;
+  padding: 10px 11px;
+  text-align: left;
+}
+
+.crm-app-shell .journey-workspace .lesson-item b {
+  flex: 0 0 auto;
+  width: 88px;
+  color: #275efe;
+  font-size: 11px;
+}
+
+.crm-app-shell .journey-workspace .proof-capture {
+  gap: 9px;
+  margin-top: 12px;
+  border-radius: 12px;
+  padding: 13px;
+  background: #fbfcff;
+}
+
+.crm-app-shell .journey-workspace .journey-next-line {
+  border: 1px solid #d8e0ee;
+  border-radius: 12px;
+  padding: 11px 13px;
+  color: #344054;
+  background: #f6f9ff;
+}
+
+.crm-app-shell .journey-workspace .journey-actions,
+.crm-app-shell .journey-workspace .action-row:last-child {
+  margin-top: 0;
+}
+
+@media (max-width: 920px) {
+  .crm-app-shell .journey-workspace {
+    padding: 16px;
+  }
+
+  .crm-app-shell .journey-workspace > h2 {
+    font-size: 23px;
+  }
+
+  .crm-app-shell .journey-workspace .journey-readiness-grid,
+  .crm-app-shell .journey-workspace .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-app-shell .journey-workspace .module-card:not(.locked) {
+    grid-row: auto;
+  }
+}

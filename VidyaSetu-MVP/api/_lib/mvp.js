@@ -940,7 +940,7 @@ function titleCase(value = '') {
 }
 
 export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
-  const skill = journeyPrimarySkill(profile);
+  const skill = journeyPrimarySkill(profile, route);
   const template = JOURNEY_TEMPLATES[skill] || JOURNEY_TEMPLATES.generic;
   const language = profile.preferred_language || profile.language || 'Hindi + local language';
   const device = profile.device || profile.phone_access || 'shared mobile phone';
@@ -1011,7 +1011,7 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
               ? 'data_science_pathway'
             : skill === 'enterprise setup'
               ? 'enterprise_setup'
-          : ['job search', 'college pathway', 'informal skill validation', 'vocational training'].includes(skill)
+          : ['job search', 'local office job', 'college pathway', 'informal skill validation', 'vocational training'].includes(skill)
             ? skill.replace(/\s+/g, '_')
           : 'career_pathway',
     language,
@@ -1127,27 +1127,40 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
   return enrichJourneyForLearner(profile, { ...route, name: routeName }, journey);
 }
 
-function journeyPrimarySkill(profile = {}) {
+function journeyPrimarySkill(profile = {}, route = {}) {
   const aspirations = Array.isArray(profile) ? profile : profile.aspirations || [];
-  const text = aspirations.join(' ').toLowerCase();
+  const routeText = routeTextOf(route);
+  const goalLabel = Array.isArray(profile) ? '' : `${profile.learner_goal?.label || ''} ${profile.learner_goal?.intent || ''}`;
+  const text = `${aspirations.join(' ')} ${goalLabel} ${routeText}`.toLowerCase();
   const goalType = Array.isArray(profile) ? '' : profile.learner_goal?.type || '';
+  const jobLikeGoal =
+    ['job', 'career', 'proof_to_work'].includes(profile.learner_goal?.intent) ||
+    ['job_search_only', 'formal_skill_job_search', 'college_job_search', 'local_office_job'].includes(goalType);
+  const localOfficeText =
+    /computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|office assistant|bpo|call center|retail billing|local data entry|office roles/.test(
+      text,
+    );
+  const dataScienceText = /data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text);
+
+  if (goalType === 'local_office_job' || (jobLikeGoal && localOfficeText && !dataScienceText)) return 'local office job';
+  if (jobLikeGoal && dataScienceText) return 'data science';
   if (profile.academic_goal?.type === 'entrance_exam_prep' || goalType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bcat\b|\bclat\b|\bnda\b|\bupsc\b|\bssc\b|railway|bank exam|entrance exam|competitive exam/.test(text)) {
     return 'entrance exam preparation';
-  }
-  if (profile.academic_goal?.type === 'school_study_support' || /study support|school study|class \d+.*study/.test(text)) {
-    return 'school study support';
   }
   if (profile.academic_goal?.type === 'class_12_exam_prep' || /class 12|board exam|exam preparation|marks|score/.test(text)) {
     return 'class 12 exam preparation';
   }
+  if (profile.academic_goal?.type === 'school_study_support' || /study support|school study|class \d+.*study/.test(text)) {
+    return 'school study support';
+  }
   if (goalType === 'self_employment_enterprise') return 'enterprise setup';
   if (goalType === 'informal_skill_validation') return 'informal skill validation';
   if (/poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|enterprise|self.?employment|apna kaam|business setup/.test(text)) return 'enterprise setup';
-  if (/data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text)) return 'data science';
+  if (dataScienceText) return 'data science';
   if (/mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text)) return 'mechanic repair';
   if (
     ['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType) &&
-    /computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|office assistant|bpo|call center|retail billing/.test(text)
+    localOfficeText
   ) {
     return 'local office job';
   }
@@ -1533,7 +1546,7 @@ const JOURNEY_TEMPLATES = {
     modules: [
       {
         title: 'Resume and typing proof',
-        goal: 'Learner gets a simple resume, Class 12 proof, and one typing score ready before applying.',
+        goal: 'Make a simple resume, attach Class 12 proof, and save one typing score before applying.',
         lessons: ['Simple resume fields', 'Class 12 certificate photo', 'Typing score proof'],
         daily_micro_tasks: ['Fill name, location, education, and skills in the resume', 'Practise typing for 20 minutes', 'Save one typing-test screenshot'],
         practice_tasks: ['Create a one-page resume', 'Take a 5-minute typing test'],
@@ -1545,7 +1558,7 @@ const JOURNEY_TEMPLATES = {
       },
       {
         title: 'Safe local shortlist',
-        goal: 'Learner filters jobs to nearby day-shift computer/customer-care roles only.',
+        goal: 'Filter jobs to nearby day-shift computer, data-entry, front-desk, billing, or customer-care roles only.',
         lessons: ['Allowed roles', 'Reject unsafe or unrelated jobs', 'Commute and day-shift check'],
         daily_micro_tasks: ['Mark allowed roles: data entry, computer operator, front desk, billing, customer care', 'Reject unrelated trade, delivery, night shift, and fee-based jobs', 'Set the commute limit'],
         practice_tasks: ['Shortlist five matching jobs', 'Mark each job safe, unsure, or reject'],
@@ -1557,7 +1570,7 @@ const JOURNEY_TEMPLATES = {
       },
       {
         title: 'Application practice',
-        goal: 'Learner practises applying without sharing private details blindly.',
+        goal: 'Practise applying without sharing phone, address, certificate, or resume blindly.',
         lessons: ['What to share', 'What not to share', 'Consent before contact'],
         daily_micro_tasks: ['Prepare a 30-second introduction', 'Choose two jobs from the safe shortlist', 'Confirm what details can be shared'],
         practice_tasks: ['Record one intro voice note', 'Approve one consent-limited draft'],
@@ -1569,7 +1582,7 @@ const JOURNEY_TEMPLATES = {
       },
       {
         title: 'Interview and first-week support',
-        goal: 'Learner prepares for screening and knows when to ask for help.',
+        goal: 'Prepare for screening and know when to ask a worker or trusted adult for help.',
         lessons: ['Common questions', 'Shift and safety questions', 'First-week warning signs'],
         daily_micro_tasks: ['Practise three interview answers', 'Prepare two safety questions', 'Save worker/guardian support contact'],
         practice_tasks: ['Complete one mock interview', 'Write first-day checklist'],
