@@ -1186,6 +1186,7 @@ function App() {
 
   async function contactEmployer(manualEmailOverride = manualEmail) {
     if (!selectedMatch) return;
+    const safeManualEmail = typeof manualEmailOverride === 'string' ? manualEmailOverride : manualEmail;
     await run('Preparing consent-limited employer outreach...', async () => {
       const data = await api('/api/outreach', {
         passport: passport || profile,
@@ -1194,7 +1195,7 @@ function App() {
         journey,
         profile,
         resumeText,
-        manualEmail: manualEmailOverride,
+        manualEmail: safeManualEmail,
       });
       setOutreach(data);
       setLastProof(data.proof || null);
