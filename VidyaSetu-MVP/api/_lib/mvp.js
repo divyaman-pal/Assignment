@@ -3263,9 +3263,9 @@ function localizeByWhen(value = 'This week', language = 'en') {
     if (language === 'or') return 'Portal deadline ପୂର୍ବରୁ';
     return 'Portal deadline se pehle';
   }
-  if (language === 'hi') return 'इस week';
-  if (language === 'or') return 'ଏହି week';
-  return 'Is week';
+  if (language === 'hi') return '7 दिन में';
+  if (language === 'or') return '7 ଦିନ ଭିତରେ';
+  return '7 din ke andar';
 }
 
 function localizeThisWeekAction(item = {}, language = 'en', context = {}) {
@@ -3374,7 +3374,11 @@ export function buildThisWeekActions(profile = {}, family = goalFamily(profile),
     ],
   };
 
-  return [...base, ...(byFamily[family] || byFamily.generic)]
+  const familyActions = byFamily[family] || byFamily.generic;
+  const hasFamilyNcsAction = familyActions.some((item) => item.id.startsWith('tw-ncs') || item.source_url === OFFICIAL.ncs.url);
+  const dedupedBase = hasFamilyNcsAction ? base.filter((item) => item.id !== 'tw-ncs') : base;
+
+  return [...dedupedBase, ...familyActions]
     .slice(0, 10)
     .map((item) => localizeThisWeekAction(item, language, { place, family, profile }));
 }
