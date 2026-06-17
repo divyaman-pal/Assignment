@@ -173,9 +173,10 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
     academicGoalType === 'class_12_exam_prep' ||
     academicGoalType === 'school_study_support';
   const explicitNonStudyGoal =
-    Boolean(profile.learner_goal?.intent && profile.learner_goal.intent !== 'study') ||
-    aspirationNonStudyIntent ||
-    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(profile.learner_goal?.type || '');
+    !academicGoalOverridesStaleCareer &&
+    (Boolean(profile.learner_goal?.intent && profile.learner_goal.intent !== 'study') ||
+      aspirationNonStudyIntent ||
+      /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(profile.learner_goal?.type || ''));
   const studyLaneActive =
     !explicitNonStudyGoal && (!profile.learner_goal?.intent || profile.learner_goal.intent === 'study' || academicGoalOverridesStaleCareer);
   if (studyLaneActive && isEntranceExamPrepProfile(profile)) {
@@ -2250,11 +2251,11 @@ const ROUTE_FAMILY_RULES = {
   board_exam: {
     requireAny:
       /ncert|diksha|sample paper|previous paper|board|revision|practice|\btest\b|mistake.?log|chapter|exam|marking scheme/i,
-    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|pmkvy|data entry/i,
+    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|job search|job matching|entry role|skill course|digital bridge|digital basics|portfolio|local work|local employer|msme|service shop|course seat|practical work|apprentice|apprenticeship|employer|\bncs\b|national career service|stipend|\bincome\b|\bwage\b|\bearn(?:ing)?\b|pmkvy|data entry/i,
   },
   school_study: {
     requireAny: /ncert|diksha|chapter|practice|\btest\b|revision|mistake.?log|homework|subject|concept|quiz|study/i,
-    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|pmkvy/i,
+    deny: /job outreach|employer outreach|hirer outreach|vacancy|salon|beauty|mehandi|tailor|electrician|placement job|job search|job matching|entry role|skill course|digital bridge|digital basics|portfolio|local work|local employer|msme|service shop|course seat|practical work|apprentice|apprenticeship|employer|\bncs\b|national career service|stipend|\bincome\b|\bwage\b|\bearn(?:ing)?\b|pmkvy/i,
   },
   data_science_job: {
     requireAny:

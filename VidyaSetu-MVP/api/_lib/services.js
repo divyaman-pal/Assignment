@@ -1069,15 +1069,22 @@ export async function generatePathways(profile, question = '') {
     schoolStudy: latestSchoolStudy,
     aspirations: profile.aspirations || [],
   });
+  const genericPathwayRequest = /^\s*(generate|create|refresh|show|make|build)\s+(a\s+|my\s+|the\s+)?(personalized\s+)?(pathway|pathway map|recommendation|recommendations|route|plan)\s*\.?\s*$/i.test(
+    String(question || ''),
+  );
   const latestNonStudyRequest =
     Boolean(String(question || '').trim()) &&
+    !genericPathwayRequest &&
     Boolean(inferredGoal.intent && !['study', 'unknown'].includes(inferredGoal.intent));
-  const explicitNonStudyGoal =
+  const explicitProfileNonStudyGoal =
     Boolean(activeGoal.intent && activeGoal.intent !== 'study') ||
+    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(activeGoal.type || '');
+  const inferredNonStudyGoal = /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(
+    inferredGoal.type || '',
+  );
+  const explicitNonStudyGoal =
     latestNonStudyRequest ||
-    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(
-      `${activeGoal.type || ''} ${inferredGoal.type || ''}`,
-    );
+    (!academicGoalOverridesStaleCareer && (explicitProfileNonStudyGoal || inferredNonStudyGoal));
   const studyLaneActive =
     latestStudyRequest ||
     (!explicitNonStudyGoal && (!activeGoal.intent || activeGoal.intent === 'study' || academicGoalOverridesStaleCareer));
@@ -1153,12 +1160,12 @@ export async function generatePathways(profile, question = '') {
           : schoolStudy
             ? 'Generate exactly three school study-support routes using only supplied evidence. Every route must include id, name, source_url, source_title, tradeoff, time, distance, income, confidence, and focus_subjects. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean}. Do not generate jobs or placement routes for school homework/study help.'
           : goal.intent === 'job'
-            ? 'Generate exactly three location-specific job-search routes using only supplied evidence. The learner wants jobs, not generic skilling unless a small proof/resume gap blocks the match. Every offline route must mention the learner location/commute. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean}.'
+            ? 'Generate exactly three location-specific job-search Pathway Cards using only supplied evidence. The learner wants jobs, not generic skilling unless a small proof/resume gap blocks the match. Every offline route must mention the learner location/commute. Each route must include id, name, card_kind (earn_fast/build_bigger/explore), archetype, source_url or sources, source_title, tradeoff, time, distance, income, confidence, first_income_in, income_path, what_it_asks, why_this_fits_you, first_step, entry_ids, and requires_worker_confirmation. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean, callback_reason:string|null}.'
             : goal.intent === 'training'
-              ? 'Generate exactly three vocational-training routes using only supplied evidence. Prioritize local centers/courses when location is available, plus phone-first foundation practice. Every offline route must mention location/commute. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean}.'
+              ? 'Generate exactly three vocational-training Pathway Cards using only supplied evidence. Prioritize local centers/courses when location is available, plus phone-first foundation practice. Every offline route must mention location/commute. Each route must include id, name, card_kind (earn_fast/build_bigger/explore), archetype, source_url or sources, source_title, tradeoff, time, distance, income, confidence, first_income_in, income_path, what_it_asks, why_this_fits_you, first_step, entry_ids, and requires_worker_confirmation. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean, callback_reason:string|null}.'
               : goal.intent === 'college'
-                ? 'Generate exactly three college pathway routes: profile/portfolio, internship/project search, and outreach/follow-up. Use supplied evidence only. Every offline internship/project route must mention location/campus constraints. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean}.'
-        : 'Generate exactly three rural India career pathway routes using only supplied evidence. Every route must include source_url, source_title, tradeoff, time, distance, income, confidence. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean}. If evidence is insufficient, set callback_flag true and confidence below 0.70.';
+                ? 'Generate exactly three college Pathway Cards: profile/portfolio, internship/project search, and outreach/follow-up. Use supplied evidence only. Every offline internship/project route must mention location/campus constraints. Each route must include id, name, card_kind (earn_fast/build_bigger/explore), archetype, source_url or sources, source_title, tradeoff, time, distance, income, confidence, first_income_in, income_path, what_it_asks, why_this_fits_you, first_step, entry_ids, and requires_worker_confirmation. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean, callback_reason:string|null}.'
+        : 'Generate exactly three rural India career Pathway Cards using only supplied evidence. Do not invent schemes, jobs, employers, wages, or contacts. Each route must include id, name, card_kind (earn_fast/build_bigger/explore), archetype, source_url or sources, source_title, tradeoff, time, distance, income, confidence, first_income_in, income_path, what_it_asks, why_this_fits_you, first_step, entry_ids, and requires_worker_confirmation. Return strict JSON: {routes:[], confidence:number, callback_flag:boolean, callback_reason:string|null}. If evidence is insufficient, set callback_flag true and confidence below 0.70.';
 
   const generated = await callFireworksJson({
     fallback,
@@ -1257,19 +1264,64 @@ function enrichPathwayData(data = {}, profile = {}, context = {}) {
   const missingFacts = missingProfileFacts(profile, context);
   const persona = personaForProfile(profile, context);
   const family = context.family || goalFamily(profile, context);
+  const enrichedRoutes = cleanedRoutes.map((route, index) => enrichRouteTrace(route, index, profile, context, persona, missingFacts));
+  const topConfidence = enrichedRoutes.length ? Number(enrichedRoutes[0].confidence || 0) : 0;
+  const lowConfidence = enrichedRoutes.length > 0 && topConfidence < 0.7;
+  const noRoutes = enrichedRoutes.length === 0;
+  const needsHumanCallback = Boolean(data.callback_flag) || noRoutes || lowConfidence;
+  const callbackReason = needsHumanCallback
+    ? safeRouteText(
+        data.callback_reason || data.callback_message,
+        noRoutes
+          ? 'No source-backed pathway matched the current profile.'
+          : lowConfidence
+            ? 'Top pathway confidence is below 0.70, so a worker should review it first.'
+            : 'A worker should review this pathway before sharing it.',
+      )
+    : null;
+  const visibleRoutes = noRoutes || lowConfidence ? [] : enrichedRoutes;
   return {
     ...data,
+    result_type: needsHumanCallback ? 'human_callback' : 'pathways',
+    callback_flag: needsHumanCallback,
+    callback_reason: callbackReason,
+    callback_message: callbackReason || data.callback_message || '',
     persona,
     this_week_actions: buildThisWeekActions(profile, family, { language: profile.preferred_language || profile.language }),
     missing_profile_facts: missingFacts,
+    cards: visibleRoutes,
     recommendation_trace: {
       persona,
       evidence_provider: context.evidenceProvider || data.evidence_provider || 'fallback_kb',
       evidence_count: context.evidenceCount || 0,
       profile_facts_used: profileFacts(profile, context),
       missing_profile_facts: missingFacts,
+      card_selection: {
+        axes: ['earn_fast', 'build_bigger', 'explore'],
+        top_confidence: topConfidence,
+        gate_threshold: 0.7,
+        source_policy: 'Each card must carry at least one source URL from deterministic evidence or retrieved entries.',
+      },
     },
-    routes: cleanedRoutes.map((route, index) => enrichRouteTrace(route, index, profile, context, persona, missingFacts)),
+    pathway_card_contract: {
+      schema_version: 'vidyasetu_pathway_cards_v1',
+      result_type: needsHumanCallback ? 'human_callback' : 'pathways',
+      callback_reason: callbackReason,
+      required_card_fields: [
+        'card_kind',
+        'archetype',
+        'title',
+        'first_income_in',
+        'income_path',
+        'what_it_asks',
+        'why_this_fits_you',
+        'first_step',
+        'entry_ids',
+        'sources',
+        'requires_worker_confirmation',
+      ],
+    },
+    routes: visibleRoutes,
   };
 }
 
@@ -1307,8 +1359,9 @@ function enrichRouteTrace(route = {}, index = 0, profile = {}, context = {}, per
     blockers,
     nextAction,
   });
+  const card = applyPathwayCardContract(decorated, index, profile, context, matchedFacts, blockers);
   return {
-    ...decorated,
+    ...card,
     id: normalizedRoute.id || `route-${index + 1}`,
     confidence: Number(normalizedRoute.confidence || 0.72),
     trace: {
@@ -1326,6 +1379,8 @@ function enrichRouteTrace(route = {}, index = 0, profile = {}, context = {}, per
 
 function normalizeRoute(route = {}, index = 0, context = {}) {
   const normalized = route && typeof route === 'object' && !Array.isArray(route) ? route : {};
+  const sourceUrls = normalizeSourceList(normalized.sources || normalized.source_urls || normalized.sourceUrls);
+  const primarySourceUrl = safeRouteUrl(normalized.source_url || normalized.url || normalized.link || normalized.route_link) || sourceUrls[0] || '';
   const routeName =
     safeRouteText(normalized.name) ||
     safeRouteText(normalized.title) ||
@@ -1339,7 +1394,8 @@ function normalizeRoute(route = {}, index = 0, context = {}) {
     ...normalized,
     id: safeRouteText(normalized.id) || `route-${index + 1}`,
     name: routeName,
-    source_url: safeRouteUrl(normalized.source_url || normalized.url || normalized.link || normalized.route_link),
+    source_url: primarySourceUrl,
+    sources: sourceUrls.length ? sourceUrls : primarySourceUrl ? [primarySourceUrl] : [],
     source_title: safeRouteText(normalized.source_title || normalized.source || normalized.provider, 'verified evidence'),
     tradeoff: safeRouteText(
       normalized.tradeoff || normalized.why || normalized.why_this_route || normalized.description || normalized.route_description,
@@ -1397,6 +1453,126 @@ function normalizeConfidence(value) {
 function safeRouteUrl(value) {
   const text = safeRouteText(value);
   return /^https?:\/\//i.test(text) ? text : '';
+}
+
+function normalizeSourceList(value) {
+  const raw = Array.isArray(value) ? value : value ? [value] : [];
+  return [
+    ...new Set(
+      raw
+        .map((item) =>
+          safeRouteUrl(
+            typeof item === 'string'
+              ? item
+              : item?.source_url || item?.url || item?.link || item?.href,
+          ),
+        )
+        .filter(Boolean),
+    ),
+  ].slice(0, 4);
+}
+
+function orderedCardKinds(profile = {}) {
+  const motivation = `${profile.motivation || ''} ${profile.earning_urgency || ''} ${profile.income_pressure ? 'earn_now' : ''}`.toLowerCase();
+  if (/build|long|higher|study/.test(motivation)) return ['build_bigger', 'earn_fast', 'explore'];
+  return ['earn_fast', 'build_bigger', 'explore'];
+}
+
+function validCardKind(value = '') {
+  return ['earn_fast', 'build_bigger', 'explore'].includes(String(value || '').trim());
+}
+
+function cardKindForRoute(route = {}, index = 0, profile = {}) {
+  const explicit = safeRouteText(route.card_kind || route.kind || route.axis);
+  if (validCardKind(explicit)) return explicit;
+  return orderedCardKinds(profile)[index] || 'explore';
+}
+
+function archetypeForRoute(family = 'generic', cardKind = 'earn_fast') {
+  if (family === 'informal_skill' && cardKind === 'build_bigger') return '11_nano_entrepreneur';
+  if (family === 'enterprise') return '11_nano_entrepreneur';
+  if (family === 'job') return '06_first_job_local';
+  if (family === 'vocational') return '05_training_to_work';
+  if (family === 'data_science_job' || family === 'college') return '09_college_to_work';
+  if (family === 'entrance_exam') return '08_exam_bridge';
+  if (family === 'board_exam') return '02_board_repair';
+  if (family === 'school_study') return '03_school_foundation';
+  if (family === 'informal_skill') return '04_rural_vernacular';
+  return '12_guided_exploration';
+}
+
+function entryIdsForRoute(route = {}, index = 0) {
+  const raw = Array.isArray(route.entry_ids) ? route.entry_ids : route.entry_id ? [route.entry_id] : [];
+  const ids = raw.map((item) => safeRouteText(item)).filter(Boolean);
+  return ids.length ? ids.slice(0, 4) : [safeRouteText(route.id, `route-${index + 1}`)];
+}
+
+function routeNeedsWorkerConfirmation(route = {}) {
+  const routeText = [
+    route.name,
+    route.tradeoff,
+    route.distance,
+    route.income,
+    route.time,
+    route.risk,
+    route.next_action,
+    route.locked_until,
+  ]
+    .map((value) => safeRouteText(value))
+    .join(' ')
+    .toLowerCase();
+  return Boolean(route.requires_worker_confirmation) || /relocat|hostel|residential|leave school|paid course|fee|fees|loan|borrow|night shift|far away/.test(routeText);
+}
+
+function profileFitLine(profile = {}, route = {}, matchedFacts = []) {
+  const explicit = safeRouteText(route.why_this_fits_you);
+  if (explicit) return explicit;
+  const usefulFacts = matchedFacts
+    .filter((fact) => /goal|skill|location|mobility|time|education/i.test(fact.label || ''))
+    .slice(0, 2)
+    .map((fact) => `${fact.label}: ${fact.value}`);
+  if (usefulFacts.length) return `Built from ${usefulFacts.join(' and ')}.`;
+  return safeRouteText(route.tradeoff || route.why_this_route, 'Matches the current learner profile.');
+}
+
+function firstStepForRoute(route = {}, context = {}) {
+  return safeRouteText(
+    route.first_step || route.next_action || route.action || route.next_action_summary || context.nextAction,
+    'Choose this card, then build the four-week journey.',
+  );
+}
+
+function whatItAsksForRoute(route = {}, blockers = []) {
+  const parts = [
+    safeRouteText(route.distance),
+    safeRouteText(route.time),
+    blockers.length ? `Check first: ${safeRouteText(blockers[0])}` : '',
+  ].filter(Boolean);
+  return parts.length ? parts.slice(0, 3).join(' ') : 'Time, travel, fees, and documents must be checked before acting.';
+}
+
+function applyPathwayCardContract(route = {}, index = 0, profile = {}, context = {}, matchedFacts = [], blockers = []) {
+  const family = context.family || goalFamily(profile, context);
+  const cardKind = cardKindForRoute(route, index, profile);
+  const sources = normalizeSourceList(route.sources || route.source_urls || route.source_url);
+  const firstStep = firstStepForRoute(route, context);
+  return {
+    ...route,
+    card_kind: cardKind,
+    archetype: safeRouteText(route.archetype, archetypeForRoute(family, cardKind)),
+    title: safeRouteText(route.title || route.name, `Pathway option ${index + 1}`),
+    first_income_in: safeRouteText(route.first_income_in || route.time, context.academicMode ? 'progress starts this week' : 'varies'),
+    income_path: safeRouteText(route.income_path || route.income || route.expected_outcome, context.academicMode ? 'study progress now -> stronger next option' : 'income depends on verified opportunity'),
+    what_it_asks: safeRouteText(route.what_it_asks, whatItAsksForRoute(route, blockers)),
+    why_this_fits_you: profileFitLine(profile, route, matchedFacts),
+    first_step: firstStep,
+    next_action: safeRouteText(route.next_action, firstStep),
+    entry_ids: entryIdsForRoute(route, index),
+    sources,
+    source_url: safeRouteUrl(route.source_url) || sources[0] || '',
+    requires_worker_confirmation: routeNeedsWorkerConfirmation(route),
+    grounding_status: sources.length ? 'source_backed' : 'needs_source_review',
+  };
 }
 
 function profileFacts(profile = {}, context = {}) {
