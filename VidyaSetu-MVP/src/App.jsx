@@ -2183,6 +2183,30 @@ function sameRoute(left, right) {
   return false;
 }
 
+function pathwaySourceItems(route = {}) {
+  const rawSources = Array.isArray(route.sources) ? route.sources : [];
+  const items = [
+    ...rawSources,
+    route.source_url ? { url: route.source_url, title: route.source_title } : null,
+  ].filter(Boolean);
+  const seen = new Set();
+  return items
+    .map((item, index) => {
+      const url = uiUrl(typeof item === 'string' ? item : item.source_url || item.url || item.link || item.href);
+      if (!url || seen.has(url)) return null;
+      seen.add(url);
+      return {
+        url,
+        title: uiText(
+          typeof item === 'string' ? '' : item.source_title || item.title || item.name,
+          index === 0 ? uiText(route.source_title, 'official source') : `source ${index + 1}`,
+        ),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 function TracePanel({ trace, nextAction }) {
   const facts = Array.isArray(trace?.matched_facts) ? trace.matched_facts : [];
   const blockers = Array.isArray(trace?.blockers) ? trace.blockers : [];
@@ -2212,7 +2236,7 @@ function TracePanel({ trace, nextAction }) {
 
 function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney, t = getTranslations('English') }) {
   const thisWeekActions = Array.isArray(pathway?.this_week_actions) ? pathway.this_week_actions : [];
-  const routes = pathway?.routes || [];
+  const routes = Array.isArray(pathway?.routes) && pathway.routes.length ? pathway.routes : Array.isArray(pathway?.cards) ? pathway.cards : [];
   const activeRoute = selectedRoute || routes[0] || null;
   const academicMode = routes.some((route) => (
     uiText(route.id).startsWith('class12') ||
@@ -2222,6 +2246,12 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
   ));
   const selectedIndex = routes.findIndex((route) => sameRoute(activeRoute, route));
   const selectedRouteName = uiText(activeRoute?.name, academicMode ? 'Study pathway' : 'Career pathway');
+  const kindCopy = academicMode ? t.pathway.studyCardKinds || t.pathway.cardKinds : t.pathway.cardKinds;
+  const kindLabel = (route, index = 0) => {
+    const kind = uiText(route?.card_kind);
+    return (kindCopy && kindCopy[kind]) || `${t.pathway.option} ${index + 1}`;
+  };
+  const activeSources = activeRoute ? pathwaySourceItems(activeRoute) : [];
   const facts = Array.isArray(activeRoute?.trace?.matched_facts) && activeRoute.trace.matched_facts.length
     ? activeRoute.trace.matched_facts.map((fact) => `${uiText(fact.label, 'Fit')}: ${uiText(fact.value, 'matched')}`)
     : [
@@ -2250,18 +2280,42 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             ? formatCopy(t.pathway.onRoute, { route: selectedRouteName, detail: uiText(activeRoute.tradeoff, 'VidyaSetu will build the next weekly plan after you confirm this route.') })
             : t.pathway.generateAfterProfile}
         </p>
-        {activeRoute && (
-          <div className="route-outcome-grid">
-            <span><b>{t.pathway.whyThisRoute}</b>{uiText(activeRoute.why_this_route, uiText(activeRoute.tradeoff, 'Matches the learner profile collected by Meera.'))}</span>
-            <span><b>{t.pathway.whatYouGet}</b>{uiText(activeRoute.expected_outcome, uiText(activeRoute.income, 'Clear progress toward your goal.'))}</span>
-            <span><b>{t.pathway.doThisNext}</b>{uiText(activeRoute.next_action, 'Start the weekly plan and finish the first task.')}</span>
-            <span><b>{t.pathway.unlocksAfter}</b>{uiText(activeRoute.locked_until, 'proof, location if offline, and consent.')}</span>
+        {pathway?.result_type === 'human_callback' && pathway?.callback_reason && (
+          <div className="pathway-worker-note">
+            {uiText(pathway.callback_reason)}
           </div>
         )}
-        {activeRoute && uiUrl(activeRoute.source_url) && (
-          <a className="pathway-source-link" href={uiUrl(activeRoute.source_url)} rel="noreferrer" target="_blank">
-            {t.btn.open}: {uiText(activeRoute.source_title, 'official source')}
-          </a>
+        {activeRoute && (
+          <>
+          <div className="pathway-card-head">
+            <span>{kindLabel(activeRoute, selectedIndex >= 0 ? selectedIndex : 0)}</span>
+            <strong>{uiText(activeRoute.title, selectedRouteName)}</strong>
+            <small>{uiText(activeRoute.grounding_status, 'source_backed').replace(/_/g, ' ')}</small>
+          </div>
+          <div className="route-outcome-grid">
+            <span><b>{academicMode ? t.pathway.timeToProgress : t.pathway.firstIncome}</b>{uiText(activeRoute.first_income_in, uiText(activeRoute.time, 'varies'))}</span>
+            <span><b>{academicMode ? t.pathway.progressPath : t.pathway.incomePath}</b>{uiText(activeRoute.income_path, uiText(activeRoute.income, 'Depends on verified opportunity.'))}</span>
+            <span><b>{t.pathway.whatItAsks}</b>{uiText(activeRoute.what_it_asks, uiText(activeRoute.distance, 'Time/travel/fees must be checked.'))}</span>
+            <span><b>{t.pathway.whyFitsYou}</b>{uiText(activeRoute.why_this_fits_you, uiText(activeRoute.why_this_route, 'Matches the learner profile collected by Meera.'))}</span>
+            <span><b>{t.pathway.firstStep}</b>{uiText(activeRoute.first_step, uiText(activeRoute.next_action, 'Create the four-week journey.'))}</span>
+            <span><b>{t.pathway.unlocksAfter}</b>{uiText(activeRoute.locked_until, 'proof, location if offline, and consent.')}</span>
+          </div>
+          {activeRoute.requires_worker_confirmation && (
+            <div className="pathway-worker-note">
+              {t.pathway.workerConfirmation}
+            </div>
+          )}
+          </>
+        )}
+        {activeSources.length > 0 && (
+          <div className="pathway-source-list" aria-label={t.pathway.sources}>
+            <b>{t.pathway.sources}</b>
+            {activeSources.map((source) => (
+              <a className="pathway-source-link" href={source.url} key={source.url} rel="noreferrer" target="_blank">
+                {t.btn.open}: {source.title}
+              </a>
+            ))}
+          </div>
         )}
       </div>
       {routes.length > 1 && (
@@ -2270,7 +2324,7 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             const selected = sameRoute(activeRoute, route);
             return (
               <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
-                {index === 0 ? t.pathway.recommended : `${t.pathway.option} ${index + 1}`}: {uiText(route.name, 'Route')}
+                {kindLabel(route, index)}: {uiText(route.name, 'Route')}
               </button>
             );
           })}
