@@ -1111,12 +1111,12 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
     },
     support_plan: [
       skill === 'entrance exam preparation'
-        ? 'AI study counselor checks syllabus progress, doubts, and error log every 3 days in the learner language.'
+        ? 'Meera checks syllabus progress, doubts, and error log every 3 days in the learner language.'
         : skill === 'class 12 exam preparation'
-          ? 'AI study counselor checks weak chapters every 3 days in the learner language.'
+          ? 'Meera checks weak chapters every 3 days in the learner language.'
           : skill === 'school study support'
-            ? 'AI study counselor checks chapter progress every 3 days in the learner language.'
-          : 'AI counselor checks in every 3 days in the learner language.',
+            ? 'Meera checks chapter progress every 3 days in the learner language.'
+          : 'Meera checks in every 3 days in the learner language.',
       skill === 'entrance exam preparation'
         ? 'If two mock/practice check-ins are missed, ADEWS suggests a mentor/parent nudge before the learner silently drops off.'
         : skill === 'class 12 exam preparation'
@@ -1142,7 +1142,8 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   const aspirations = Array.isArray(profile) ? profile : profile.aspirations || [];
   const routeText = routeTextOf(route);
   const goalLabel = Array.isArray(profile) ? '' : `${profile.learner_goal?.label || ''} ${profile.learner_goal?.intent || ''}`;
-  const text = `${aspirations.join(' ')} ${goalLabel} ${routeText}`.toLowerCase();
+  const profileText = `${aspirations.join(' ')} ${goalLabel} ${profile.class_level || ''} ${profile.education_status || ''}`.toLowerCase();
+  const text = `${profileText} ${routeText}`.toLowerCase();
   const goalType = Array.isArray(profile) ? '' : profile.learner_goal?.type || '';
   const jobLikeGoal =
     ['job', 'career', 'proof_to_work'].includes(profile.learner_goal?.intent) ||
@@ -1153,13 +1154,31 @@ function journeyPrimarySkill(profile = {}, route = {}) {
       text,
     );
   const dataScienceText = /data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text);
+  const entrancePattern = /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bcat\b|\bclat\b|\bnda\b|\bupsc\b|\bssc\b|railway|bank exam|entrance exam|competitive exam/;
+  const routeExplicitEntranceText = entrancePattern.test(routeText);
+  const profileExplicitEntranceText = entrancePattern.test(profileText);
+  const routeBoardPrepText = /class 12|12th|twelfth|board exam|\bcbse\b|sample paper|marking scheme/.test(routeText);
+  const explicitEntrancePrep =
+    profile.academic_goal?.type === 'entrance_exam_prep' ||
+    goalType === 'entrance_exam_prep' ||
+    profileExplicitEntranceText ||
+    routeExplicitEntranceText;
+  const boardPrepText =
+    profile.academic_goal?.type === 'class_12_exam_prep' ||
+    /class 12|12th|twelfth|board exam|\bcbse\b|sample paper/.test(text);
 
   if (goalType === 'local_office_job' || ((jobLikeGoal || routeJobText) && localOfficeText && !dataScienceText)) return 'local office job';
   if (jobLikeGoal && dataScienceText) return 'data science';
-  if (profile.academic_goal?.type === 'entrance_exam_prep' || goalType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bcat\b|\bclat\b|\bnda\b|\bupsc\b|\bssc\b|railway|bank exam|entrance exam|competitive exam/.test(text)) {
+  if (routeBoardPrepText && !routeExplicitEntranceText) {
+    return 'class 12 exam preparation';
+  }
+  if (boardPrepText && !profileExplicitEntranceText && !routeExplicitEntranceText) {
+    return 'class 12 exam preparation';
+  }
+  if (explicitEntrancePrep) {
     return 'entrance exam preparation';
   }
-  if (profile.academic_goal?.type === 'class_12_exam_prep' || /class 12|board exam|exam preparation|marks|score/.test(text)) {
+  if (boardPrepText || /exam preparation/.test(text)) {
     return 'class 12 exam preparation';
   }
   if (profile.academic_goal?.type === 'school_study_support' || /study support|school study|class \d+.*study/.test(text)) {

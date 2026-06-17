@@ -3,73 +3,73 @@ const LANGUAGE_STYLES = {
     name: 'English',
     script: 'Latin',
     stt_language_code: 'en-IN',
-    instruction: 'Reply in clear simple English.',
+    instruction: 'Reply in clear simple English with warm counselor wording, not generic AI wording.',
   },
   Hinglish: {
     name: 'Hinglish',
     script: 'Latin',
     stt_language_code: 'hi-IN',
-    instruction: 'Reply in simple Hinglish using Roman script, matching the user style.',
+    instruction: 'Reply in simple Hinglish using Roman script, matching the user style. Use Meera as a female counselor or neutral wording; avoid male first-person forms like karunga, banaunga, dunga.',
   },
   Hindi: {
     name: 'Hindi',
     script: 'Devanagari',
     stt_language_code: 'hi-IN',
-    instruction: 'Reply in simple Hindi using Devanagari script.',
+    instruction: 'Reply in simple Hindi using Devanagari script. Use Meera as a female counselor or neutral wording; avoid male first-person forms.',
   },
   Odia: {
     name: 'Odia',
     script: 'Odia',
     stt_language_code: 'od-IN',
-    instruction: 'Reply in simple Odia. If the user mixes Hindi/Odia, keep the same mixed style.',
+    instruction: 'Reply in simple Odia. If the user mixes Hindi/Odia, keep the same mixed style. Keep the tone human and counselor-like.',
   },
   Bengali: {
     name: 'Bengali',
     script: 'Bengali',
     stt_language_code: 'bn-IN',
-    instruction: 'Reply in simple Bengali.',
+    instruction: 'Reply in simple Bengali with warm counselor wording.',
   },
   Marathi: {
     name: 'Marathi',
     script: 'Devanagari',
     stt_language_code: 'mr-IN',
-    instruction: 'Reply in simple Marathi.',
+    instruction: 'Reply in simple Marathi with warm counselor wording. Use Meera as a female counselor or neutral wording.',
   },
   Tamil: {
     name: 'Tamil',
     script: 'Tamil',
     stt_language_code: 'ta-IN',
-    instruction: 'Reply in simple Tamil.',
+    instruction: 'Reply in simple Tamil with warm counselor wording.',
   },
   Telugu: {
     name: 'Telugu',
     script: 'Telugu',
     stt_language_code: 'te-IN',
-    instruction: 'Reply in simple Telugu.',
+    instruction: 'Reply in simple Telugu with warm counselor wording.',
   },
   Kannada: {
     name: 'Kannada',
     script: 'Kannada',
     stt_language_code: 'kn-IN',
-    instruction: 'Reply in simple Kannada.',
+    instruction: 'Reply in simple Kannada with warm counselor wording.',
   },
   Malayalam: {
     name: 'Malayalam',
     script: 'Malayalam',
     stt_language_code: 'ml-IN',
-    instruction: 'Reply in simple Malayalam.',
+    instruction: 'Reply in simple Malayalam with warm counselor wording.',
   },
   Gujarati: {
     name: 'Gujarati',
     script: 'Gujarati',
     stt_language_code: 'gu-IN',
-    instruction: 'Reply in simple Gujarati.',
+    instruction: 'Reply in simple Gujarati with warm counselor wording.',
   },
   Punjabi: {
     name: 'Punjabi',
     script: 'Gurmukhi',
     stt_language_code: 'pa-IN',
-    instruction: 'Reply in simple Punjabi using Gurmukhi script.',
+    instruction: 'Reply in simple Punjabi using Gurmukhi script with warm counselor wording.',
   },
 };
 
@@ -77,58 +77,64 @@ export function detectLanguageStyle(text = '', profile = {}) {
   const raw = String(text || '');
   const lower = raw.toLowerCase();
   const preferred = String(profile.preferred_language || profile.language || profile.language_profile?.preferred_language || '').toLowerCase();
+  const hasLatestText = Boolean(raw.trim());
+  const hasIndicScript = /[\u0900-\u0D7F\u0A00-\u0AFF]/.test(raw);
+  const hasClearLatinLanguage =
+    hasIndicRoman(lower) ||
+    /\b(i|my|want|need|can|you|help|study|job|course|open|business|scheme|loan|what|how|why|tell|please|english)\b/.test(lower);
+  const allowPreferred = !hasLatestText || (!hasIndicScript && !hasClearLatinLanguage);
 
-  if (/hinglish/.test(preferred) || (/hindi/.test(preferred) && /english/.test(preferred) && !/[\u0900-\u097F]/.test(raw))) {
+  if (allowPreferred && (/hinglish/.test(preferred) || (/hindi/.test(preferred) && /english/.test(preferred) && !/[\u0900-\u097F]/.test(raw)))) {
     return style('Hinglish');
   }
-  if (/[\u0B00-\u0B7F]/.test(raw) || /\b(odia|oriya|odiare|mora|mu)\b/.test(lower) || /odia/.test(preferred)) {
+  if (/[\u0B00-\u0B7F]/.test(raw) || /\b(odia|oriya|odiare|mora|mu)\b/.test(lower) || (allowPreferred && /odia/.test(preferred))) {
     return style('Odia');
   }
-  if (/[\u0980-\u09FF]/.test(raw) || /\b(bengali|bangla)\b/.test(lower) || /bengali|bangla/.test(preferred)) {
+  if (/[\u0980-\u09FF]/.test(raw) || /\b(bengali|bangla)\b/.test(lower) || (allowPreferred && /bengali|bangla/.test(preferred))) {
     return style('Bengali');
   }
-  if (/[\u0B80-\u0BFF]/.test(raw) || /\b(tamil)\b/.test(lower) || /tamil/.test(preferred)) {
+  if (/[\u0B80-\u0BFF]/.test(raw) || /\b(tamil)\b/.test(lower) || (allowPreferred && /tamil/.test(preferred))) {
     return style('Tamil');
   }
-  if (/[\u0C00-\u0C7F]/.test(raw) || /\b(telugu)\b/.test(lower) || /telugu/.test(preferred)) {
+  if (/[\u0C00-\u0C7F]/.test(raw) || /\b(telugu)\b/.test(lower) || (allowPreferred && /telugu/.test(preferred))) {
     return style('Telugu');
   }
-  if (/[\u0C80-\u0CFF]/.test(raw) || /\b(kannada)\b/.test(lower) || /kannada/.test(preferred)) {
+  if (/[\u0C80-\u0CFF]/.test(raw) || /\b(kannada)\b/.test(lower) || (allowPreferred && /kannada/.test(preferred))) {
     return style('Kannada');
   }
-  if (/[\u0D00-\u0D7F]/.test(raw) || /\b(malayalam)\b/.test(lower) || /malayalam/.test(preferred)) {
+  if (/[\u0D00-\u0D7F]/.test(raw) || /\b(malayalam)\b/.test(lower) || (allowPreferred && /malayalam/.test(preferred))) {
     return style('Malayalam');
   }
-  if (/[\u0A80-\u0AFF]/.test(raw) || /\b(gujarati)\b/.test(lower) || /gujarati/.test(preferred)) {
+  if (/[\u0A80-\u0AFF]/.test(raw) || /\b(gujarati)\b/.test(lower) || (allowPreferred && /gujarati/.test(preferred))) {
     return style('Gujarati');
   }
-  if (/[\u0A00-\u0A7F]/.test(raw) || /\b(punjabi)\b/.test(lower) || /punjabi/.test(preferred)) {
+  if (/[\u0A00-\u0A7F]/.test(raw) || /\b(punjabi)\b/.test(lower) || (allowPreferred && /punjabi/.test(preferred))) {
     return style('Punjabi');
   }
   if (
     hasIndicRoman(lower) &&
     !/\b(marathi|mala|majha|majhi|majhe|ahe|pahije)\b/.test(lower) &&
-    !/hindi/.test(preferred) &&
-    !/marathi/.test(preferred)
+    !(allowPreferred && /hindi/.test(preferred)) &&
+    !(allowPreferred && /marathi/.test(preferred))
   ) {
     return style('Hinglish');
   }
-  if (/english/.test(preferred) && !/\b(marathi|mala|majha|majhi|majhe|ahe|pahije)\b/.test(lower)) {
+  if (allowPreferred && /english/.test(preferred) && !hasIndicRoman(lower) && !/\b(marathi|mala|majha|majhi|majhe|ahe|pahije)\b/.test(lower)) {
     return style('English');
   }
-  if (/hindi/.test(preferred) && !/\b(marathi|mala|majha|majhi|majhe|ahe|pahije)\b/.test(lower)) {
+  if (allowPreferred && /hindi/.test(preferred) && !hasIndicRoman(lower) && !/\b(marathi|mala|majha|majhi|majhe|ahe|pahije)\b/.test(lower)) {
     return style('Hindi');
   }
-  if (/\b(marathi|mala|majha|majhi|ahe|pahije|pune|mumbai|nagpur)\b/.test(lower) || /मराठी|मला|माझ|आहे|पाहिजे/.test(raw) || /marathi/.test(preferred)) {
+  if (/\b(marathi|mala|majha|majhi|ahe|pahije|pune|mumbai|nagpur)\b/.test(lower) || /मराठी|मला|माझ|आहे|पाहिजे/.test(raw) || (allowPreferred && /marathi/.test(preferred))) {
     return style('Marathi');
   }
   if (hasIndicRoman(lower)) {
     return style('Hinglish');
   }
-  if (/[\u0900-\u097F]/.test(raw) || /\b(hindi)\b/.test(lower) || /हिंदी|हिन्दी/.test(raw) || /hindi/.test(preferred)) {
+  if (/[\u0900-\u097F]/.test(raw) || /\b(hindi)\b/.test(lower) || /हिंदी|हिन्दी/.test(raw) || (allowPreferred && /hindi/.test(preferred))) {
     return style('Hindi');
   }
-  if (/english/.test(preferred) && !hasIndicRoman(lower)) {
+  if (allowPreferred && /english/.test(preferred) && !hasIndicRoman(lower)) {
     return style('English');
   }
   return style('English');
@@ -136,7 +142,7 @@ export function detectLanguageStyle(text = '', profile = {}) {
 
 export function languageInstruction(profile = {}, latestText = '') {
   const detected = detectLanguageStyle(latestText, profile);
-  return `${detected.instruction} Keep the answer in ${detected.name} unless the learner explicitly switches language.`;
+  return `${detected.instruction} The latest learner message decides the reply language and script; if it differs from the saved profile language, follow the latest message. Keep the answer in ${detected.name} unless the learner explicitly switches language. Do not say you are an AI/model. Do not use markdown, stars, bullets, headings, or long profile recaps. Meera is female; use female or neutral wording for Meera, and do not assume the learner's gender.`;
 }
 
 export function languageVoiceProfile(profile = {}, latestText = '') {
@@ -248,21 +254,21 @@ const PHRASES = {
   English: ENGLISH,
   Hinglish: {
     study_ready:
-      'Haan. Isko main study goal hi rakhunga, job route nahi. Next step: {focus} ke weak topics identify karna, right resources dena, daily practice banana, aur progress track karna.',
+      'Haan. Meera isko study goal rakhegi, job route nahi. Next step: {focus} ke weak topics identify karna, right resources, daily practice, aur progress tracking.',
     entrance_ready:
-      'Haan. Main pehle {exam} prep ko priority dunga. Plan mein syllabus map, weak-topic diagnosis, daily problem practice, mocks, aur error-log review hoga.',
+      'Haan. Meera pehle {exam} prep ko priority degi. Plan mein syllabus map, weak-topic diagnosis, daily problem practice, mocks, aur error-log review hoga.',
     job_ready:
-      'Haan. Main {goal} ke liye job pathway banaunga. Next main proof/resume gaps check karunga, {location} ke hisaab se relevant opportunities dhoondhunga, aur consent ke baad outreach draft banaunga.',
+      'Haan. Meera {goal} ke liye job pathway banayegi. Pehle proof/resume gaps check honge, {location} ke hisaab se relevant opportunities dekhe jayenge, aur consent ke baad outreach draft banega.',
     training_ready:
-      'Haan. Main {location} ke around {goal} ka training-to-work pathway banaunga: course fit, safe commute, fee risk, proof tasks, aur placement/apprenticeship options.',
+      'Haan. Meera {location} ke around {goal} ka training-to-work pathway banayegi: course fit, safe commute, fee risk, proof tasks, aur placement/apprenticeship options.',
     proof_ready:
       'Haan. Pehle aapki existing skill ko proof mein convert karenge, phir us proof se local training, RPL, apprenticeship, ya job matching karenge.',
     need_location:
-      'Offline job, training, apprenticeship, ya local course ke liye city/district aur safe commute range chahiye. Location ke bina main offline options suggest nahi karunga.',
+      'Offline job, training, apprenticeship, ya local course ke liye city/district aur safe commute range chahiye. Location ke bina Meera offline options suggest nahi karegi.',
     need_skill:
       'Aap exact role/skill batao, aur koi proof hai to woh bhi: resume, certificate, project, sample kaam, ya experience.',
     career_switch:
-      'Theek hai. Main study-only mode se career/job counseling mode mein switch kar raha hoon. Pehle target role, skill/proof, location ya relocation preference, aur resume/project status chahiye.',
+      'Theek hai. Meera study-only mode se career/job counseling mode mein switch kar rahi hai. Pehle target role, skill/proof, location ya relocation preference, aur resume/project status chahiye.',
     direct_answer_prefix: 'Short answer:',
     missing_class: 'Aap abhi school, college, ITI/diploma, graduate, working, ya dropout stage mein hain?',
     missing_subjects: 'Kis subject ya exam area mein help chahiye?',
@@ -270,26 +276,26 @@ const PHRASES = {
     missing_time: 'Roz ya hafte mein learning, practice, ya job prep ke liye kitna time de sakte hain?',
     missing_phone: 'Phone aapka khud ka hai ya shared hai? WhatsApp, voice note, aur documents chal jate hain?',
     missing_mobility: 'Offline option ke liye ghar se kitni door tak safe travel kar sakte hain? Agar India mein kahin bhi relocate kar sakte hain, woh bhi bata dijiye.',
-    next_pathway: 'Main ab aapke liye next pathway bana sakta hoon.',
+    next_pathway: 'Meera ab aapke liye next pathway bana sakti hai.',
     voice_retry: 'Voice note clear nahi aaya. Kripya 5-10 second dobara record karo, ya wahi baat type kar do.',
   },
   Hindi: {
     study_ready:
-      'हाँ। मैं इसे पढ़ाई का लक्ष्य ही रखूँगा, नौकरी वाला रास्ता नहीं। अगला कदम: {focus} के कमजोर टॉपिक पहचानना, सही संसाधन देना, रोज़ अभ्यास कराना और प्रगति ट्रैक करना।',
+      'हाँ। मीरा इसे पढ़ाई का लक्ष्य रखेगी, नौकरी वाला रास्ता नहीं। अगला कदम: {focus} के कमजोर टॉपिक पहचानना, सही संसाधन, रोज़ अभ्यास और प्रगति ट्रैक करना।',
     entrance_ready:
-      'हाँ। मैं पहले {exam} तैयारी को प्राथमिकता दूँगा। प्लान में सिलेबस मैप, कमजोर टॉपिक, रोज़ की प्रैक्टिस, मॉक टेस्ट और एरर-लॉग रिव्यू होगा।',
+      'हाँ। मीरा पहले {exam} तैयारी को प्राथमिकता देगी। प्लान में सिलेबस मैप, कमजोर टॉपिक, रोज़ की प्रैक्टिस, मॉक टेस्ट और एरर-लॉग रिव्यू होगा।',
     job_ready:
-      'हाँ। मैं {goal} के लिए नौकरी pathway बनाऊँगा। पहले proof/resume gaps देखूँगा, {location} के हिसाब से अवसर खोजूँगा, फिर consent के बाद outreach draft बनाऊँगा।',
+      'हाँ। मीरा {goal} के लिए नौकरी pathway बनाएगी। पहले proof/resume gaps देखे जाएँगे, {location} के हिसाब से अवसर खोजे जाएँगे, फिर consent के बाद outreach draft बनेगा।',
     training_ready:
-      'हाँ। मैं {location} के हिसाब से {goal} का training-to-work pathway बनाऊँगा: course fit, safe commute, fee risk, proof tasks और placement/apprenticeship options।',
+      'हाँ। मीरा {location} के हिसाब से {goal} का training-to-work pathway बनाएगी: course fit, safe commute, fee risk, proof tasks और placement/apprenticeship options।',
     proof_ready:
       'हाँ। पहले आपकी मौजूदा skill को proof में बदलेंगे, फिर उसी proof से local training, RPL, apprenticeship या job matching करेंगे।',
     need_location:
-      'Offline job, training, apprenticeship या local course के लिए city/district और safe commute range चाहिए। Location के बिना मैं offline options suggest नहीं करूँगा।',
+      'Offline job, training, apprenticeship या local course के लिए city/district और safe commute range चाहिए। Location के बिना मीरा offline options suggest नहीं करेगी।',
     need_skill:
       'आप exact role/skill बताइए, और कोई proof हो तो वह भी: resume, certificate, project, sample work या experience।',
     career_switch:
-      'ठीक है। मैं study-only mode से career/job counseling mode में switch कर रहा हूँ। पहले target role, skill/proof, location या relocation preference और resume/project status चाहिए।',
+      'ठीक है। मीरा study-only mode से career/job counseling mode में switch कर रही है। पहले target role, skill/proof, location या relocation preference और resume/project status चाहिए।',
     direct_answer_prefix: 'छोटा जवाब:',
     missing_class: 'आप अभी किस stage में हैं: school, college, ITI/diploma, graduate, working, या dropout?',
     missing_subjects: 'आपको किस subject या exam area में help चाहिए?',
@@ -297,7 +303,7 @@ const PHRASES = {
     missing_time: 'Learning, practice, या job prep के लिए आप रोज़ या हफ्ते में कितना time दे सकते हैं?',
     missing_phone: 'Phone आपका खुद का है या shared है? क्या WhatsApp, voice note, और documents चल जाते हैं?',
     missing_mobility: 'Offline option के लिए आप घर से कितनी दूर तक safely travel कर सकते हैं? अगर India में कहीं भी relocate कर सकते हैं, तो वह भी बताइए।',
-    next_pathway: 'अब मैं आपके लिए next pathway बना सकता हूँ।',
+    next_pathway: 'अब मीरा आपके लिए next pathway बना सकती है।',
     voice_retry: 'Voice note साफ़ नहीं आया। कृपया 5-10 सेकंड दोबारा record करें, या वही बात type कर दें।',
   },
   Odia: localPhrases({

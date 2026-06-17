@@ -259,27 +259,27 @@ function starterMessageForLanguage(language = 'English') {
     English:
       'Hello, I am Meera from VidyaSetu. We will go step by step, not as a long form. First, what name should I call you?',
     Hinglish:
-      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle batao, main aapko kis naam se bulaun?',
+      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle batao, Meera aapko kis naam se bulaye?',
     Hindi:
-      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle bataiye, main aapko kis naam se bulaun?',
+      'नमस्ते, मैं VidyaSetu की मीरा हूँ. हम एक-एक करके profile बनाएंगे, long form नहीं. पहले बताइए, मीरा आपको किस नाम से बुलाए?',
     Marathi:
-      'Namaste, mi VidyaSetu chi Meera aahe. Aapan ek-ek karun profile banavu. Pahile sanga, mi tumhala kontya navane bolavu?',
+      'नमस्ते, मी VidyaSetu ची Meera आहे. आपण एक-एक करून profile बनवू. आधी सांगा, Meera तुम्हाला कोणत्या नावाने बोलवू?',
     Odia:
-      'Namaste, mu VidyaSetu ra Meera. Ame step by step profile kariba. Prathame kahantu, mu apananku keun naamare dakibi?',
+      'ନମସ୍କାର, ମୁଁ VidyaSetu ର Meera. ଆମେ step by step profile ବନାଇବୁ. ପ୍ରଥମେ କୁହନ୍ତୁ, Meera ଆପଣଙ୍କୁ କେଉଁ ନାମରେ ଡାକିବ?',
     Bengali:
-      'Namaste, ami VidyaSetu-r Meera. Amra ek-ek kore profile banabo. Age bolun, ami apnake kon naam-e dakbo?',
+      'নমস্কার, আমি VidyaSetu-র Meera. আমরা ধাপে ধাপে profile বানাবো. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
     Tamil:
-      'Vanakkam, naan VidyaSetu Meera. Naam step by step profile pannuvom. Mudhalil, unga peyar enna solli koopidalam?',
+      'வணக்கம், நான் VidyaSetu Meera. நாம் step by step profile உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
     Telugu:
-      'Namaste, nenu VidyaSetu Meera. Manam step by step profile chestam. Mundu, mee peru emani pilavali?',
+      'నమస్తే, నేను VidyaSetu Meera. మనం step by step profile తయారు చేద్దాం. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
     Kannada:
-      'Namaste, nanu VidyaSetu Meera. Navu step by step profile madona. Modalu, nimmannu yava hesarininda kareyali?',
+      'ನಮಸ್ತೆ, ನಾನು VidyaSetu Meera. ನಾವು step by step profile ಮಾಡೋಣ. ಮೊದಲು, Meera ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಲಿ?',
     Malayalam:
-      'Namaste, njan VidyaSetu Meera. Namukku step by step profile undakkam. Aadyam, ningale enthu per vilikkam?',
+      'നമസ്കാരം, ഞാൻ VidyaSetu Meera. നമുക്ക് step by step profile ഉണ്ടാക്കാം. ആദ്യം, Meera നിങ്ങളെ ഏത് പേരിൽ വിളിക്കണം?',
     Gujarati:
-      'Namaste, hu VidyaSetu ni Meera chu. Aapde step by step profile banavishu. Pehla kaho, tamne kya naam thi bolavu?',
+      'નમસ્તે, હું VidyaSetu ની Meera છું. આપણે step by step profile બનાવીએ. પહેલા કહો, Meera તમને કયા નામથી બોલાવે?',
     Punjabi:
-      'Namaste, main VidyaSetu di Meera haan. Asi step by step profile banavange. Pehla daso, main tuhanu kis naam naal bulaava?',
+      'ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਮੈਂ VidyaSetu ਦੀ Meera ਹਾਂ. ਅਸੀਂ step by step profile ਬਣਾਵਾਂਗੇ. ਪਹਿਲਾਂ ਦੱਸੋ, Meera ਤੁਹਾਨੂੰ ਕਿਸ ਨਾਮ ਨਾਲ ਬੁਲਾਏ?',
   };
   return { role: 'assistant', content: messages[language] || messages.English };
 }
@@ -444,6 +444,10 @@ function uiText(value, fallback = '') {
   return fallback;
 }
 
+function formatCopy(template = '', values = {}) {
+  return String(template || '').replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
+}
+
 function uiUrl(value) {
   const text = uiText(value);
   return /^https?:\/\//i.test(text) ? text : '';
@@ -474,6 +478,29 @@ function nextCounselorNeed(profile = {}) {
   return 'ready for pathway';
 }
 
+function normalizedDisplayKey(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function localizedProfileValue(value, copy = {}, fallback = '') {
+  const text = uiText(value, fallback);
+  if (!text) return fallback;
+  return copy.valueMap?.[normalizedDisplayKey(text)] || text;
+}
+
+function localizedProfileNeed(value, copy = {}) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => copy.needMap?.[normalizedDisplayKey(item)] || item)
+    .join(', ');
+}
+
 function quickStartSubtitle(label = '') {
   const map = {
     'Mobile repair learner': 'Training + early income',
@@ -488,7 +515,7 @@ function quickStartSubtitle(label = '') {
 
 function CounselorAvatar({ compact = false }) {
   return (
-    <div className={compact ? 'counselor-avatar compact' : 'counselor-avatar'} aria-label="Meera, VidyaSetu AI counselor">
+    <div className={compact ? 'counselor-avatar compact' : 'counselor-avatar'} aria-label="Meera, VidyaSetu counselor">
       <svg viewBox="0 0 120 120" width="100%" height="100%" aria-hidden="true">
         <defs>
           <linearGradient id="meeraKurta" x1="0" x2="0" y1="0" y2="1">
@@ -1387,7 +1414,7 @@ function App() {
             Choose your language
             <span>apni bhasha chunein</span>
           </h1>
-          <p>Meera, your AI counsellor, will talk with you in this language - by text or voice.</p>
+          <p>Meera will talk with you in this language - by text or voice.</p>
           <div className="language-select-grid lang-grid">
             {prototypeLanguageOptions.map((option) => (
               <button
@@ -1514,7 +1541,7 @@ function App() {
           <CounselorAvatar compact />
           <div>
             <b>Meera</b>
-            <span><i className="dot" /> AI counsellor · online</span>
+            <span><i className="dot" /> {t.counselor.sidebarStatus}</span>
           </div>
         </div>
         </aside>
@@ -1531,7 +1558,7 @@ function App() {
               <h1>{activeMeta.title}</h1>
               <p>{loading || activeMeta.subtitle}</p>
             </div>
-            <span className="pill crm-header-icon"><ActiveIcon size={15} /> {activeTab === 'counselor' ? 'Voice-first · low-literacy friendly' : activeTab === 'jobs' ? 'Mode: professional outreach' : 'Built from learner proof'}</span>
+            <span className="pill crm-header-icon"><ActiveIcon size={15} /> {activeTab === 'counselor' ? t.counselor.headerPill : activeTab === 'jobs' ? t.counselor.jobsPill : t.counselor.proofPill}</span>
           </header>
           {returning && <div className="memory-banner">Welcome back. VidyaSetu restored this learner's saved profile, journey, and next action.</div>}
           {error && <div className="site-alert">{error}</div>}
@@ -1552,7 +1579,7 @@ function App() {
               setActiveTab={setActiveTab}
             />
           )}
-          {activeTab === 'profile' && <ProfileTab profile={profile} readinessLayers={readinessLayers} setActiveTab={setActiveTab} />}
+          {activeTab === 'profile' && <ProfileTab profile={profile} readinessLayers={readinessLayers} setActiveTab={setActiveTab} t={t} />}
           {activeTab === 'counselor' && (
             <CounselorTab
               input={input}
@@ -1571,6 +1598,7 @@ function App() {
               stopSpeaking={stopSpeaking}
               voiceStatus={voiceStatus}
               liveTranscript={liveTranscript}
+              t={t}
             />
           )}
           {activeTab === 'readiness' && <ReadinessTab readinessLayers={readinessLayers} setActiveTab={setActiveTab} />}
@@ -1853,13 +1881,13 @@ function FieldDemoPanel({ fieldStatus, runBalangirFieldDemo, setActiveTab }) {
   );
 }
 
-function ProfileTab({ profile, readinessLayers, setActiveTab }) {
+function ProfileTab({ profile, readinessLayers, setActiveTab, t = getTranslations('English') }) {
   return (
     <div className="workspace-card">
       <p className="eyebrow">Learner profile layer</p>
       <h2>The profile updates from the latest counselor message.</h2>
       <div className="profile-dashboard">
-        <ProfileCard profile={profile} />
+        <ProfileCard profile={profile} t={t} />
         <div className="profile-detail-grid">
           <DetailBlock label="Learning access" value={profile.phone_access || profile.device || 'Pending'} />
           <DetailBlock label="Preferred language" value={profile.preferred_language || profile.language || 'Pending'} />
@@ -1944,12 +1972,15 @@ function CounselorTab({
   stopSpeaking,
   voiceStatus,
   liveTranscript,
+  t = getTranslations('English'),
 }) {
   const language = languageProfileForUi(profile, lastProof);
+  const counselorCopy = t.counselor || getTranslations('English').counselor;
+  const profileCopy = t.profile || getTranslations('English').profile;
   const counselorStats = [
-    ['Focus', counselorFocus(profile)],
-    ['Language', language.preferred_language],
-    ['Needs next', nextCounselorNeed(profile)],
+    [counselorCopy.focus, localizedProfileValue(counselorFocus(profile), profileCopy)],
+    [profileCopy.language, language.preferred_language],
+    [counselorCopy.needsNext, localizedProfileNeed(nextCounselorNeed(profile), profileCopy)],
   ];
   return (
     <div className="prototype-screen counselor-workspace">
@@ -1959,14 +1990,14 @@ function CounselorTab({
           {speakingIndex !== null && (
             <button onClick={stopSpeaking} type="button">
               <VolumeX size={14} />
-              Stop
+              {counselorCopy.stop}
             </button>
           )}
         </div>
       )}
       {liveTranscript && (
         <div className="live-transcript-panel">
-          <small>Live transcript</small>
+          <small>{counselorCopy.liveTranscript}</small>
           <p>{liveTranscript}</p>
         </div>
       )}
@@ -1980,7 +2011,7 @@ function CounselorTab({
             </div>
             <div className="who">
               <b>Meera</b>
-              <span><i className="dot" /> {recording ? 'Listening...' : 'Online'} · speaks {language.preferred_language}</span>
+              <span><i className="dot" /> {recording ? counselorCopy.listening : counselorCopy.online} · {formatCopy(counselorCopy.speaks, { language: language.preferred_language })}</span>
             </div>
             <span className="lang-tag"><Languages size={14} /> {language.preferred_language}</span>
           </div>
@@ -1997,7 +2028,7 @@ function CounselorTab({
                     type="button"
                   >
                     <Volume2 size={14} />
-                    {speakingIndex === index ? 'Speaking' : 'Listen'}
+                    {speakingIndex === index ? counselorCopy.speaking : counselorCopy.listen}
                   </button>
                 )}
               </div>
@@ -2005,18 +2036,18 @@ function CounselorTab({
           ))}
           </div>
           <div className="chat-input chat-composer">
-            <button className={recording ? 'mic record-button live recording' : 'mic record-button'} onClick={recording ? stopRecording : startRecording} title="Speak" type="button">
+            <button aria-label={counselorCopy.speak} className={recording ? 'mic record-button live recording' : 'mic record-button'} onClick={recording ? stopRecording : startRecording} title={counselorCopy.speak} type="button">
               <Mic size={18} />
             </button>
-            <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Type in the learner's chosen language..." />
+            <input value={input} onChange={(event) => setInput(event.target.value)} placeholder={counselorCopy.placeholder} />
             <button className="send primary-button" onClick={() => sendMessage()} type="button">
               <Send size={18} />
             </button>
           </div>
         </div>
-        <ProfileCard profile={profile} />
+        <ProfileCard profile={profile} t={t} />
       </div>
-      <div className="suggest counselor-quick-starts-below" aria-label="Example learner starts">
+      <div className="suggest counselor-quick-starts-below" aria-label={counselorCopy.quickStartsAria}>
         {quickStarts.slice(0, 3).map((item) => (
           <button className="chip-s" key={item.label} onClick={() => sendMessage(item.text)} type="button">
             {quickStartSubtitle(item.label)} · {item.label}
@@ -2025,9 +2056,9 @@ function CounselorTab({
       </div>
       <div className="action-row">
         <button className="primary-button" disabled={!profile.profile_complete} onClick={generatePathway}>
-          Generate pathway
+          {t.btn.generatePathway}
         </button>
-        <span>{profile.profile_complete ? 'Profile complete enough for recommendation.' : 'Counselor still needs a few details.'}</span>
+        <span>{profile.profile_complete ? t.profile.profileComplete : t.profile.counselorNeeds}</span>
       </div>
       <ProviderStatus proof={lastProof} />
     </div>
@@ -2079,42 +2110,47 @@ function ProviderStatus({ proof }) {
   );
 }
 
-function ProfileCard({ profile }) {
+function ProfileCard({ profile, t = getTranslations('English') }) {
   const language = languageProfileForUi(profile);
+  const copy = t.profile || getTranslations('English').profile;
+  const preferredLanguage = language.preferred_language === 'Pending' ? copy.pending : language.preferred_language;
+  const goalValue = localizedProfileValue(profile.learner_goal?.label || counselorFocus(profile), copy, copy.discovering);
+  const timeValue = localizedProfileValue(profile.time_available, copy, copy.pending);
+  const earningValue = localizedProfileValue(profile.earning_urgency, copy, profile.income_pressure ? copy.high : copy.pending);
   const completedRows = [
     profile.name,
     profile.class_level || profile.education_status,
-    language.preferred_language && language.preferred_language !== 'Pending',
+    preferredLanguage && preferredLanguage !== copy.pending,
     profile.location,
     profile.learner_goal?.label || profile.aspirations?.length,
     profile.earning_urgency || profile.income_pressure,
   ].filter(Boolean).length;
   const progress = Math.round((completedRows / 6) * 100);
   const rows = [
-    ['Language', language.preferred_language],
-    ['Location', profile.location || 'tap to add'],
-    ['Goal', profile.learner_goal?.label || counselorFocus(profile) || 'discovering...'],
-    ['Time', profile.time_available || 'Pending'],
-    ['Earning need', profile.earning_urgency || (profile.income_pressure ? 'High' : 'Pending')],
+    [copy.language, preferredLanguage],
+    [copy.location, profile.location || copy.tapToAdd],
+    [copy.goal, goalValue],
+    [copy.time, timeValue],
+    [copy.earningNeed, earningValue],
   ];
-  const nextNeed = nextCounselorNeed(profile);
+  const nextNeed = localizedProfileNeed(nextCounselorNeed(profile), copy);
   return (
     <div className="profile-card">
-      <h3>{profile.profile_complete ? 'Profile ready' : 'Building your profile'}</h3>
-      <div className="sub">Meera fills this as you chat - never a long form.</div>
+      <h3>{profile.profile_complete ? copy.ready : copy.building}</h3>
+      <div className="sub">{copy.sub}</div>
       <div className="prog"><i style={{ width: `${progress}%` }} /></div>
       <div className="field">
-        <span className="k">Name</span>
-        <span className={profile.name ? 'v' : 'v empty'}>{profile.name || 'tap to add'}</span>
+        <span className="k">{copy.name}</span>
+        <span className={profile.name ? 'v' : 'v empty'}>{profile.name || copy.tapToAdd}</span>
         {profile.name && <span className="tick">✓</span>}
       </div>
       <div className="field">
-        <span className="k">Education</span>
-        <span className={profile.class_level || profile.education_status ? 'v' : 'v empty'}>{profile.class_level || profile.education_status || 'tap to add'}</span>
+        <span className="k">{copy.education}</span>
+        <span className={profile.class_level || profile.education_status ? 'v' : 'v empty'}>{profile.class_level || profile.education_status || copy.tapToAdd}</span>
         {(profile.class_level || profile.education_status) && <span className="tick">✓</span>}
       </div>
       {rows.map(([label, value]) => {
-        const pending = !value || value === 'Pending' || value === 'tap to add';
+        const pending = !value || value === copy.pending || value === copy.tapToAdd;
         return (
           <div className="field" key={label}>
             <span className="k">{label}</span>
@@ -2124,10 +2160,10 @@ function ProfileCard({ profile }) {
         );
       })}
       <div className="nextq">
-        <b>{profile.profile_complete ? 'Ready' : 'Next question'}</b>
-        {profile.profile_complete ? 'Profile complete enough for pathway.' : `Meera still needs: ${nextNeed}.`}
+        <b>{profile.profile_complete ? copy.readyLabel : copy.nextQuestion}</b>
+        {profile.profile_complete ? copy.completeEnough : formatCopy(copy.stillNeeds, { need: nextNeed })}
       </div>
-      <div className="note">Nothing is shared with anyone without learner permission.</div>
+      <div className="note">{copy.privateNote}</div>
     </div>
   );
 }
@@ -2192,23 +2228,23 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
   const blockers = Array.isArray(activeRoute?.trace?.blockers) && activeRoute.trace.blockers.length
     ? activeRoute.trace.blockers.map((item) => uiText(item)).filter(Boolean)
     : [
-      'Professional outreach unlocks after proof and consent.',
-      'Local/offline options need district, commute range, and source verification.',
+      t.pathway.professionalOutreachBlocked,
+      t.pathway.offlineNeedsLocation,
     ];
   return (
     <div className="prototype-screen pathway-screen">
-      {!routes.length && <EmptyState text="Generate recommendations after the counselor profile is ready." />}
+      {!routes.length && <EmptyState text={t.pathway.empty} />}
       <div className="card">
         <div className="bridge">
-          <div className="bstep done"><div className="bc">✓</div><small>Foundation</small></div>
-          <div className="bstep now"><div className="bc">2</div><small>{academicMode ? 'Study plan' : 'Skill build'}</small></div>
-          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>Proof</small></div>
-          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>Outreach</small></div>
+          <div className="bstep done"><div className="bc">✓</div><small>{t.pathway.foundation}</small></div>
+          <div className="bstep now"><div className="bc">2</div><small>{academicMode ? t.pathway.studyPlan : t.pathway.skillBuild}</small></div>
+          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>{t.pathway.proof}</small></div>
+          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>{t.pathway.outreach}</small></div>
         </div>
         <p>
           {activeRoute
-            ? `You're on ${selectedRouteName}. ${uiText(activeRoute.tradeoff, 'VidyaSetu will build the next weekly plan after you confirm this route.')}`
-            : 'Generate a route after Meera has the learner goal, language, time, location or mobility, and proof details.'}
+            ? formatCopy(t.pathway.onRoute, { route: selectedRouteName, detail: uiText(activeRoute.tradeoff, 'VidyaSetu will build the next weekly plan after you confirm this route.') })
+            : t.pathway.generateAfterProfile}
         </p>
         {activeRoute && (
           <div className="route-outcome-grid">
@@ -2276,35 +2312,36 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
           {pathway?.callback_flag
             ? uiText(pathway.callback_message, 'More learner details are needed before recommendations.')
             : activeRoute
-              ? `Selected${selectedIndex >= 0 ? ` option ${selectedIndex + 1}` : ''}: ${selectedRouteName}.`
-              : 'No pathway selected yet.'}
+              ? `${t.pathway.selected}${selectedIndex >= 0 ? ` ${selectedIndex + 1}` : ''}: ${selectedRouteName}.`
+              : t.pathway.noSelected}
         </span>
       </div>
     </div>
   );
 }
 
-function weekDayPlan(module = {}, lessons = [], practiceTasks = [], proofTasks = []) {
+function weekDayPlan(module = {}, lessons = [], practiceTasks = [], proofTasks = [], t = getTranslations('English')) {
+  const copy = t.journey || getTranslations('English').journey;
   const dailyMicroTasks = Array.isArray(module.daily_micro_tasks) ? module.daily_micro_tasks : [];
   const learningSteps = [
-    ...dailyMicroTasks.map((text) => ({ kind: 'Daily', text })),
-    ...lessons.map((text) => ({ kind: 'Learn', text })),
-    ...practiceTasks.map((text) => ({ kind: 'Practice', text })),
+    ...dailyMicroTasks.map((text) => ({ kind: copy.daily, text })),
+    ...lessons.map((text) => ({ kind: copy.learn, text })),
+    ...practiceTasks.map((text) => ({ kind: copy.practice, text })),
   ].filter((item) => uiText(item.text));
-  const proofText = uiText(proofTasks[0], uiText(module.proof, 'Save one short proof note or photo.'));
+  const proofText = uiText(proofTasks[0], uiText(module.proof, copy.shortProof));
   const reviewText = uiText(
     module.unlocks || module.unlock_after_completion || module.unlock,
-    'Review the week and prepare the next step.',
+    copy.review,
   );
 
   return Array.from({ length: 7 }, (_, index) => {
     if (index < 5) {
-      const fallback = { kind: 'Daily', text: uiText(module.goal, 'Continue this week task.') };
+      const fallback = { kind: copy.daily, text: uiText(module.goal, copy.completeThisWeek) };
       const item = learningSteps[index] || learningSteps[index % Math.max(learningSteps.length, 1)] || fallback;
       return { day: index + 1, kind: item.kind, text: uiText(item.text, fallback.text) };
     }
-    if (index === 5) return { day: 6, kind: 'Proof', text: proofText };
-    return { day: 7, kind: 'Review', text: reviewText };
+    if (index === 5) return { day: 6, kind: copy.proof, text: proofText };
+    return { day: 7, kind: copy.review, text: reviewText };
   });
 }
 
@@ -2323,6 +2360,7 @@ function JourneyTab({
   progressState = {},
   t = getTranslations('English'),
 }) {
+  const copy = t.journey || getTranslations('English').journey;
   const modules = Array.isArray(journey?.modules) ? journey.modules : [];
   const learningContract = journey?.learning_contract && typeof journey.learning_contract === 'object' ? journey.learning_contract : {};
   const baseProgress = journey?.progress && typeof journey.progress === 'object' ? journey.progress : {};
@@ -2352,43 +2390,43 @@ function JourneyTab({
   const routeName = uiText(selectedRoute?.name, uiText(journey?.route_name, academicMode ? 'Study route' : 'Career route'));
   const finalUnlock = uiText(
     learningContract.opportunity_unlock,
-    academicMode ? 'Review the study record and choose the next chapter or mentor support.' : 'Create the Skill Passport, then move to consent-gated opportunity steps.',
+    academicMode ? copy.finalAcademicUnlock : copy.finalCareerUnlock,
   );
   const nextAction = uiText(
     progress.next_action,
-    currentModule ? `Continue Week ${currentModule.week || 1}: ${uiText(currentModule.title, 'current task')}.` : 'Create the journey first.',
+    currentModule ? formatCopy(copy.continueWeek, { week: currentModule.week || 1, title: uiText(currentModule.title, 'current task') }) : copy.createJourneyFirst,
   );
   const proofPlaceholder = academicMode
-    ? 'Example: solved one section, scored 7/10, and noted two mistakes.'
-    : 'Example: resume done, typing score saved, or two safe job sources checked.';
+    ? copy.proofPlaceholderStudy
+    : copy.proofPlaceholderWork;
   return (
     <div className="workspace-card journey-workspace">
       <div className="journey-page-head">
         <div>
-          <p className="eyebrow">Learner Journey</p>
-          <h2>{journey ? routeName : 'Choose a pathway, then create the four-week plan.'}</h2>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h2>{journey ? routeName : copy.choosePathway}</h2>
           <p>
             {journey
-              ? 'Four clear weeks. Each week has seven day tabs and its own proof box.'
-              : 'The journey will be built from the selected pathway and learner profile.'}
+              ? copy.fourWeeks
+              : copy.builtFromPathway}
           </p>
         </div>
         <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
-          {journey ? 'Refresh journey' : academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
+          {journey ? copy.refresh : academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
         </button>
       </div>
-      {!journey && <EmptyState text="Choose the route first. VidyaSetu will create only the weekly actions needed for that route." />}
+      {!journey && <EmptyState text={copy.chooseRouteFirst} />}
       {journey && (
         <>
           <div className="journey-readiness-grid">
-            <span><b>{completionPercent}%</b>progress</span>
-            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>proof saved</span>
-            <span><b>{passportEligible ? 'Ready' : 'Draft'}</b>{academicMode ? 'Study record' : 'Skill Passport'}</span>
+            <span><b>{completionPercent}%</b>{copy.progress}</span>
+            <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>{copy.proofSaved}</span>
+            <span><b>{passportEligible ? copy.ready : copy.draft}</b>{academicMode ? copy.studyRecord : copy.skillPassport}</span>
           </div>
           <div className="study-progress">
             <div>
               <strong>{completedCount}/{totalItems}</strong>
-              <span>{academicMode ? 'study lessons and tasks completed' : 'learning items completed'}</span>
+              <span>{academicMode ? copy.studyItems : copy.learningItems}</span>
             </div>
             <i><b style={{ width: `${completionPercent}%` }} /></i>
           </div>
@@ -2397,7 +2435,7 @@ function JourneyTab({
               const lessons = Array.isArray(module.lessons) ? module.lessons : [];
               const practiceTasks = Array.isArray(module.practice_tasks) ? module.practice_tasks : [];
               const proofTasks = Array.isArray(module.proof_tasks) ? module.proof_tasks : [];
-              const dayPlan = weekDayPlan(module, lessons, practiceTasks, proofTasks);
+              const dayPlan = weekDayPlan(module, lessons, practiceTasks, proofTasks, t);
               const moduleItems = [
                 ...lessons.map((item) => `${module.id}::lesson::${item}`),
                 ...practiceTasks.map((item) => `${module.id}::task::${item}`),
@@ -2411,30 +2449,30 @@ function JourneyTab({
               const unlocked = savedStatus.unlocked ?? moduleIndex === 0;
               const locked = !unlocked && !savedStatus.module_complete;
               const moduleStatus = savedStatus.module_complete
-                ? 'Complete'
+                ? copy.complete
                 : locked
-                  ? 'Locked'
+                  ? copy.locked
                   : proofReady
-                    ? 'Proof saved'
+                    ? copy.proofSaved
                     : moduleDone
-                      ? 'Add proof'
-                      : 'Start';
+                      ? copy.addProof
+                      : copy.start;
               return (
                 <article className={locked ? 'journey-week-card locked' : 'journey-week-card'} key={module.id}>
                   <div className="journey-week-topline">
-                    <span>Week {module.week || moduleIndex + 1}</span>
+                    <span>{copy.week} {module.week || moduleIndex + 1}</span>
                     <b className={savedStatus.module_complete || proofReady ? 'status-pill done' : locked ? 'status-pill locked' : 'status-pill'}>{moduleStatus}</b>
                   </div>
-                  <h3>{uiText(module.title, `Week ${module.week || moduleIndex + 1}`)}</h3>
-                  <p>{uiText(module.goal, 'Complete this week before moving ahead.')}</p>
+                  <h3>{uiText(module.title, `${copy.week} ${module.week || moduleIndex + 1}`)}</h3>
+                  <p>{uiText(module.goal, copy.completeThisWeek)}</p>
                   <div className="module-progress-line">
-                    <strong>{moduleDone}/{moduleItems.length} complete</strong>
+                    <strong>{moduleDone}/{moduleItems.length} {copy.complete.toLowerCase()}</strong>
                     <i><b style={{ width: `${modulePercent}%` }} /></i>
                   </div>
-                  <div className="week-day-tabs" role="tablist" aria-label={`Week ${module.week || moduleIndex + 1} day plan`}>
+                  <div className="week-day-tabs" role="tablist" aria-label={`${copy.week} ${module.week || moduleIndex + 1} ${copy.day} plan`}>
                     {dayPlan.map((day) => (
                       <button className={day.day === 1 && !moduleDone && !locked ? 'active' : ''} key={`${module.id}-day-${day.day}`} type="button">
-                        <span>Day {day.day}</span>
+                        <span>{copy.day} {day.day}</span>
                         <small>{day.kind}</small>
                       </button>
                     ))}
@@ -2442,7 +2480,7 @@ function JourneyTab({
                   <div className="week-day-plan">
                     {dayPlan.map((day) => (
                       <span key={`${module.id}-task-${day.day}`}>
-                        <b>Day {day.day}</b>
+                        <b>{copy.day} {day.day}</b>
                         {day.text}
                       </span>
                     ))}
@@ -2452,7 +2490,7 @@ function JourneyTab({
                       const key = `${module.id}::lesson::${lesson}`;
                       return (
                         <button className={completedLessons[key] ? 'lesson-item done' : 'lesson-item'} disabled={locked} key={key} onClick={() => toggleLesson(key)}>
-                          <b>{completedLessons[key] ? 'Completed' : locked ? 'Locked' : 'Tap after lesson'}</b>
+                          <b>{completedLessons[key] ? copy.completed : locked ? copy.locked : copy.tapAfterLesson}</b>
                           {lesson}
                         </button>
                       );
@@ -2461,14 +2499,14 @@ function JourneyTab({
                       const key = `${module.id}::task::${task}`;
                       return (
                         <button className={completedLessons[key] ? 'lesson-item task done' : 'lesson-item task'} disabled={locked} key={key} onClick={() => toggleLesson(key)}>
-                          <b>{completedLessons[key] ? 'Completed' : locked ? 'Locked' : 'Tap after practice'}</b>
+                          <b>{completedLessons[key] ? copy.completed : locked ? copy.locked : copy.tapAfterPractice}</b>
                           {task}
                         </button>
                       );
                     })}
                   </div>
                   <div className="week-proof-section">
-                    <strong>Proof for Week {module.week || moduleIndex + 1}: {uiText(module.proof, 'short proof note or photo')}</strong>
+                    <strong>{formatCopy(copy.proofForWeek, { week: module.week || moduleIndex + 1 })}: {uiText(module.proof, copy.shortProof)}</strong>
                     {proofTasks.length > 0 && (
                       <div className="proof-task-list">
                         {proofTasks.map((proofTask) => (
@@ -2486,28 +2524,28 @@ function JourneyTab({
                     <input
                       disabled={locked}
                       value={proofArtifact}
-                      placeholder="Optional proof link/photo note"
+                      placeholder={copy.optionalProof}
                       onBlur={() => saveJourneyProgress?.('proof_artifact_saved')}
                       onChange={(event) => updateProofArtifact?.(module.id, event.target.value)}
                     />
                     <button className="ghost-button" disabled={locked} onClick={() => saveJourneyProgress?.('proof_note_saved')}>
-                      Save proof for Week {module.week}
+                      {formatCopy(copy.saveProofForWeek, { week: module.week || moduleIndex + 1 })}
                     </button>
-                    <small>{proofReady ? 'Proof saved. Next week unlocks after all items are complete.' : `Unlocks: ${uiText(module.unlocks || module.unlock_after_completion || module.unlock, 'next week')}`}</small>
+                    <small>{proofReady ? copy.proofSavedUnlock : `${copy.unlocks}: ${uiText(module.unlocks || module.unlock_after_completion || module.unlock, copy.nextWeek)}`}</small>
                   </div>
                 </article>
               );
             })}
           </div>
           <div className="journey-after-card" role="tab">
-            <span>After Week 4</span>
+            <span>{copy.afterWeek4}</span>
             <div>
-              <h3>{academicMode ? 'Study record review' : 'Skill Passport and next step'}</h3>
+              <h3>{academicMode ? copy.studyRecordReview : copy.skillPassportNext}</h3>
               <p>{finalUnlock}</p>
-              <small><b>Next now:</b> {nextAction}</small>
+              <small><b>{copy.nextNow}:</b> {nextAction}</small>
             </div>
             <button className="primary-button" onClick={savePassport}>
-              {academicMode ? 'Save study record' : passportEligible ? 'Create proof-ready Skill Passport' : 'Create draft Skill Passport'}
+              {academicMode ? copy.saveStudyRecord : passportEligible ? copy.createProofReadyPassport : copy.createDraftPassport}
             </button>
           </div>
         </>

@@ -29,27 +29,27 @@ function starterMessageForLanguage(language = 'English') {
     English:
       'Hello, I am Meera from VidyaSetu. We will go step by step, not as a long form. First, what name should I call you?',
     Hinglish:
-      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle batao, main aapko kis naam se bulaun?',
+      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle batao, Meera aapko kis naam se bulaye?',
     Hindi:
-      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle bataiye, main aapko kis naam se bulaun?',
+      'नमस्ते, मैं VidyaSetu की मीरा हूँ. हम एक-एक करके profile बनाएंगे, long form नहीं. पहले बताइए, मीरा आपको किस नाम से बुलाए?',
     Marathi:
-      'Namaste, mi VidyaSetu chi Meera aahe. Aapan ek-ek karun profile banavu. Pahile sanga, mi tumhala kontya navane bolavu?',
+      'नमस्ते, मी VidyaSetu ची Meera आहे. आपण एक-एक करून profile बनवू. आधी सांगा, Meera तुम्हाला कोणत्या नावाने बोलवू?',
     Odia:
-      'Namaste, mu VidyaSetu ra Meera. Ame step by step profile kariba. Prathame kahantu, mu apananku keun naamare dakibi?',
+      'ନମସ୍କାର, ମୁଁ VidyaSetu ର Meera. ଆମେ step by step profile ବନାଇବୁ. ପ୍ରଥମେ କୁହନ୍ତୁ, Meera ଆପଣଙ୍କୁ କେଉଁ ନାମରେ ଡାକିବ?',
     Bengali:
-      'Namaste, ami VidyaSetu-r Meera. Amra ek-ek kore profile banabo. Age bolun, ami apnake kon naam-e dakbo?',
+      'নমস্কার, আমি VidyaSetu-র Meera. আমরা ধাপে ধাপে profile বানাবো. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
     Tamil:
-      'Vanakkam, naan VidyaSetu Meera. Naam step by step profile pannuvom. Mudhalil, unga peyar enna solli koopidalam?',
+      'வணக்கம், நான் VidyaSetu Meera. நாம் step by step profile உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
     Telugu:
-      'Namaste, nenu VidyaSetu Meera. Manam step by step profile chestam. Mundu, mee peru emani pilavali?',
+      'నమస్తే, నేను VidyaSetu Meera. మనం step by step profile తయారు చేద్దాం. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
     Kannada:
-      'Namaste, nanu VidyaSetu Meera. Navu step by step profile madona. Modalu, nimmannu yava hesarininda kareyali?',
+      'ನಮಸ್ತೆ, ನಾನು VidyaSetu Meera. ನಾವು step by step profile ಮಾಡೋಣ. ಮೊದಲು, Meera ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಲಿ?',
     Malayalam:
-      'Namaste, njan VidyaSetu Meera. Namukku step by step profile undakkam. Aadyam, ningale enthu per vilikkam?',
+      'നമസ്കാരം, ഞാൻ VidyaSetu Meera. നമുക്ക് step by step profile ഉണ്ടാക്കാം. ആദ്യം, Meera നിങ്ങളെ ഏത് പേരിൽ വിളിക്കണം?',
     Gujarati:
-      'Namaste, hu VidyaSetu ni Meera chu. Aapde step by step profile banavishu. Pehla kaho, tamne kya naam thi bolavu?',
+      'નમસ્તે, હું VidyaSetu ની Meera છું. આપણે step by step profile બનાવીએ. પહેલા કહો, Meera તમને કયા નામથી બોલાવે?',
     Punjabi:
-      'Namaste, main VidyaSetu di Meera haan. Asi step by step profile banavange. Pehla daso, main tuhanu kis naam naal bulaava?',
+      'ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਮੈਂ VidyaSetu ਦੀ Meera ਹਾਂ. ਅਸੀਂ step by step profile ਬਣਾਵਾਂਗੇ. ਪਹਿਲਾਂ ਦੱਸੋ, Meera ਤੁਹਾਨੂੰ ਕਿਸ ਨਾਮ ਨਾਲ ਬੁਲਾਏ?',
   };
   return { role: 'assistant', content: messages[languageMeta(language).name] || messages.English };
 }
