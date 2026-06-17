@@ -2333,28 +2333,28 @@ function JourneyTab({
   const proofRequiredCount = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
   const passportEligible = Boolean(progress.passport_eligible);
   return (
-    <div className="workspace-card">
-      <p className="eyebrow">Content and readiness plan</p>
-      <h2>{journey?.title || 'Your course appears here.'}</h2>
-      <div className="guided-steps">
-        <span className="active"><b>1</b>Open Week 1</span>
-        <span className="active"><b>2</b>Tap lessons after completing</span>
-        <span className={completionPercent > 0 ? 'active' : ''}><b>3</b>Save proof</span>
+    <div className="workspace-card journey-workspace">
+      <p className="eyebrow">Weekly action plan</p>
+      <h2>{journey?.title || 'Choose a pathway, then create the first weekly plan.'}</h2>
+      <div className="guided-steps journey-stage-strip">
+        <span className="active"><b>1</b>Today&apos;s proof</span>
+        <span className={modules.length ? 'active' : ''}><b>2</b>Safe shortlist</span>
+        <span className={completionPercent > 0 ? 'active' : ''}><b>3</b>Consent next</span>
       </div>
       <div className="action-row">
         <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
           {academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
         </button>
-        <span>{selectedRoute ? `Course: ${selectedRoute.name}` : 'Choose a pathway first.'}</span>
+        <span>{selectedRoute ? `Pathway: ${selectedRoute.name}` : 'Choose a pathway first.'}</span>
       </div>
-      {!journey && <EmptyState text="After choosing a route, VidyaSetu creates weekly lessons, practice tasks, proof requirements, and support rules." />}
+      {!journey && <EmptyState text="Choose the route first. VidyaSetu will create only the weekly actions needed for that route." />}
       {journey && (
         <>
           <p className="journey-tip">
-            Open Week 1, finish a lesson or task, tap it done, then save a short proof. Saving unlocks the next week.
+            Work on the first proof before applying anywhere. Outreach stays blocked until the learner approves what will be shared.
           </p>
           <div className="journey-readiness-grid">
-            <span><b>{completionPercent}%</b>Course completion</span>
+            <span><b>{completionPercent}%</b>Plan progress</span>
             <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>Proof saved</span>
             <span><b>{passportEligible ? 'Ready' : 'Draft'}</b>{academicMode ? 'Study record' : 'Skill Passport'}</span>
           </div>
@@ -2378,7 +2378,7 @@ function JourneyTab({
             const startProof = uiText(startModule.proof_task, uiText(startModule.proof, uiText(start.proof_required, 'a short note or photo of what you did')));
             const startUnlocks = uiText(startModule.unlocks, uiText(startModule.unlock_after_completion, uiText(start.unlocks_next, 'the next week')));
             return (
-              <div className="today-card">
+              <div className="today-card journey-today-card">
                 <span>{t.journey.startHere}</span>
                 <strong>{t.journey.week} {startWeek}: {startTitle}</strong>
                 {startWhy ? <p>{startWhy}</p> : null}

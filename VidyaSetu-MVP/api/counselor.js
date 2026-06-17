@@ -46,6 +46,14 @@ function latestAssistantContent(messages = []) {
   return [...messages].reverse().find((message) => message.role === 'assistant')?.content || '';
 }
 
+function meaningfulArraySignals(values = []) {
+  return values
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .filter((item) => !/^(?:mera|my|ab|now)?\s*(?:pathway|pathwat|raasta|rasta|roadmap|plan|next step)(?:\s+banao|\s+build|\s+make)?$/i.test(item))
+    .filter((item) => !/\b(?:pathway|pathwat|raasta|rasta|roadmap)\s+(?:banao|build|make)\b/i.test(item));
+}
+
 function applyLatestSignals(profile = {}, latestText = '') {
   const latestProfile = fallbackProfileFromTranscript(latestText);
   const next = { ...profile };
@@ -54,7 +62,11 @@ function applyLatestSignals(profile = {}, latestText = '') {
     if (key === 'learner_goal') return;
     if (Array.isArray(value)) {
       if (key === 'aspirations' || key === 'skills' || key === 'content_preferences' || key === 'support_needs') {
-        next[key] = value;
+        const nextValues = meaningfulArraySignals(value);
+        if (nextValues.length) {
+          const previousValues = Array.isArray(next[key]) ? next[key] : [];
+          next[key] = [...new Set([...previousValues, ...nextValues])];
+        }
       }
       return;
     }
@@ -152,6 +164,7 @@ function applyGeneralGoal(profile = {}, latestText = '') {
     aspirations: profile.aspirations || [],
   });
   const existingGoal = profile.learner_goal;
+  const hasMeaningfulExtractedGoal = Boolean(extractedGoal?.intent && extractedGoal.intent !== 'unknown');
   const latestExplicitChange =
     /actually|instead|change(?:d)?|\bab\b|now|also|too|sirf|only|bas|but|first|pehle|career|job|internship|placement|training|course|naukri|पहले|बट/i.test(
       latestText,
@@ -166,13 +179,13 @@ function applyGeneralGoal(profile = {}, latestText = '') {
     );
   const shouldUseLatest =
     !existingGoal ||
-    existingGoal.type === 'open_counseling' ||
+    (existingGoal.type === 'open_counseling' && hasMeaningfulExtractedGoal) ||
     extractedGoal?.type === 'informal_skill_validation' ||
     extractedGoal?.type === 'entrance_exam_prep' ||
     extractedGoal?.intent === 'study' ||
     latestChangesLane ||
-    latestExplicitChange ||
-    (existingGoal.intent === 'unknown' && extractedGoal?.intent !== 'unknown');
+    (latestExplicitChange && hasMeaningfulExtractedGoal) ||
+    (existingGoal.intent === 'unknown' && hasMeaningfulExtractedGoal);
   const goal = shouldUseLatest ? extractedGoal : existingGoal;
   const next = {
     ...profile,
@@ -211,13 +224,14 @@ function suspiciousName(value = '') {
   const text = String(value || '').trim();
   if (!text) return false;
   if (text.length > 40) return true;
+  if (/\b(nahi|nahin|nhi|can't|cannot|can not)\b.*\b(bana|bna|make|create|kar|sakta|sakti|skta|skti|paunga|paungi)\b/i.test(text)) return true;
   return /study|plan|career|job|internship|employability|pathway|course|training|business|school|class|board|cbse|jee|neet|padhai|naukri|skill|location|phone|whatsapp|proof|resume/i.test(
     text,
   );
 }
 
 function suspiciousLocation(value = '') {
-  return /hindi|english|odia|language|content|marks|chahiye|city|batana|nahi|offline|online|remote|graduate$|student$|study|plan|career|job|internship|employability|pathway|course|training|business|school|class|board|cbse|jee|neet|padhai|naukri|skill|phone|whatsapp|proof|resume/i.test(
+  return /hindi|english|odia|language|content|marks|chahiye|batana|nahi|offline|online|remote|graduate$|student$|study|plan|career|job|internship|employability|pathway|course|training|business|school|class|board|cbse|jee|neet|padhai|naukri|skill|phone|whatsapp|proof|resume/i.test(
     String(value),
   );
 }
@@ -263,14 +277,15 @@ function counselorPersona(profile = {}) {
   const goalType = profile.learner_goal?.type || profile.academic_goal?.type || '';
   const goalIntent = profile.learner_goal?.intent || '';
   const text = `${goalType} ${goalIntent} ${profile.class_level || ''} ${profile.education_status || ''} ${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`.toLowerCase();
+  if (/formal_skill_job_search|certified|certificate|iti|diploma|license/.test(text)) return 'formal_skill_job_search';
+  if (goalIntent === 'job' || /job_search|job|naukri|placement/.test(text)) return 'job_search_only';
+  if (goalIntent === 'training' || /training|course|vocational/.test(text)) return 'vocational_training';
+  if (goalIntent === 'proof_to_work') return 'informal_skill_rpl';
   if (/entrance|jee|neet|polytechnic/.test(text)) return 'entrance_exam_prep';
   if (/class 12|board|marks|score/.test(text)) return 'board_exam_prep';
   if (goalIntent === 'study' || /school_study|school study|homework/.test(text)) return 'school_study_support';
   if (/internship|project/.test(text)) return 'college_internship';
   if (/college|btech|b\.tech|engineering|degree|bca|mca/.test(text)) return 'college_career';
-  if (/formal_skill_job_search|certified|certificate|iti|diploma|license/.test(text)) return 'formal_skill_job_search';
-  if (goalIntent === 'job' || /job_search|job|naukri|placement/.test(text)) return 'job_search_only';
-  if (goalIntent === 'training' || /training|course|vocational/.test(text)) return 'vocational_training';
   if (/informal|rpl|tailor|stitch|repair|farming|cooking/.test(text)) return 'informal_skill_rpl';
   if (/dropout|school chhod|income urgent/.test(text)) return 'dropout_income';
   return 'unsure_exploration';
@@ -281,7 +296,8 @@ function fieldHasValue(profile = {}, field) {
     return Boolean(profile.aspirations?.length || profile.skills?.length || profile.proof_available?.length);
   }
   if (field === 'mobility_signal') {
-    return Boolean(profile.commute_km || profile.relocation_preference);
+    const relocation = String(profile.relocation_preference || '').toLowerCase();
+    return Boolean(profile.commute_km || /relocat|anywhere|remote|india.?wide|outside/i.test(relocation));
   }
   if (field === 'academic_subjects') {
     return Boolean(profile.academic_goal?.subjects?.length);
@@ -399,7 +415,14 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
   }
   if (field === 'time_available') return phrase(profile, latestText, 'missing_time', {});
   if (field === 'phone_access') return phrase(profile, latestText, 'missing_phone', {});
-  if (field === 'mobility_signal') return phrase(profile, latestText, 'missing_mobility', {});
+  if (field === 'mobility_signal') {
+    return localizedLine(profile, latestText, {
+      English: 'How far can you safely travel from home each day?',
+      Hinglish: 'Ghar se roz kitni door tak safe travel kar sakti ho?',
+      Hindi: 'Ghar se roz kitni door tak safe travel kar sakti ho?',
+      Marathi: 'Gharapasun roj kiti door safe travel karu shakta?',
+    });
+  }
   if (field === 'proof_available') {
     return localizedLine(profile, latestText, {
       English: 'Do you already have any proof: resume, certificate, project, sample work, score, or work experience?',
@@ -442,28 +465,20 @@ function directAnswerForLatest(profile = {}, latestText = '') {
         'Ho, aadhi safe setup plan banavto: training, cost heads, buyer/supplier check, scheme eligibility ani loan risk. Income guarantee denar nahi.',
     });
   }
-  if (/jee|neet|cuet|exam|board|marks|score|class|padh|study|homework|subject/i.test(text)) {
-    return localizedLine(profile, latestText, {
-      English:
-        'Yes, I can help with study planning. I will keep this as a study route first and build weak-topic practice, resources, and progress tracking.',
-      Hinglish:
-        'Haan, main study planning mein help karunga. Isko pehle study route rakhunga: weak-topic practice, resources, aur progress tracking.',
-      Hindi:
-        'Haan, main study planning mein help karunga. Isko pehle study route rakhunga: weak-topic practice, resources, aur progress tracking.',
-      Marathi:
-        'Ho, mi study planning madhe madat karen. Aadhee study route thevu: weak topics, resources ani progress tracking.',
-    });
-  }
   if (/job|naukri|placement|internship|career/i.test(text)) {
     return localizedLine(profile, latestText, {
-      English:
-        'Yes, I can build a job path, but the first step is to understand your target role, current skills, proof, and safe location/mobility.',
-      Hinglish:
-        'Haan, job path ban sakta hai, par pehle target role, current skills, proof, aur safe location/mobility clear karenge.',
-      Hindi:
-        'Haan, job path ban sakta hai, par pehle target role, current skills, proof, aur safe location/mobility clear karenge.',
-      Marathi:
-        'Ho, job path banavu shakto, pan aadhi target role, skills, proof ani safe location/mobility clear karu.',
+      English: 'Yes, I can help with a job path.',
+      Hinglish: 'Haan, job path mein help kar sakta hoon.',
+      Hindi: 'Haan, job path mein help kar sakta hoon.',
+      Marathi: 'Ho, job path madhe madat karu shakto.',
+    });
+  }
+  if (/jee|neet|cuet|exam|board|marks|score|class|padh|study|homework|subject/i.test(text)) {
+    return localizedLine(profile, latestText, {
+      English: 'Yes, I can help with study planning.',
+      Hinglish: 'Haan, study planning mein help kar sakta hoon.',
+      Hindi: 'Haan, study planning mein help kar sakta hoon.',
+      Marathi: 'Ho, study planning madhe madat karu shakto.',
     });
   }
   return localizedLine(profile, latestText, {
@@ -486,29 +501,28 @@ function buildStepwiseReply({
 }) {
   const updates = changedProfileFields(previousProfile, profile);
   const directAnswer = directAnswerForLatest(profile, latestText);
+  const ack = updates.length ? updateLine(updates, profile, latestText) : '';
   if (!profileReady) {
     const nextField = nextBestIntakeField(missing, profile);
     const nextQuestion = oneThingQuestion(nextField, profile, latestText);
-    return avoidRepeat(
-      joinParts([updates.length ? updateLine(updates, profile, latestText) : '', directAnswer, nextQuestion]),
+    return cleanCounselorReply(avoidRepeat(
+      joinParts([ack, directAnswer, nextQuestion]),
       previousAssistant,
       profile,
       latestText,
-    );
+    ));
   }
 
-  const baseReply = directReply || modelReply || readyReply(profile, latestText);
-  const shouldSummarize = !previousProfile.profile_complete || updates.length;
-  return avoidRepeat(
+  const baseReply = directReply || conciseReadyReply(profile, latestText, modelReply);
+  return cleanCounselorReply(avoidRepeat(
     joinParts([
-      updates.length ? updateLine(updates, profile, latestText) : '',
-      shouldSummarize ? collectedProfileLine(profile, latestText) : '',
+      ack,
       baseReply,
     ]),
     previousAssistant,
     profile,
     latestText,
-  );
+  ));
 }
 
 function changedProfileFields(previous = {}, next = {}) {
@@ -537,12 +551,11 @@ function changedProfileFields(previous = {}, next = {}) {
 }
 
 function updateLine(updates = [], profile = {}, latestText = '') {
-  const updateText = updates.join(', ');
   return localizedLine(profile, latestText, {
-    English: `Updated ${updateText}.`,
-    Hinglish: `Update kar diya: ${updateText}.`,
-    Hindi: `Update kar diya: ${updateText}.`,
-    Marathi: `Update kele: ${updateText}.`,
+    English: 'Got it, I saved that.',
+    Hinglish: 'Theek hai, save kar liya.',
+    Hindi: 'Theek hai, save kar liya.',
+    Marathi: 'Theek aahe, save kele.',
   });
 }
 
@@ -575,6 +588,19 @@ function localizedLine(profile = {}, latestText = '', variants = {}) {
 
 function joinParts(parts = []) {
   return parts.map((part) => String(part || '').trim()).filter(Boolean).join(' ');
+}
+
+function cleanCounselorReply(reply = '') {
+  return String(reply || '')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/`/g, '')
+    .replace(/^\s*[-+]\s+/gm, '')
+    .replace(/^\s*\d+[.)]\s+/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .replace(/\s+\n/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
 
 function normalizeComparable(value) {
@@ -616,6 +642,44 @@ function readyReply(profile = {}, latestText = '') {
     return phrase(profile, latestText, 'proof_ready', {});
   }
   return phrase(profile, latestText, 'need_skill', {});
+}
+
+function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
+  const directModelReply = String(modelReply || '').trim();
+  if (directModelReply && directModelReply.length <= 180 && !/[\n*]/.test(directModelReply)) {
+    return directModelReply;
+  }
+  const intent = profile.learner_goal?.intent || '';
+  if (intent === 'study') {
+    return localizedLine(profile, latestText, {
+      English: 'Good, I have enough to make a study plan now. I will keep it focused on weak topics and daily practice.',
+      Hinglish: 'Theek hai, ab study plan ban sakta hai. Main weak topics aur daily practice par focus rakhunga.',
+      Hindi: 'Theek hai, ab study plan ban sakta hai. Main weak topics aur daily practice par focus rakhunga.',
+      Marathi: 'Theek aahe, ata study plan banu shakto. Weak topics ani daily practice var focus thevu.',
+    });
+  }
+  if (intent === 'job' || intent === 'college') {
+    return localizedLine(profile, latestText, {
+      English: 'Good, I have enough to build the pathway. I will show only matching jobs after proof and consent.',
+      Hinglish: 'Theek hai, pathway banane ke liye profile enough hai. Jobs sirf fit, proof aur consent ke baad dikhengi.',
+      Hindi: 'Theek hai, pathway banane ke liye profile enough hai. Jobs sirf fit, proof aur consent ke baad dikhengi.',
+      Marathi: 'Theek aahe, pathway sathi profile enough aahe. Jobs fit, proof ani consent nantarach disatil.',
+    });
+  }
+  if (intent === 'training') {
+    return localizedLine(profile, latestText, {
+      English: 'Good, I can build the training route now. I will check safe travel, fees, proof, and placement risk.',
+      Hinglish: 'Theek hai, training route ban sakta hai. Main safe travel, fees, proof aur placement risk check karunga.',
+      Hindi: 'Theek hai, training route ban sakta hai. Main safe travel, fees, proof aur placement risk check karunga.',
+      Marathi: 'Theek aahe, training route banu shakto. Safe travel, fees, proof ani placement risk check karu.',
+    });
+  }
+  return localizedLine(profile, latestText, {
+    English: 'Good, I have enough for the next step. I will keep the pathway simple and tied to this profile.',
+    Hinglish: 'Theek hai, next step ke liye profile enough hai. Pathway simple aur isi profile se linked rahega.',
+    Hindi: 'Theek hai, next step ke liye profile enough hai. Pathway simple aur isi profile se linked rahega.',
+    Marathi: 'Theek aahe, next step sathi profile enough aahe. Pathway simple ani ya profile shi linked rahil.',
+  });
 }
 
 function usableModelReply(reply = '') {
@@ -699,8 +763,24 @@ function directLatestReply(profile = {}, latestText = '', previousProfile = {}) 
   ) {
     return phrase(profile, latestText, 'need_location', {});
   }
+  if (/resume|cv/i.test(lower) && /\b(nahi|nahin|nhi|can't|cannot|can not|not able|unable)\b|bana\s+nahi|bna\s+nahi/i.test(lower)) {
+    return localizedLine(profile, latestText, {
+      English: 'No problem. I can build a simple truthful resume from this chat and your certificate/photo proof.',
+      Hinglish: 'Koi baat nahi. Main isi chat aur certificate/photo proof se simple truthful resume bana sakta hoon.',
+      Hindi: 'Koi baat nahi. Main isi chat aur certificate/photo proof se simple truthful resume bana sakta hoon.',
+      Marathi: 'Kahi problem nahi. Ya chat ani certificate/photo proof varun mi simple truthful resume banavu shakto.',
+    });
+  }
   if (/resume|cv/i.test(lower) && !profile.proof_available?.some((item) => /resume|cv/i.test(item))) {
     return `${phrase(profile, latestText, 'direct_answer_prefix')} ${phrase(profile, latestText, 'need_skill', {})}`;
+  }
+  if (/pathway|pathwat|raasta|rasta|roadmap|next step|plan/i.test(lower)) {
+    return localizedLine(profile, latestText, {
+      English: 'Yes. I can build the pathway now from this profile.',
+      Hinglish: 'Haan. Ab isi profile se pathway bana sakta hoon.',
+      Hindi: 'Haan. Ab isi profile se pathway bana sakta hoon.',
+      Marathi: 'Ho. Ata ya profile varun pathway banu shakto.',
+    });
   }
   if (/connect|hirer|hiring|founder|employer|mail|email|outreach|contact/i.test(lower) && goal.intent === 'job') {
     return phrase(profile, latestText, 'job_ready', {
@@ -714,7 +794,7 @@ function directLatestReply(profile = {}, latestText = '', previousProfile = {}) 
 function avoidRepeat(reply = '', previous = '', profile = {}, latestText = '') {
   const clean = String(reply || '').trim();
   const previousClean = String(previous || '').trim();
-  if (!clean) return readyReply(profile, latestText);
+  if (!clean) return conciseReadyReply(profile, latestText);
   if (previousClean && clean.toLowerCase() === previousClean.toLowerCase()) {
     return `${clean} ${phrase(profile, latestText, 'need_skill', {})}`;
   }
@@ -800,9 +880,9 @@ export default async function handler(req, res) {
     const fallback = fallbackCounselor({ messages, profile });
     const generated = await callFireworksJson({
       fallback,
-      maxTokens: 700,
-      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal, for example from job search to JEE/IIT/NEET/entrance preparation or from study-only to job/employability. Intake must feel like a counselor conversation, not a form: answer the learner's direct question first, then ask only one next-best question. Do not ask for name, class, location, phone, time, commute, proof, and support needs in one message. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the profile is complete enough, summarize the collected profile and give concrete next actions, not a generic acknowledgement. If the learner changes any fact or goal later, update the profile and acknowledge the change. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
-      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "warm counselor response in learner language. Answer direct questions first. Ask at most one next-best question if information is missing. Do not only say Samajh gaya. If enough information is available, summarize collected profile and then say the concrete next step. If user wants a job plan, mention proof/resume, pathway, opportunity search, and consent-based outreach only when relevant. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, training verification, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
+      maxTokens: 420,
+      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Build the structured profile silently in JSON. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
+      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in learner language. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Answer direct questions first. Ask at most one next-best question if information is missing. If enough information is available, say the next step briefly. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
     });
 
     const mergedGeneratedProfile = mergeProfile(profile, generated.data.profile || {});

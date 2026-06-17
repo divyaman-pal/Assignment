@@ -932,6 +932,9 @@ function cleanName(value = '') {
 
 function detectLocation(text = '') {
   const patterns = [
+    /\baur\s+([A-Za-z\u0900-\u097F]{3,30})(?:\s+(?:city|town|district))?\s+(?:ke\s+paas|near)\b/i,
+    /\b([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+){0,2})\s+(?:city|town|district)?\s*(?:ke\s+paas|near)\s+(?:rehta|rehti|rahta|rahti|hoon|hu|hun|live|lives)\b/,
+    /\b([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+){0,2})\s+(?:city|town|district)?\s*(?:ke\s+paas|near)\b/,
     /\b(New Delhi|Navi Mumbai|Greater Noida|Noida Extension|Greater Mumbai)\s+(?:se|से)\b/i,
     /(?:main|mai|i am)\s+[A-Za-z\u0900-\u097F]{2,30}\s+([A-Z][a-zA-Z]+)\s+(?:se|से)\b/i,
     /\b([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+){0,2})\s+(?:se|से)\s+(?:hoon|hu|hun|belong|हूँ|हूं)\b/,
@@ -957,7 +960,7 @@ function detectLocation(text = '') {
 }
 
 function isNotLocation(value = '') {
-  return /certified|electrician|data entry|job only|resume|android|phone|math|science|training|course|help|student|class|skill|certificate|engineering|college|hindi|english|odia|language|content|city|batana|nahi|chahti|chahiye|marks/i.test(
+  return /certified|electrician|data entry|job only|resume|android|phone|math|science|training|course|help|student|class|skill|certificate|engineering|college|hindi|english|odia|language|content|batana|nahi|chahti|chahiye|marks/i.test(
     value,
   );
 }
@@ -966,6 +969,7 @@ function cleanLocation(value = '') {
   return value
     .replace(/^(main|mai|i)\s+/i, '')
     .replace(/\s+(ke|के)\s+(ek|एक)?\s*(engineering\s+)?(college|university|कॉलेज|इंजीनियरिंग).*$/i, '')
+    .replace(/\s+(city|town|district)$/i, '')
     .replace(/\b(se|re|from|near|paas|mein|me|ke|rehta|rehti|rahta|rahti|hoon|hu|hun|live|lives|हूँ|हूं)$/i, '')
     .trim();
 }

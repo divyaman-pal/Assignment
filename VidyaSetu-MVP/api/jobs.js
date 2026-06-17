@@ -800,6 +800,9 @@ function deriveTargetRoles(profile = {}, resumeText = '') {
   const text = `${resumeText} ${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`.toLowerCase();
   if (/data science|machine learning|data analyst|analytics|python|sql/.test(text)) return ['Data Analyst Intern', 'Data Science Intern', 'Junior Data Analyst'];
   if (/software|web|react|javascript|frontend|backend|btech|engineering/.test(text)) return ['Software Engineering Intern', 'Frontend Intern', 'Junior Software Developer'];
+  if (/computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|bpo|call center|office assistant|retail billing/.test(text)) {
+    return ['Data Entry Operator', 'Customer Service Assistant', 'Computer Operator', 'Front Desk Assistant', 'Retail Billing Assistant'];
+  }
   if (/accounting|tally|gst|finance|bcom/.test(text)) return ['Accounts Assistant', 'GST Billing Assistant', 'Finance Intern'];
   if (/driver|driving|license/.test(text)) return ['Driver', 'Fleet Driver', 'Delivery Driver'];
   if (/electrician|iti/.test(text)) return ['Electrician Assistant', 'ITI Electrician', 'Maintenance Technician'];
@@ -1371,7 +1374,20 @@ function profileAwareJobs(jobs, profile = {}, segment, resumeProfile) {
       .slice(0, 6);
   }
   if (/computer|digital|typing|data/.test(aspirations) && !/data science|analytics|python|sql/.test(aspirations)) {
-    return deduped.filter((job) => !/beauty|salon|mehandi|mobile repair/i.test(`${job.title} ${job.description}`)).slice(0, 6);
+    return deduped
+      .filter((job) => {
+        const haystack = `${job.title} ${job.description} ${job.employer} ${job.lead_type} ${job.source_url}`.toLowerCase();
+        const relevant =
+          /data entry|computer operator|customer service|customer care|front desk|reception|receptionist|billing|office assistant|back office|bpo|call center|retail billing|typing|cyber cafe|csc/.test(
+            haystack,
+          );
+        const unrelated =
+          /electrician|electrical|wireman|\biti\b|fitter|welder|plumber|mechanic|driver|delivery|cook|hotel|salon|beauty|mehandi|tailor|mobile repair/.test(
+            haystack,
+          );
+        return relevant && !unrelated;
+      })
+      .slice(0, 6);
   }
   return deduped.slice(0, 6);
 }

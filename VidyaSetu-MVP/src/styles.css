@@ -7773,3 +7773,57 @@ body {
     max-width: 96%;
   }
 }
+
+.crm-app-shell .journey-workspace {
+  color: #1d2939;
+  background: #ffffff;
+}
+
+.crm-app-shell .journey-workspace .journey-stage-strip span,
+.crm-app-shell .journey-workspace .journey-today-card,
+.crm-app-shell .journey-workspace .study-progress,
+.crm-app-shell .journey-workspace .journey-readiness-grid span,
+.crm-app-shell .journey-workspace .module-card,
+.crm-app-shell .journey-workspace .proof-capture,
+.crm-app-shell .journey-workspace .lesson-item {
+  border-color: #d8e0ee;
+  color: #344054;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.crm-app-shell .journey-workspace .journey-stage-strip span.active,
+.crm-app-shell .journey-workspace .journey-today-card {
+  border-color: rgba(39, 94, 254, 0.24);
+  background: #f6f9ff;
+}
+
+.crm-app-shell .journey-workspace .journey-stage-strip b,
+.crm-app-shell .journey-workspace .journey-today-card span {
+  color: #ffffff;
+  background: #275efe;
+}
+
+.crm-app-shell .journey-workspace h2,
+.crm-app-shell .journey-workspace .journey-today-card strong,
+.crm-app-shell .journey-workspace .module-card h3,
+.crm-app-shell .journey-workspace .module-card strong,
+.crm-app-shell .journey-workspace .study-progress strong,
+.crm-app-shell .journey-workspace .journey-readiness-grid b {
+  color: #101828;
+}
+
+.crm-app-shell .journey-workspace .journey-tip,
+.crm-app-shell .journey-workspace .journey-today-card p,
+.crm-app-shell .journey-workspace .journey-today-card small,
+.crm-app-shell .journey-workspace .module-card p,
+.crm-app-shell .journey-workspace .module-card small,
+.crm-app-shell .journey-workspace .study-progress span {
+  color: #667085;
+}
+
+.crm-app-shell .journey-workspace .lesson-item.done {
+  border-color: rgba(19, 166, 112, 0.28);
+  color: #0f6f4d;
+  background: #f0fbf7;
+}

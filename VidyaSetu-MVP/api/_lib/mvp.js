@@ -157,6 +157,10 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
   const location = profile.location || 'your district';
   const firstAspiration = primarySkill(profile.aspirations || ['career skill']);
   const dataScienceIntent = /data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(aspirations);
+  const localOfficeIntent =
+    /computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|office assistant|bpo|call center|retail billing/.test(
+      aspirations,
+    ) && !dataScienceIntent;
   const academicGoalType = profile.academic_goal?.type || '';
   const academicGoalOverridesStaleCareer =
     academicGoalType === 'entrance_exam_prep' ||
@@ -291,6 +295,58 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
   const goalType = profile.learner_goal?.type || '';
   if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) {
     const role = titleCase(firstAspiration || 'job');
+    if (localOfficeIntent) {
+      const commute = profile.commute_km ? `${profile.commute_km} km` : 'safe commute range';
+      const place = profile.location || 'your town';
+      return [
+        {
+          id: 'local-day-shift-office-job',
+          name: `Day-shift computer job near ${place}`,
+          time: 'Start today, then follow a 7-day search loop',
+          distance: `Only roles within ${commute} of ${place}`,
+          income: 'Entry wage depends on the employer listing',
+          tradeoff:
+            'Matches computer basics, typing, customer service, safe day shift, and nearby travel.',
+          next_action: 'Build a one-page resume from the Class 12 certificate and save one 5-minute typing-test screenshot.',
+          expected_outcome: 'Shortlist only data entry, computer operator, front desk, retail billing, or customer-care roles.',
+          locked_until: 'Job contact stays blocked until resume/proof, safe shift, commute, and learner consent are checked.',
+          risk: 'Reject any job asking fees, unsafe travel, night shift, unrelated trade skill, or private contact sharing without consent.',
+          source_url: 'https://www.ncs.gov.in/',
+          source_title: 'National Career Service local job search',
+          confidence: 0.88,
+        },
+        {
+          id: 'typing-proof-resume',
+          name: 'Typing proof plus simple resume',
+          time: '1-2 days',
+          distance: 'Phone-first; can be done at home',
+          income: 'Improves callback chances for office and customer-care roles',
+          tradeoff:
+            'This is the smallest useful proof for a Class 12 learner who cannot make a resume alone: simple resume, certificate photo, and typing score.',
+          next_action: 'Use Meera to create the resume, then practise typing for 20 minutes and save the score photo.',
+          expected_outcome: 'A shareable proof pack before applying.',
+          locked_until: 'Employer outreach unlocks only after learner reviews what will be shared.',
+          source_url: 'https://www.skillindiadigital.gov.in/',
+          source_title: 'Skill India Digital basic digital skills',
+          confidence: 0.82,
+        },
+        {
+          id: 'safe-local-application-loop',
+          name: 'Safe local application loop',
+          time: 'Daily 30-45 minutes for one week',
+          distance: `Nearby offices, shops, schools, clinics, cyber cafes, and service counters within ${commute}`,
+          income: 'Depends on verified local openings',
+          tradeoff:
+            'Apply to fewer but better-fit roles: day shift, nearby, computer/customer handling, no fees, and contact verified from a public source.',
+          next_action: 'Shortlist five matching roles and mark each one as safe, unsure, or reject.',
+          expected_outcome: 'A tracked list of applications instead of random job links.',
+          locked_until: 'Send/apply stays blocked until the learner gives consent for each employer.',
+          source_url: 'https://www.ncs.gov.in/',
+          source_title: 'NCS opportunities plus consent-based tracking',
+          confidence: 0.78,
+        },
+      ];
+    }
     if (dataScienceIntent) {
       return [
         {
@@ -1089,6 +1145,12 @@ function journeyPrimarySkill(profile = {}) {
   if (/poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|enterprise|self.?employment|apna kaam|business setup/.test(text)) return 'enterprise setup';
   if (/data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text)) return 'data science';
   if (/mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text)) return 'mechanic repair';
+  if (
+    ['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType) &&
+    /computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|office assistant|bpo|call center|retail billing/.test(text)
+  ) {
+    return 'local office job';
+  }
   if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) return 'job search';
   if (['college_career', 'college_internship_project'].includes(goalType)) return 'college pathway';
   if (goalType === 'vocational_training') return 'vocational training';
@@ -1463,6 +1525,59 @@ const JOURNEY_TEMPLATES = {
         practice_tasks: ['Select two leads', 'Prepare one follow-up answer'],
         proof: 'Application pipeline state',
         unlock: 'Interview/screening prep',
+      },
+    ],
+  },
+  'local office job': {
+    id: 'local-office-job',
+    modules: [
+      {
+        title: 'Resume and typing proof',
+        goal: 'Learner gets a simple resume, Class 12 proof, and one typing score ready before applying.',
+        lessons: ['Simple resume fields', 'Class 12 certificate photo', 'Typing score proof'],
+        daily_micro_tasks: ['Fill name, location, education, and skills in the resume', 'Practise typing for 20 minutes', 'Save one typing-test screenshot'],
+        practice_tasks: ['Create a one-page resume', 'Take a 5-minute typing test'],
+        proof: 'Resume plus typing score screenshot',
+        unlock: 'Safe local shortlist',
+        completion_criteria: 'Resume is readable, Class 12 certificate is noted, and one typing score is saved.',
+        low_data_alternative: 'Write the resume in a notebook and send one WhatsApp photo to the worker.',
+        voice_whatsapp_version: 'Meera sends one short voice note: resume fields, typing practice, and proof photo.',
+      },
+      {
+        title: 'Safe local shortlist',
+        goal: 'Learner filters jobs to nearby day-shift computer/customer-care roles only.',
+        lessons: ['Allowed roles', 'Reject unsafe or unrelated jobs', 'Commute and day-shift check'],
+        daily_micro_tasks: ['Mark allowed roles: data entry, computer operator, front desk, billing, customer care', 'Reject unrelated trade, delivery, night shift, and fee-based jobs', 'Set the commute limit'],
+        practice_tasks: ['Shortlist five matching jobs', 'Mark each job safe, unsure, or reject'],
+        proof: 'Five-role shortlist with safety notes',
+        unlock: 'Application practice',
+        completion_criteria: 'Every shortlisted job has role fit, source link, commute, shift, and fee-risk checked.',
+        low_data_alternative: 'Worker/counselor reads two job cards aloud and the learner says safe, unsure, or reject.',
+        voice_whatsapp_version: 'Meera asks one job at a time: role, distance, shift, fee, and consent.',
+      },
+      {
+        title: 'Application practice',
+        goal: 'Learner practises applying without sharing private details blindly.',
+        lessons: ['What to share', 'What not to share', 'Consent before contact'],
+        daily_micro_tasks: ['Prepare a 30-second introduction', 'Choose two jobs from the safe shortlist', 'Confirm what details can be shared'],
+        practice_tasks: ['Record one intro voice note', 'Approve one consent-limited draft'],
+        proof: 'Intro voice note plus approved draft',
+        unlock: 'Interview practice',
+        completion_criteria: 'Learner has approved one draft and understands no details are shared without consent.',
+        low_data_alternative: 'Use a phone call script instead of email.',
+        voice_whatsapp_version: 'Meera speaks the intro script and asks the learner to repeat it once.',
+      },
+      {
+        title: 'Interview and first-week support',
+        goal: 'Learner prepares for screening and knows when to ask for help.',
+        lessons: ['Common questions', 'Shift and safety questions', 'First-week warning signs'],
+        daily_micro_tasks: ['Practise three interview answers', 'Prepare two safety questions', 'Save worker/guardian support contact'],
+        practice_tasks: ['Complete one mock interview', 'Write first-day checklist'],
+        proof: 'Mock interview score and first-day checklist',
+        unlock: 'Worker-supported placement follow-up',
+        completion_criteria: 'Learner can answer availability, typing skill, commute, and safety questions clearly.',
+        low_data_alternative: 'Mock interview over voice note.',
+        voice_whatsapp_version: 'Meera asks three screening questions and records the score.',
       },
     ],
   },
@@ -2560,6 +2675,11 @@ export function goalFamily(profile = {}, context = {}) {
   if (context.entrancePrep || academicType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bclat\b|\bnda\b|entrance exam|competitive exam/.test(text)) {
     return 'entrance_exam';
   }
+  if (['job_search_only', 'formal_skill_job_search'].includes(goalType) || intent === 'job') {
+    const earlyDataScience = /data science|machine learning|data analyst|analytics|\bpython\b|\bsql\b|artificial intelligence/.test(text);
+    if (earlyDataScience) return 'data_science_job';
+    return 'job';
+  }
   if (context.academicPrep || academicType === 'class_12_exam_prep' || /class 12|board exam|12th|twelfth/.test(text)) {
     return 'board_exam';
   }
@@ -2634,10 +2754,17 @@ export function validatePathwayRoutes(profile = {}, routes = [], options = {}) {
   const incoming = (Array.isArray(routes) ? routes : []).filter((route) => route && typeof route === 'object' && !Array.isArray(route));
   const kept = incoming.filter((route) => !rejectUnrelatedRoute(profile, route, family));
   const rejected = incoming.filter((route) => !kept.includes(route)).map((route) => coerceText(route.name, route.id || 'route'));
-  let finalRoutes = [...kept];
+  const preferDeterministicFirst = deterministic[0]?.id === 'local-day-shift-office-job';
+  let finalRoutes = preferDeterministicFirst ? [...deterministic] : [...kept];
   for (const det of deterministic) {
     if (finalRoutes.length >= 3) break;
     if (!finalRoutes.some((route) => sameRouteName(route, det))) finalRoutes.push(det);
+  }
+  if (preferDeterministicFirst) {
+    for (const route of kept) {
+      if (finalRoutes.length >= 3) break;
+      if (!finalRoutes.some((item) => sameRouteName(item, route))) finalRoutes.push(route);
+    }
   }
   if (!finalRoutes.length) finalRoutes = deterministic.slice(0, 3);
   finalRoutes = finalRoutes.slice(0, 3);
