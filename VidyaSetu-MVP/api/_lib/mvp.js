@@ -929,6 +929,8 @@ function primarySkill(aspirations = []) {
   if (/study support|school study|class \d+.*study/.test(text)) return 'school study support';
   if (/class 12|board exam|exam preparation|marks|score/.test(text)) return 'class 12 exam preparation';
   if (/data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text)) return 'data science';
+  if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text)) return 'plumbing';
+  if (/electrician|electrical|wiring|wireman|iti electrician/.test(text)) return 'electrician';
   if (/mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text)) return 'mechanic repair';
   if (/repair|mobile|technician/.test(text)) return 'mobile repair';
   if (/video|content|creator/.test(text)) return 'video creation';
@@ -953,7 +955,7 @@ function titleCase(value = '') {
 
 export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
   const skill = journeyPrimarySkill(profile, route);
-  const template = JOURNEY_TEMPLATES[skill] || JOURNEY_TEMPLATES.generic;
+  const template = journeyTemplateForSkill(skill, profile, route);
   const language = profile.preferred_language || profile.language || 'Hindi + local language';
   const device = profile.device || profile.phone_access || 'shared mobile phone';
   const urgency = profile.earning_urgency || (profile.income_pressure ? 'high' : 'medium');
@@ -985,6 +987,7 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
       safety_commute_note: module.safety_commute_note || safetyCommuteNoteFor(profile, skill),
       dropout_prevention_trigger: module.dropout_prevention_trigger || dropoutPreventionFor(skill),
       progress_metrics: module.progress_metrics || progressMetricsFor(skill, module),
+      resources: module.resources || resourceCardsForModule(skill, profile, module, index),
       counselor_response_after_completion:
         module.counselor_response_after_completion || counselorCompletionResponseFor(skill, module),
       worker_check:
@@ -1025,6 +1028,8 @@ export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
               ? 'enterprise_setup'
           : ['job search', 'local office job', 'college pathway', 'informal skill validation', 'vocational training'].includes(skill)
             ? skill.replace(/\s+/g, '_')
+            : ['plumbing', 'electrician'].includes(skill)
+              ? 'vocational_training'
           : 'career_pathway',
     language,
     duration: {
@@ -1167,9 +1172,16 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   const boardPrepText =
     profile.academic_goal?.type === 'class_12_exam_prep' ||
     /class 12|12th|twelfth|board exam|\bcbse\b|sample paper/.test(text);
+  const explicitBoardPrep =
+    profile.academic_goal?.type === 'class_12_exam_prep' ||
+    goalType === 'school_exam_prep' ||
+    /class 12 board|board exam preparation|cbse.*marks|marks.*cbse/.test(profileText);
 
   if (goalType === 'local_office_job' || ((jobLikeGoal || routeJobText) && localOfficeText && !dataScienceText)) return 'local office job';
   if (jobLikeGoal && dataScienceText) return 'data science';
+  if (explicitBoardPrep && !profileExplicitEntranceText) {
+    return 'class 12 exam preparation';
+  }
   if (routeBoardPrepText && !routeExplicitEntranceText) {
     return 'class 12 exam preparation';
   }
@@ -1182,6 +1194,8 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   if (boardPrepText || /exam preparation/.test(text)) {
     return 'class 12 exam preparation';
   }
+  if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text)) return 'plumbing';
+  if (/electrician|electrical|wiring|wireman|iti electrician/.test(text)) return 'electrician';
   if (profile.academic_goal?.type === 'school_study_support' || /study support|school study|class \d+.*study/.test(text)) {
     return 'school study support';
   }
@@ -1211,6 +1225,146 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   return aspirations[0] || 'career skill';
 }
 
+const SKILL_JOURNEY_PROFILES = {
+  plumbing: {
+    id: 'plumbing',
+    label: 'Plumbing work',
+    entry_role: 'plumber helper / pipe fitting trainee',
+    caution: 'No gas line, pump, overhead tank, or live site work without a trained adult or verified trainer.',
+    search_terms: 'plumbing pipe fitting basics leak repair Hindi',
+    official_terms: 'plumbing pipe fitter Skill India',
+    weeks: [
+      {
+        title: 'Pipe and tool basics',
+        goal: 'Learner understands pipe types, common fittings, basic tools, and safety before touching real work.',
+        lessons: ['PVC/CPVC/GI pipe types', 'Elbow, tee, socket, valve and tap names', 'Tool safety and measurement basics'],
+        daily_micro_tasks: [
+          'Day 1: Watch/listen to pipe and fitting names, then write five names in your notebook.',
+          'Day 2: Identify two pipe/fitting examples at home or nearby without opening anything.',
+          'Day 3: Learn measuring tape basics and mark 10 cm, 20 cm, 30 cm on paper.',
+          'Day 4: Ask one local plumber/trainer what beginner helpers are allowed to do safely.',
+          'Day 5: Save a pipe/fitting checklist and ask Meera what unlocks next.',
+        ],
+        practice_tasks: ['Make a photo/handwritten list of 5 fittings', 'Record a 30-second voice note explaining what each fitting does'],
+        proof: 'Pipe/fitting checklist + voice explanation',
+        unlock: 'Practice fitting demo',
+      },
+      {
+        title: 'Safe fitting practice',
+        goal: 'Learner practises measurement, joint sequence, and leak-check thinking on scrap/demo material only.',
+        lessons: ['Measure before cutting', 'Dry fit before fixing', 'Leak check and rework rules'],
+        daily_micro_tasks: [
+          'Day 1: Watch one short pipe joint demo and write the steps.',
+          'Day 2: Practise measuring equal lengths on paper/cardboard if scrap pipe is not available.',
+          'Day 3: Explain dry-fit -> fix -> check in your own words.',
+          'Day 4: Compare a good joint and bad joint from a video/photo.',
+          'Day 5: Save practice proof and ask Meera what unlocks next.',
+        ],
+        practice_tasks: ['Create one dry-fit sequence using safe scrap/demo items', 'Write three mistakes to avoid'],
+        proof: 'Dry-fit practice photo/note',
+        unlock: 'Helper role readiness',
+      },
+      {
+        title: 'Helper role readiness',
+        goal: 'Learner prepares for realistic entry roles: plumber helper, pipe fitter helper, or training-centre beginner.',
+        lessons: ['What a helper does', 'Customer/site safety questions', 'What not to promise without trainer'],
+        daily_micro_tasks: [
+          'Day 1: Learn helper duties: carry tools, measure, observe, clean, note parts.',
+          'Day 2: Prepare three safety questions for trainer/employer.',
+          'Day 3: Practise a 30-second self-introduction.',
+          'Day 4: List commute, timing, and family constraints.',
+          'Day 5: Save readiness proof and ask Meera what unlocks next.',
+        ],
+        practice_tasks: ['Record one helper-role introduction', 'Write safe commute and timing limits'],
+        proof: 'Helper readiness voice note + safety limits',
+        unlock: 'Verified training/local role search',
+      },
+      {
+        title: 'Verified source check',
+        goal: 'Learner checks real training/apprenticeship/job sources without believing unverified contacts or fee promises.',
+        lessons: ['Skill India/NCS/apprenticeship search', 'How to reject fee scams', 'Consent before sharing phone/address'],
+        daily_micro_tasks: [
+          'Day 1: Open official training or job source and search plumbing/pipe fitter.',
+          'Day 2: Note one nearby/online training option and what it asks.',
+          'Day 3: Search NCS/apprenticeship for helper or trainee roles.',
+          'Day 4: Mark each source as verified, unsure, or reject.',
+          'Day 5: Save source-review proof and ask Meera what unlocks next.',
+        ],
+        practice_tasks: ['Shortlist two official/source-backed options', 'Prepare one consent-safe enquiry script'],
+        proof: 'Verified source shortlist + enquiry script',
+        unlock: 'Worker-reviewed opportunity or training referral',
+      },
+    ],
+  },
+  electrician: {
+    id: 'electrician',
+    label: 'Electrician work',
+    entry_role: 'electrician helper / wiring trainee',
+    caution: 'Never touch live wires, open panels, meters, pumps, or mains. First four weeks are awareness and dead-demo practice only.',
+    search_terms: 'electrician wiring basics safety Hindi',
+    official_terms: 'electrician wireman Skill India',
+    weeks: [
+      {
+        title: 'Electrical safety and tool names',
+        goal: 'Learner learns safety rules, tool names, and basic electrical words before any real work.',
+        lessons: ['Live vs dead wire safety', 'Tester, plier, tape and screwdriver names', 'Switch, socket, plug and MCB basics'],
+        practice_tasks: ['Write 5 safety rules', 'Record a 30-second explanation of why live wire work is locked'],
+        proof: 'Safety checklist + voice explanation',
+        unlock: 'Dead-demo wiring practice',
+      },
+      {
+        title: 'Dead-demo wiring practice',
+        goal: 'Learner understands simple switch/socket sequence using drawings or dead-demo boards only.',
+        lessons: ['Simple circuit drawing', 'Wire color and label basics', 'How to check work before power'],
+        practice_tasks: ['Draw one switch-bulb circuit', 'Explain the sequence without touching live supply'],
+        proof: 'Circuit drawing photo',
+        unlock: 'Helper role readiness',
+      },
+      {
+        title: 'Helper role readiness',
+        goal: 'Learner prepares for electrician helper/training conversations safely.',
+        lessons: ['Helper duties', 'Site safety questions', 'Consent before sharing details'],
+        practice_tasks: ['Record one helper-role introduction', 'Write commute and timing limits'],
+        proof: 'Helper readiness voice note',
+        unlock: 'Verified training/local role search',
+      },
+      {
+        title: 'Verified source check',
+        goal: 'Learner checks official training/apprenticeship/job sources before any commute or payment.',
+        lessons: ['Skill India/NCS/apprenticeship search', 'Reject unsafe fee promises', 'Worker review before visit'],
+        practice_tasks: ['Shortlist two official/source-backed options', 'Prepare one consent-safe enquiry script'],
+        proof: 'Verified source shortlist + enquiry script',
+        unlock: 'Worker-reviewed opportunity or training referral',
+      },
+    ],
+  },
+};
+
+function journeyTemplateForSkill(skill = 'career skill', profile = {}, route = {}) {
+  if (JOURNEY_TEMPLATES[skill]) return JOURNEY_TEMPLATES[skill];
+  const skillProfile = SKILL_JOURNEY_PROFILES[skill];
+  if (!skillProfile) return JOURNEY_TEMPLATES.generic;
+  return {
+    id: skillProfile.id,
+    modules: skillProfile.weeks.map((week, index) => ({
+      ...week,
+      resources: resourceCardsForModule(skill, profile, week, index),
+      worker_check:
+        week.worker_check ||
+        `Confirm ${skillProfile.entry_role}, safety limits, daily time, location, and whether any fees/commute are involved.`,
+      completion_criteria:
+        week.completion_criteria ||
+        `${week.proof} is saved, safety limits are clear, and the learner can explain the week in simple words.`,
+      low_data_alternative:
+        week.low_data_alternative ||
+        'Use one short YouTube/search result only on Wi-Fi if possible; otherwise use Meera voice recap, notebook photo, and worker explanation.',
+      voice_whatsapp_version:
+        week.voice_whatsapp_version ||
+        'Meera sends a voice recap, learner replies with one voice note and one photo/note proof.',
+    })),
+  };
+}
+
 function deliveryMode(device = '') {
   if (/shared|low|feature/i.test(device)) return 'voice note, SMS recap, and one image checklist';
   return 'short video, voice note, and WhatsApp checklist';
@@ -1236,7 +1390,7 @@ function finalMvpModuleFor(skill = 'career skill', week = 4) {
       completion_criteria: 'Resume/proof summary is ready, one mock answer is recorded, and consent choices are explicit.',
     };
   }
-  if (/informal|tailor|beauty|cooking|hospitality|customer|mobile|repair|vocational|mechanic|electrician|drone|agriculture/i.test(skill)) {
+  if (/informal|tailor|beauty|cooking|hospitality|customer|mobile|repair|vocational|mechanic|electrician|plumb|drone|agriculture/i.test(skill)) {
     return {
       title: 'Readiness and branch decision',
       goal: 'Learner chooses the next safe branch: local work, apprenticeship, more training, or enterprise.',
@@ -1319,7 +1473,9 @@ function voiceWhatsappVersionFor(skill = '', language = 'learner language') {
 
 function familySupportNoteFor(profile = {}, skill = '') {
   const firstGen = profile.first_generation || /shared|family/i.test(`${profile.phone_access || ''} ${profile.device || ''}`);
-  const school = /study|exam|class|school/i.test(skill) || Number(profile.age || 0) < 18;
+  const age = Number(profile.age);
+  const knownMinor = Number.isFinite(age) && age > 0 && age < 18;
+  const school = /study|exam|class|school/i.test(skill) || knownMinor;
   if (school) {
     return 'Family/guardian note: give the learner a fixed quiet time, do not replace school, and support proof photos or notebook checks.';
   }
@@ -3056,6 +3212,80 @@ function lessonResourceFor(family = 'generic') {
   }
 }
 
+function externalSearchUrl(baseUrl = '', query = '') {
+  const clean = String(query || '').trim();
+  if (!clean) return baseUrl;
+  return `${baseUrl}${encodeURIComponent(clean).replace(/%20/g, '+')}`;
+}
+
+function skillResourceTerms(skill = '', profile = {}, module = {}) {
+  const language = coerceText(profile.preferred_language || profile.language, 'Hindi');
+  const place = coerceText(profile.location || profile.district || profile.relocation_preference, 'near me');
+  const skillProfile = SKILL_JOURNEY_PROFILES[skill] || {};
+  const base =
+    skillProfile.search_terms ||
+    {
+      'mobile repair': 'mobile repair basics Hindi beginner',
+      tailoring: 'tailoring stitching basics Hindi beginner',
+      'computer basics': 'computer typing data entry basics Hindi',
+      'beauty and wellness': 'beauty parlour basics hygiene Hindi',
+      'hospitality cooking': 'kitchen helper basics hygiene Hindi',
+      'agriculture skills': 'agriculture service basics Hindi farmer records',
+      'drone operations': 'drone agriculture basics Hindi safety',
+      'customer service': 'customer service communication basics Hindi',
+      'data science': 'data analyst Python SQL beginner Hindi',
+    }[skill] ||
+    `${skill || 'career skill'} basics ${language}`;
+  return {
+    language,
+    place,
+    base,
+    official: skillProfile.official_terms || `${skill || 'career skill'} Skill India Digital`,
+    role: skillProfile.entry_role || `${skill || 'skill'} beginner role`,
+    moduleTitle: coerceText(module.title, `${skill || 'skill'} week`),
+  };
+}
+
+function resourceCardsForModule(skill = '', profile = {}, module = {}, index = 0) {
+  const terms = skillResourceTerms(skill, profile, module);
+  const week = index + 1;
+  const searchQuery = `${terms.base} ${terms.moduleTitle}`;
+  const officialQuery = `${terms.official} ${terms.place}`.trim();
+  const cards = [
+    {
+      title: `Free video search: ${terms.moduleTitle}`,
+      type: 'free_video_search',
+      source_url: externalSearchUrl('https://www.youtube.com/results?search_query=', searchQuery),
+      how_to_use:
+        'Open 1-2 short videos. Watch only the part matching this week. Pause after every step, copy the steps in your notebook, then do the safe practice task. Do not trust videos asking for money or promising guaranteed jobs.',
+      proof_to_save: `Notebook steps or voice note from Week ${week}`,
+    },
+    {
+      title: 'Skill India Digital / official course search',
+      type: 'official_search',
+      source_url: 'https://www.skillindiadigital.gov.in/',
+      search_query: officialQuery,
+      how_to_use:
+        `Search "${officialQuery}". Check course name, provider, language, duration, fees if any, and whether it matches ${terms.role}. Save only source-backed options.`,
+      proof_to_save: `Course/source name and screenshot or note for Week ${week}`,
+    },
+  ];
+
+  if (week >= 3 && !/exam|study|school|class/i.test(skill)) {
+    cards.push({
+      title: 'NCS / Apprenticeship role search',
+      type: 'official_opportunity_search',
+      source_url: 'https://www.ncs.gov.in/',
+      search_query: `${terms.role} ${terms.place}`,
+      how_to_use:
+        `Search "${terms.role}" near "${terms.place}". Do not apply yet. First note role, location, salary if shown, shift, fee risk, and source URL for worker review.`,
+      proof_to_save: 'Two source-backed options marked safe, unsure, or reject',
+    });
+  }
+
+  return cards;
+}
+
 function buildLessonDetail(lesson, index = 0, module = {}, family = 'generic', profile = {}) {
   const languageName = coerceText(profile.preferred_language) || coerceText(profile.language) || 'your language';
   const language = learnerLanguageCode(profile);
@@ -3080,6 +3310,15 @@ export function enrichModule(module = {}, family = 'generic', profile = {}, inde
   const dailyMicroTasks = localizeLearnerArray(Array.isArray(module.daily_micro_tasks) ? module.daily_micro_tasks : [], language);
   const practiceTasks = localizeLearnerArray(Array.isArray(module.practice_tasks) ? module.practice_tasks : [], language);
   const proofTasks = localizeLearnerArray(Array.isArray(module.proof_tasks) ? module.proof_tasks : [], language);
+  const resources = Array.isArray(module.resources)
+    ? module.resources.map((resource) => ({
+        ...resource,
+        title: localizeLearnerText(resource.title, language),
+        how_to_use: localizeLearnerText(resource.how_to_use, language),
+        proof_to_save: localizeLearnerText(resource.proof_to_save, language),
+        search_query: localizeLearnerText(resource.search_query, language),
+      }))
+    : [];
   const proofTask =
     localizeLearnerText(coerceText(module.proof_task), language) ||
     localizeLearnerText(coerceText(module.proof), language) ||
@@ -3095,6 +3334,7 @@ export function enrichModule(module = {}, family = 'generic', profile = {}, inde
     proof: localizeLearnerText(module.proof, language),
     proof_tasks: proofTasks,
     completion_criteria: localizeLearnerText(module.completion_criteria, language),
+    resources,
     low_data_alternative: localizeLearnerText(module.low_data_alternative, language),
     voice_whatsapp_version: localizeLearnerText(module.voice_whatsapp_version, language),
     counselor_response_after_completion: localizeLearnerText(module.counselor_response_after_completion, language),

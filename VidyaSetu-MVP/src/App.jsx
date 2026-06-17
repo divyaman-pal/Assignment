@@ -2235,7 +2235,6 @@ function TracePanel({ trace, nextAction }) {
 }
 
 function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney, t = getTranslations('English') }) {
-  const thisWeekActions = Array.isArray(pathway?.this_week_actions) ? pathway.this_week_actions : [];
   const routes = Array.isArray(pathway?.routes) && pathway.routes.length ? pathway.routes : Array.isArray(pathway?.cards) ? pathway.cards : [];
   const activeRoute = selectedRoute || routes[0] || null;
   const academicMode = routes.some((route) => (
@@ -2265,6 +2264,11 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
       t.pathway.professionalOutreachBlocked,
       t.pathway.offlineNeedsLocation,
     ];
+  const pathwayDetail =
+    activeRoute?.pathway_detail && typeof activeRoute.pathway_detail === 'object' && !Array.isArray(activeRoute.pathway_detail)
+      ? activeRoute.pathway_detail
+      : {};
+  const journeyPreview = Array.isArray(pathwayDetail.journey_preview) ? pathwayDetail.journey_preview : [];
   return (
     <div className="prototype-screen pathway-screen">
       {!routes.length && <EmptyState text={t.pathway.empty} />}
@@ -2300,6 +2304,36 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             <span><b>{t.pathway.firstStep}</b>{uiText(activeRoute.first_step, uiText(activeRoute.next_action, 'Create the four-week journey.'))}</span>
             <span><b>{t.pathway.unlocksAfter}</b>{uiText(activeRoute.locked_until, 'proof, location if offline, and consent.')}</span>
           </div>
+          <div className="pathway-detail-panel">
+            <section>
+              <b>{t.pathway.realisticRole || 'Realistic first role'}</b>
+              <p>{uiText(pathwayDetail.realistic_role, uiText(activeRoute.title, selectedRouteName))}</p>
+            </section>
+            <section>
+              <b>{t.pathway.whyThisRoute || 'Why this route'}</b>
+              <p>{uiText(pathwayDetail.why_realistic, uiText(activeRoute.why_this_route, 'Meera uses the learner profile before building the journey.'))}</p>
+            </section>
+            <section>
+              <b>{t.pathway.learnerConditions || 'Learner conditions used'}</b>
+              <p>{uiText(pathwayDetail.learner_conditions, facts.join(' '))}</p>
+            </section>
+            <section>
+              <b>{t.pathway.checkBefore || 'Check before acting'}</b>
+              <p>{uiText(pathwayDetail.what_to_check, blockers[0] || 'Verify source, fees, safety, location, and consent first.')}</p>
+            </section>
+            {journeyPreview.length > 0 && (
+              <section className="pathway-journey-preview">
+                <b>{t.pathway.journeyPreview || 'What the 4-week journey will do'}</b>
+                <ol>
+                  {journeyPreview.map((item) => <li key={uiText(item)}>{uiText(item)}</li>)}
+                </ol>
+              </section>
+            )}
+            <section className="pathway-honesty-note">
+              <b>{t.pathway.honestyNote || 'Honesty note'}</b>
+              <p>{uiText(pathwayDetail.not_a_promise, 'This is not a guaranteed job. Sources and contacts must be verified first.')}</p>
+            </section>
+          </div>
           {activeRoute.requires_worker_confirmation && (
             <div className="pathway-worker-note">
               {t.pathway.workerConfirmation}
@@ -2328,35 +2362,6 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
               </button>
             );
           })}
-        </div>
-      )}
-      {thisWeekActions.length > 0 && (
-        <div className="card this-week-card">
-          <span className="tag green">✓ {t.thisWeek.title}</span>
-          <h3>{t.thisWeek.title}</h3>
-          <p className="this-week-subtitle">{t.thisWeek.subtitle}</p>
-          <div className="this-week-list">
-            {thisWeekActions.map((item, index) => {
-              const url = uiUrl(item.source_url);
-              return (
-                <div className="this-week-item" key={uiText(item.id, `tw-${index}`)}>
-                  <span className="this-week-num">{index + 1}</span>
-                  <div className="this-week-body">
-                    <strong>{uiText(item.title, 'Action')}</strong>
-                    <small><b>{t.thisWeek.how}:</b> {uiText(item.how)}</small>
-                    <div className="this-week-meta">
-                      <span className="this-week-when">{t.thisWeek.byWhen}: {uiText(item.by_when, t.thisWeek.title)}</span>
-                      {url ? (
-                        <a href={url} rel="noreferrer" target="_blank">{t.btn.open}: {uiText(item.source_title, 'official source')}</a>
-                      ) : (
-                        <span className="this-week-inapp">{t.thisWeek.inApp}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
       <div className="action-row">
@@ -2493,6 +2498,7 @@ function JourneyTab({
               const lessons = Array.isArray(module.lessons) ? module.lessons : [];
               const practiceTasks = Array.isArray(module.practice_tasks) ? module.practice_tasks : [];
               const proofTasks = Array.isArray(module.proof_tasks) ? module.proof_tasks : [];
+              const moduleResources = Array.isArray(module.resources) ? module.resources : [];
               const dayPlan = weekDayPlan(module, lessons, practiceTasks, proofTasks, t);
               const moduleItems = [
                 ...lessons.map((item) => `${module.id}::lesson::${item}`),
@@ -2543,6 +2549,29 @@ function JourneyTab({
                       </span>
                     ))}
                   </div>
+                  {moduleResources.length > 0 && (
+                    <div className="week-resource-list">
+                      <b>{copy.resources || 'Resources for this week'}</b>
+                      {moduleResources.map((resource, resourceIndex) => {
+                        const url = uiUrl(resource.source_url);
+                        return (
+                          <div className="week-resource-card" key={`${module.id}-resource-${resourceIndex}`}>
+                            <div>
+                              <strong>{uiText(resource.title, 'Learning resource')}</strong>
+                              {resource.search_query && <small>{copy.searchFor || 'Search'}: {uiText(resource.search_query)}</small>}
+                            </div>
+                            <p><b>{copy.howToUse || 'How to use'}:</b> {uiText(resource.how_to_use, 'Use this only for the current week task, then save proof.')}</p>
+                            <p><b>{copy.proofToSave || 'Proof to save'}:</b> {uiText(resource.proof_to_save, uiText(module.proof, copy.shortProof))}</p>
+                            {url && (
+                              <a href={url} rel="noreferrer" target="_blank">
+                                {t.btn.open}: {uiText(resource.type, 'resource').replace(/_/g, ' ')}
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="lesson-checklist">
                     {lessons.map((lesson) => {
                       const key = `${module.id}::lesson::${lesson}`;

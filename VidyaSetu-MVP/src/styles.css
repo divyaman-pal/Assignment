@@ -2142,6 +2142,54 @@ button:disabled {
   text-transform: capitalize;
 }
 
+.pathway-detail-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pathway-detail-panel section {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #d8e0ee;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #ffffff;
+}
+
+.pathway-detail-panel b {
+  color: #123b9f;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pathway-detail-panel p,
+.pathway-detail-panel li {
+  margin: 0;
+  color: #344054;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.pathway-detail-panel ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.pathway-detail-panel .pathway-journey-preview,
+.pathway-detail-panel .pathway-honesty-note {
+  grid-column: 1 / -1;
+}
+
+.pathway-detail-panel .pathway-honesty-note {
+  border-color: #fedf89;
+  background: #fffbeb;
+}
+
 .pathway-worker-note {
   margin-top: 12px;
   border: 1px solid #fedf89;
@@ -2169,7 +2217,8 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  .route-outcome-grid {
+  .route-outcome-grid,
+  .pathway-detail-panel {
     grid-template-columns: 1fr;
   }
 }
@@ -2224,93 +2273,6 @@ button:disabled {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.this-week-card {
-  margin-top: 16px;
-}
-
-.this-week-subtitle {
-  margin: 4px 0 12px;
-  color: #475467;
-  font-size: 0.86rem;
-}
-
-.this-week-list {
-  display: grid;
-  gap: 10px;
-}
-
-.this-week-item {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: #f8fbff;
-}
-
-.this-week-num {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #275efe;
-  color: #fff;
-  font-weight: 800;
-  font-size: 0.82rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.this-week-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.this-week-body strong {
-  color: #1d2939;
-  font-size: 0.92rem;
-}
-
-.this-week-body small {
-  color: #475467;
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
-.this-week-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  align-items: center;
-  margin-top: 2px;
-}
-
-.this-week-when {
-  font-size: 0.76rem;
-  font-weight: 800;
-  color: #275efe;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.this-week-meta a {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #275efe;
-}
-
-.this-week-inapp {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #0f766e;
-  background: rgba(15, 118, 110, 0.1);
-  padding: 2px 8px;
-  border-radius: 999px;
 }
 
 .micro-task-list {
@@ -8274,6 +8236,55 @@ body {
 .crm-app-shell .week-day-plan b {
   color: #275efe;
   font-size: 11px;
+}
+
+.crm-app-shell .week-resource-list {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8e0ee;
+  border-radius: 11px;
+  padding: 11px;
+  background: #f7fbff;
+}
+
+.crm-app-shell .week-resource-list > b {
+  color: #123b9f;
+  font-size: 12px;
+}
+
+.crm-app-shell .week-resource-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #d8e0ee;
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.crm-app-shell .week-resource-card strong {
+  display: block;
+  color: #101828;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.crm-app-shell .week-resource-card small,
+.crm-app-shell .week-resource-card p {
+  margin: 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.crm-app-shell .week-resource-card p b {
+  color: #123b9f;
+}
+
+.crm-app-shell .week-resource-card a {
+  width: fit-content;
+  color: #275efe;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .crm-app-shell .journey-workspace .lesson-checklist {

@@ -194,7 +194,7 @@ function applyGeneralGoal(profile = {}, latestText = '') {
     ...profile,
     learner_goal: goal,
   };
-  if (latestChangesLane && goal.intent !== 'study') {
+  if (goal?.intent && goal.intent !== 'study') {
     next.academic_goal = null;
   }
   if (
@@ -672,7 +672,18 @@ function directAnswerForLatest(profile = {}, latestText = '') {
       Marathi: 'Ho, job path madhe madat karu shakto.',
     });
   }
-  if (/jee|neet|cuet|exam|board|marks|score|class|padh|study|homework|subject/i.test(text)) {
+  if (
+    profile.learner_goal?.intent === 'training' ||
+    /training|course|vocational|skill|seekhna|sikhna|plumb|pipe fitter|sanitary|water fitting|bathroom fitting|electrician|mobile repair|tailor|silai/i.test(text)
+  ) {
+    return localizedLine(profile, latestText, {
+      English: 'Yes, Meera can help you build a practical training route.',
+      Hinglish: 'Haan, Meera practical training route banane mein help karegi.',
+      Hindi: 'Haan, Meera practical training route banane mein help karegi.',
+      Marathi: 'Ho, Meera practical training route banavnyat madat karel.',
+    });
+  }
+  if (profile.learner_goal?.intent === 'study' && /jee|neet|cuet|exam|board|marks|score|class|padh|study|homework|subject/i.test(text)) {
     return localizedLine(profile, latestText, {
       English: 'Yes, I can help with study planning.',
       Hinglish: 'Haan, Meera study planning mein help kar sakti hai.',

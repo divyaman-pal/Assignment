@@ -6,7 +6,6 @@ import {
   buildLocationGuardrail,
   decorateRouteExplanation,
   goalFamily,
-  buildThisWeekActions,
 } from './mvp.js';
 import { detectLanguageStyle, languageInstruction, phrase } from './language.js';
 
@@ -731,7 +730,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
       recommended_next_step: 'Build college profile, portfolio/resume, internship/job route, and outreach plan.',
     };
   }
-  if (/repair|mobile|tailor|silai|cooking|hotel|beauty|salon|computer|typing|data entry|data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql|agri|drone|retail|sales|customer|video|design/.test(combined)) {
+  if (/repair|mobile|tailor|silai|cooking|hotel|beauty|salon|computer|typing|data entry|plumb|pipe fitter|sanitary|water fitting|bathroom fitting|electrician|electrical|wireman|data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql|agri|drone|retail|sales|customer|video|design/.test(combined)) {
     return {
       type: 'skill_pathway_exploration',
       label: /data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql/i.test(combined) ? 'Data science pathway exploration' : 'Skill pathway exploration',
@@ -753,7 +752,7 @@ export function isSchoolStudyText(text = '') {
   const lower = String(text).toLowerCase();
   const hasClass = /class\s*\d{1,2}|\d{1,2}(?:st|nd|rd|th)|कक्षा\s*\d{1,2}|क्लास\s*\d{1,2}|କ୍ଲାସ\s*\d{1,2}|ক্লাস\s*\d{1,2}|வகுப்பு\s*\d{1,2}/.test(lower);
   const vocationalOrCareerIntent =
-    /training|course|vocational|job|naukri|career|income|earning|internship|placement|nursing|anm|gnm|agriculture|drone|mobile repair|tailor|silai|beauty|driver|driving|accountant|tally|gst/i.test(
+    /training|course|vocational|job|naukri|career|income|earning|internship|placement|nursing|anm|gnm|agriculture|drone|mobile repair|tailor|silai|plumb|pipe fitter|sanitary|water fitting|bathroom fitting|electrician|electrical|wireman|beauty|driver|driving|accountant|tally|gst/i.test(
       lower,
     );
   const explicitAcademicNeed =
@@ -894,6 +893,7 @@ function detectAspirations(text = '') {
     /nursing|health/.test(text) ? 'nursing' : null,
     /beauty|mehandi|wellness|salon/.test(text) ? 'beauty and wellness' : null,
     /computer|typing|data entry|spreadsheet|office/.test(text) ? 'computer basics' : null,
+    /plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text) ? 'plumbing' : null,
     /repair|mobile|technician/.test(text) ? 'mobile repair' : null,
     /mechanic|bike|motorcycle|two wheeler|2 wheeler/.test(text) ? 'mechanic repair' : null,
     /tailor|silai|stitch|sewing|garment/.test(text) ? 'tailoring' : null,
@@ -1287,7 +1287,6 @@ function enrichPathwayData(data = {}, profile = {}, context = {}) {
     callback_reason: callbackReason,
     callback_message: callbackReason || data.callback_message || '',
     persona,
-    this_week_actions: buildThisWeekActions(profile, family, { language: profile.preferred_language || profile.language }),
     missing_profile_facts: missingFacts,
     cards: visibleRoutes,
     recommendation_trace: {
@@ -1535,6 +1534,99 @@ function profileFitLine(profile = {}, route = {}, matchedFacts = []) {
   return safeRouteText(route.tradeoff || route.why_this_route, 'Matches the current learner profile.');
 }
 
+function simpleLanguageKind(profile = {}) {
+  const raw = String(profile.preferred_language || profile.language || '').toLowerCase();
+  if (/hinglish|hindi\s*\+\s*english|hindi\+english/.test(raw)) return 'hinglish';
+  if (/hindi|हिंदी|हिन्दी/.test(raw)) return 'hi';
+  return 'en';
+}
+
+function realisticRoleForRoute(route = {}) {
+  const text = [
+    route.name,
+    route.title,
+    route.tradeoff,
+    route.income_path,
+    route.what_it_asks,
+    route.first_step,
+    route.next_action,
+  ]
+    .map((value) => safeRouteText(value))
+    .join(' ')
+    .toLowerCase();
+  if (/plumb|pipe fitter|sanitary|water fitting/.test(text)) return 'plumber helper / pipe fitting trainee';
+  if (/electrician|electrical|wiring|wireman/.test(text)) return 'electrician helper / wiring trainee';
+  if (/mobile|repair|technician/.test(text)) return 'mobile repair shop helper / trainee';
+  if (/tailor|silai|stitch|garment/.test(text)) return 'tailor helper / alteration trainee';
+  if (/computer|typing|data entry|office|billing|front desk/.test(text)) return 'computer operator / data-entry trainee';
+  if (/beauty|salon|wellness|mehandi/.test(text)) return 'salon helper / beauty trainee';
+  if (/cook|kitchen|hotel|hospitality/.test(text)) return 'kitchen helper trainee';
+  if (/data science|analyst|python|sql/.test(text)) return 'data analyst intern / junior project role';
+  return safeRouteText(route.realistic_role || route.entry_role, 'beginner trainee / helper role');
+}
+
+function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], blockers = []) {
+  const kind = simpleLanguageKind(profile);
+  const role = realisticRoleForRoute(route);
+  const factText = matchedFacts
+    .filter((fact) => /goal|skill|location|mobility|time|education|language/i.test(fact.label || ''))
+    .slice(0, 4)
+    .map((fact) => `${fact.label}: ${fact.value}`)
+    .join('; ');
+  const checkFirst = blockers.length
+    ? blockers[0]
+    : 'Verify training/source, location, fees if any, safety, and consent before sharing details.';
+  if (kind === 'hinglish') {
+    return {
+      realistic_role: role,
+      why_realistic: factText
+        ? `Meera ne yeh rasta in baaton se chuna: ${factText}. Isliye pehle ${role} ke liye basic skill + proof banega, seedha job promise nahi.`
+        : `Yeh ${role} ke liye starter rasta hai. Pehle skill proof banega, phir verified training/job source check hoga.`,
+      learner_conditions: `Daily time, phone access, location/commute, aur family safety ko dhyan mein rakhkar step banega.`,
+      what_to_check: checkFirst,
+      journey_preview: [
+        'Week 1: skill ke basic words, tools, safety, aur pehla notebook/voice proof.',
+        'Week 2: safe practice task aur photo/note proof.',
+        'Week 3: helper/trainee role ke screening answers aur commute/consent check.',
+        'Week 4: Skill India/NCS/apprenticeship/source review; sirf verified next step.',
+      ],
+      not_a_promise: 'Yeh guaranteed job nahi hai. Contact, fee, salary, aur employer/source verify hone ke baad hi share/apply hoga.',
+    };
+  }
+  if (kind === 'hi') {
+    return {
+      realistic_role: role,
+      why_realistic: factText
+        ? `Meera ने यह रास्ता इन बातों से चुना: ${factText}. पहले ${role} के लिए basic skill और proof बनेगा, सीधे job promise नहीं.`
+        : `यह ${role} के लिए starter रास्ता है. पहले skill proof बनेगा, फिर verified training/job source check होगा.`,
+      learner_conditions: 'Daily time, phone access, location/commute और family safety को ध्यान में रखकर steps बनेंगे.',
+      what_to_check: checkFirst,
+      journey_preview: [
+        'Week 1: skill के basic words, tools, safety और पहला notebook/voice proof.',
+        'Week 2: safe practice task और photo/note proof.',
+        'Week 3: helper/trainee role के screening answers और commute/consent check.',
+        'Week 4: Skill India/NCS/apprenticeship/source review; सिर्फ verified next step.',
+      ],
+      not_a_promise: 'यह guaranteed job नहीं है. Contact, fee, salary और employer/source verify होने के बाद ही share/apply होगा.',
+    };
+  }
+  return {
+    realistic_role: role,
+    why_realistic: factText
+      ? `Meera chose this from the learner profile: ${factText}. The first target is ${role}, with proof before any outreach.`
+      : `This is a starter route toward ${role}. The learner builds proof first, then checks verified training/job sources.`,
+    learner_conditions: 'The route must respect daily time, phone access, location/commute, family safety, and consent.',
+    what_to_check: checkFirst,
+    journey_preview: [
+      'Week 1: basic words, tools, safety, and first notebook/voice proof.',
+      'Week 2: safe practice task with photo/note proof.',
+      'Week 3: helper/trainee screening answers plus commute and consent check.',
+      'Week 4: Skill India/NCS/apprenticeship/source review; only verified next step.',
+    ],
+    not_a_promise: 'This is not a guaranteed job. Contact, fee, salary, and employer/source must be verified before sharing or applying.',
+  };
+}
+
 function firstStepForRoute(route = {}, context = {}) {
   return safeRouteText(
     route.first_step || route.next_action || route.action || route.next_action_summary || context.nextAction,
@@ -1572,6 +1664,7 @@ function applyPathwayCardContract(route = {}, index = 0, profile = {}, context =
     source_url: safeRouteUrl(route.source_url) || sources[0] || '',
     requires_worker_confirmation: routeNeedsWorkerConfirmation(route),
     grounding_status: sources.length ? 'source_backed' : 'needs_source_review',
+    pathway_detail: pathwayDetailForRoute(route, profile, matchedFacts, blockers),
   };
 }
 

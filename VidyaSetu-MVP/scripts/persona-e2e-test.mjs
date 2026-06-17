@@ -257,9 +257,8 @@ function expectedEnough(persona, result) {
     failures.push('routes missing explanation fields (why/next/outcome/locked)');
   }
 
-  if (persona.kind !== 'clarify') {
-    if (Number(result.thisWeekCount || 0) < 5) failures.push(`too few this-week actions (${result.thisWeekCount || 0})`);
-    if (result.thisWeekValid === false) failures.push('this-week actions missing title/how/source');
+  if (result.routeCount > 0 && result.pathwayDetailsValid === false) {
+    failures.push('routes missing detailed pathway contract (role/conditions/checks/journey preview)');
   }
 
   if (result.moduleCount > 0) {
@@ -267,6 +266,7 @@ function expectedEnough(persona, result) {
     if (!result.journeyModulesValid) failures.push('journey modules missing lessons/completion/lesson_details/proof/unlock');
     if (!result.journeyHasStartHere) failures.push('journey missing start_here/today_task');
     if (!result.journeyHasProofAndUnlock) failures.push('journey missing proof tasks or unlock logic');
+    if (!result.journeyResourcesValid) failures.push('journey modules missing weekly learning resources');
   }
   if (persona.id === 'btech_ds' && !JSON.stringify(result).toLowerCase().includes('data science')) {
     failures.push('data science not preserved');
@@ -342,12 +342,22 @@ async function runPersona(persona, index) {
   out.routes = (pathway.routes || []).map((route) => route.name).slice(0, 3);
   out.locationRequired = Boolean(pathway.location_required) || out.locationRequired;
   out.pathwayText = JSON.stringify(pathway.routes || []).toLowerCase();
-  const thisWeek = Array.isArray(pathway.this_week_actions) ? pathway.this_week_actions : [];
-  out.thisWeekCount = thisWeek.length;
-  out.thisWeekValid =
-    thisWeek.length > 0 &&
-    thisWeek.every((item) => item && item.title && item.how) &&
-    thisWeek.filter((item) => /^https?:\/\//.test(item.source_url || '')).length >= 3;
+  out.pathwayDetailsValid = (pathway.routes || []).every((route) => {
+    const detail = route.pathway_detail || {};
+    return (
+      Boolean(detail.realistic_role) &&
+      Boolean(detail.why_realistic) &&
+      Boolean(
+        Array.isArray(detail.learner_conditions)
+          ? detail.learner_conditions.length > 0
+          : detail.learner_conditions,
+      ) &&
+      Boolean(Array.isArray(detail.what_to_check) ? detail.what_to_check.length > 0 : detail.what_to_check) &&
+      Array.isArray(detail.journey_preview) &&
+      detail.journey_preview.length > 0 &&
+      Boolean(detail.not_a_promise)
+    );
+  });
   out.routeValidation = pathway.route_validation || null;
   out.routesHaveExplanations = (pathway.routes || []).every(
     (route) => route.why_this_route && route.next_action && route.expected_outcome && route.locked_until,
@@ -378,6 +388,21 @@ async function runPersona(persona, index) {
       journeyModules.every((module) => Boolean(module.proof_task)) &&
       journeyModules.every((module) => Boolean(module.unlocks)) &&
       Boolean(journey.journey?.progress?.placement_unlock_rule || journey.journey?.progress?.unlock_label);
+    out.journeyResourcesValid =
+      journeyModules.length > 0 &&
+      journeyModules.every(
+        (module) =>
+          Array.isArray(module.resources) &&
+          module.resources.length > 0 &&
+          module.resources.every(
+            (resource) =>
+              resource &&
+              resource.title &&
+              /^https?:\/\//.test(resource.source_url || resource.url || '') &&
+              resource.how_to_use &&
+              resource.proof_to_save,
+          ),
+      );
     if (persona.kind !== 'study') {
       const passport = await post('/api/passport', {
         profile,
