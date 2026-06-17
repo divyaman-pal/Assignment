@@ -7085,6 +7085,15 @@ body {
   padding: 0 18px 12px;
 }
 
+.counselor-quick-starts-below {
+  margin-top: -6px;
+  border: 1px solid var(--proto-line);
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: var(--proto-shadow-s);
+}
+
 .chip-s {
   border: 1.4px solid var(--proto-indigo-soft);
   border-radius: 30px;

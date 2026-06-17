@@ -2004,13 +2004,6 @@ function CounselorTab({
             </div>
           ))}
           </div>
-          <div className="suggest">
-            {quickStarts.slice(0, 3).map((item) => (
-              <button className="chip-s" key={item.label} onClick={() => sendMessage(item.text)} type="button">
-                {quickStartSubtitle(item.label)} · {item.label}
-              </button>
-            ))}
-          </div>
           <div className="chat-input chat-composer">
             <button className={recording ? 'mic record-button live recording' : 'mic record-button'} onClick={recording ? stopRecording : startRecording} title="Speak" type="button">
               <Mic size={18} />
@@ -2022,6 +2015,13 @@ function CounselorTab({
           </div>
         </div>
         <ProfileCard profile={profile} />
+      </div>
+      <div className="suggest counselor-quick-starts-below" aria-label="Example learner starts">
+        {quickStarts.slice(0, 3).map((item) => (
+          <button className="chip-s" key={item.label} onClick={() => sendMessage(item.text)} type="button">
+            {quickStartSubtitle(item.label)} · {item.label}
+          </button>
+        ))}
       </div>
       <div className="action-row">
         <button className="primary-button" disabled={!profile.profile_complete} onClick={generatePathway}>
