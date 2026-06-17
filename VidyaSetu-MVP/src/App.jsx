@@ -269,7 +269,7 @@ function starterMessageForLanguage(language = 'English') {
     Bengali:
       'নমস্কার, আমি VidyaSetu-র Meera. আমরা ধাপে ধাপে profile বানাবো. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
     Tamil:
-      'வணக்கம், நான் VidyaSetu Meera. நாம் step by step profile உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
+      'வணக்கம், நான் VidyaSetu Meera. உங்கள் விவரங்களை ஒவ்வொரு படியாக உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
     Telugu:
       'నమస్తే, నేను VidyaSetu Meera. మనం step by step profile తయారు చేద్దాం. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
     Kannada:
@@ -667,12 +667,16 @@ function App() {
   function hydrateWorkspace(data) {
     const workspace = data.workspace || {};
     const baseProfile = { ...emptyProfile(phone), ...(workspace.profile || data.profile || {}) };
-    const nextProfile = profileWithPreferredLanguage(baseProfile, baseProfile.preferred_language || selectedLanguage || baseProfile.language);
-    const starter = starterMessageForLanguage(nextProfile.preferred_language || selectedLanguage || 'English');
+    const storedLanguage = baseProfile.preferred_language || baseProfile.language;
+    const requestedLanguage = selectedLanguage || storedLanguage || 'English';
+    const nextProfile = profileWithPreferredLanguage(baseProfile, requestedLanguage);
+    const starter = starterMessageForLanguage(nextProfile.preferred_language || requestedLanguage);
+    const restoredMessages = workspace.messages?.length ? workspace.messages : data.messages?.length ? data.messages : [];
+    const resetMessagesForSelectedLanguage = Boolean(selectedLanguage && storedLanguage && selectedLanguage !== storedLanguage);
     setProfile(nextProfile);
-    setSelectedLanguage(nextProfile.preferred_language || selectedLanguage || 'English');
-    setUiLanguage((current) => current || nextProfile.preferred_language || selectedLanguage || 'English');
-    setMessages(workspace.messages?.length ? workspace.messages : data.messages?.length ? data.messages : [starter]);
+    setSelectedLanguage(nextProfile.preferred_language || requestedLanguage);
+    setUiLanguage(nextProfile.preferred_language || requestedLanguage);
+    setMessages(resetMessagesForSelectedLanguage || !restoredMessages.length ? [starter] : restoredMessages);
     setReturning(Boolean(data.returning));
     setPathway(workspace.pathway || null);
     setSelectedRoute(workspace.selectedRoute || null);
@@ -1629,7 +1633,7 @@ function App() {
               t={t}
             />
           )}
-          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} />}
+          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} t={t} />}
           {activeTab === 'jobs' && (
             <JobsTab
               matches={matches}
@@ -2554,49 +2558,54 @@ function JourneyTab({
   );
 }
 
-function PassportTab({ passport, savePassport, findJobs, journey }) {
+function PassportTab({ passport, savePassport, findJobs, journey, t = getTranslations('English') }) {
+  const copy = t.passport || getTranslations('English').passport;
+  const readinessScore = Number(journey?.readiness_score ?? journey?.progress?.completion_percent ?? 0);
+  const journeyStatus = journey
+    ? formatCopy(copy.journeyAttached, { score: Number.isFinite(readinessScore) ? Math.round(readinessScore) : 0 })
+    : copy.journeyPending;
   return (
     <div className="workspace-card">
-      <p className="eyebrow">Skill Passport</p>
-      <h2>Portable proof controlled by the learner.</h2>
+      <p className="eyebrow">{copy.eyebrow}</p>
+      <h2>{copy.title}</h2>
       <div className="action-row">
         <button className="primary-button" onClick={savePassport}>
-          Create / refresh passport
+          {copy.refresh}
         </button>
-        <span>{journey ? `${journey.readiness_score}% journey readiness attached` : 'Journey proof can be attached after creation.'}</span>
+        <span>{journeyStatus}</span>
       </div>
       {passport && (
         <div className="passport-card passport-card-enhanced">
           <div className="passport-qr-layout">
             <MockQr token={passport.qr_token} />
             <div>
-              <span className="source-badge">Consent-controlled QR</span>
+              <span className="source-badge">{copy.consentQr}</span>
               <h3>{passport.name}</h3>
-              <p>{passport.class_level} | {passport.location || 'location protected'}</p>
+              <p>{passport.class_level} | {passport.location || copy.locationProtected}</p>
               <div className="passport-token">{passport.qr_token}</div>
             </div>
           </div>
           {passport.learning_proof && (
             <div className="passport-proof-strip">
-              <span><b>{passport.status === 'proof_ready_for_review' ? 'Proof ready' : 'Draft'}</b>Status</span>
-              <span><b>{passport.learning_proof.completion_percent || 0}%</b>Course progress</span>
-              <span><b>{passport.learning_proof.proof_ready_count || 0}/{passport.learning_proof.proof_required_count || 1}</b>Proof saved</span>
+              <span><b>{passport.status === 'proof_ready_for_review' ? copy.proofReady : copy.draft}</b>{copy.status}</span>
+              <span><b>{passport.learning_proof.completion_percent || 0}%</b>{copy.courseProgress}</span>
+              <span><b>{passport.learning_proof.proof_ready_count || 0}/{passport.learning_proof.proof_required_count || 1}</b>{copy.proofSaved}</span>
             </div>
           )}
           <div className="consent-scope-grid">
-            <span className={passport.consent?.share_certs ? 'ready' : ''}><b>Certificates</b>{passport.consent?.share_certs ? 'share allowed' : 'hidden'}</span>
-            <span className={passport.consent?.share_informal ? 'ready' : ''}><b>Informal skills</b>{passport.consent?.share_informal ? 'share allowed' : 'hidden'}</span>
-            <span className={passport.consent?.share_scores ? 'ready' : ''}><b>Scores</b>{passport.consent?.share_scores ? 'share allowed' : 'hidden'}</span>
+            <span className={passport.consent?.share_certs ? 'ready' : ''}><b>{copy.certificates}</b>{passport.consent?.share_certs ? copy.shareAllowed : copy.hidden}</span>
+            <span className={passport.consent?.share_informal ? 'ready' : ''}><b>{copy.informalSkills}</b>{passport.consent?.share_informal ? copy.shareAllowed : copy.hidden}</span>
+            <span className={passport.consent?.share_scores ? 'ready' : ''}><b>{copy.scores}</b>{passport.consent?.share_scores ? copy.shareAllowed : copy.hidden}</span>
           </div>
           <div className="credential-list">
             {passport.certs?.map((cert) => <span key={cert.name}>{cert.name} - {cert.status}</span>)}
             {passport.informal?.map((skill) => <span key={skill.name}>{skill.name} - {skill.verification_method}</span>)}
           </div>
-          {passport.learning_proof?.next_action && <p><b>Next:</b> {passport.learning_proof.next_action}</p>}
+          {passport.learning_proof?.next_action && <p><b>{copy.next}:</b> {passport.learning_proof.next_action}</p>}
         </div>
       )}
       <button className="primary-button" disabled={!passport} onClick={findJobs}>
-        Open live opportunity engine
+        {copy.openOpportunities}
       </button>
     </div>
   );

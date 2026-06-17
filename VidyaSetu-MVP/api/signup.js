@@ -39,7 +39,7 @@ function starterMessageForLanguage(language = 'English') {
     Bengali:
       'নমস্কার, আমি VidyaSetu-র Meera. আমরা ধাপে ধাপে profile বানাবো. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
     Tamil:
-      'வணக்கம், நான் VidyaSetu Meera. நாம் step by step profile உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
+      'வணக்கம், நான் VidyaSetu Meera. உங்கள் விவரங்களை ஒவ்வொரு படியாக உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
     Telugu:
       'నమస్తే, నేను VidyaSetu Meera. మనం step by step profile తయారు చేద్దాం. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
     Kannada:
