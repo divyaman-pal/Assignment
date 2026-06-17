@@ -8009,3 +8009,382 @@ body {
     grid-row: auto;
   }
 }
+
+.crm-app-shell .journey-workspace {
+  display: grid;
+  gap: 16px;
+  border: 1px solid #d8e0ee;
+  color: #101828;
+  background: #ffffff;
+}
+
+.crm-app-shell .journey-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e5eaf3;
+  padding-bottom: 14px;
+}
+
+.crm-app-shell .journey-page-head h2 {
+  max-width: 760px;
+  margin: 0;
+  color: #101828;
+  font-size: 26px;
+  line-height: 1.16;
+}
+
+.crm-app-shell .journey-page-head p {
+  max-width: 760px;
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.crm-app-shell .journey-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-app-shell .journey-readiness-grid span {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  border: 1px solid #d8e0ee;
+  border-radius: 10px;
+  padding: 12px;
+  color: #475467;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.crm-app-shell .journey-readiness-grid b {
+  color: #101828;
+  font-size: 20px;
+}
+
+.crm-app-shell .journey-workspace .study-progress {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8e0ee;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #475467;
+  background: #ffffff;
+}
+
+.crm-app-shell .journey-workspace .study-progress strong {
+  color: #101828;
+}
+
+.crm-app-shell .journey-workspace .study-progress span {
+  color: #667085;
+}
+
+.crm-app-shell .journey-week-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.crm-app-shell .journey-week-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d8e0ee;
+  border-radius: 12px;
+  padding: 16px;
+  color: #344054;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.05);
+}
+
+.crm-app-shell .journey-week-card.locked {
+  opacity: 1;
+  background: #fbfcff;
+}
+
+.crm-app-shell .journey-week-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.crm-app-shell .journey-week-topline > span {
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #1d4ed8;
+  background: #eaf0ff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.crm-app-shell .journey-week-card h3 {
+  margin: 0;
+  color: #101828;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.crm-app-shell .journey-week-card p {
+  margin: 0;
+  color: #475467;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.crm-app-shell .journey-week-card .module-progress-line {
+  display: grid;
+  gap: 7px;
+}
+
+.crm-app-shell .journey-week-card .module-progress-line strong {
+  color: #344054;
+  font-size: 12px;
+}
+
+.crm-app-shell .week-day-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.crm-app-shell .week-day-tabs button {
+  min-width: 0;
+  border: 1px solid #d8e0ee;
+  border-radius: 9px;
+  padding: 8px 5px;
+  color: #475467;
+  background: #f8fafc;
+  font: inherit;
+  text-align: center;
+}
+
+.crm-app-shell .week-day-tabs button.active {
+  border-color: #275efe;
+  color: #123b9f;
+  background: #edf3ff;
+}
+
+.crm-app-shell .week-day-tabs span,
+.crm-app-shell .week-day-tabs small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crm-app-shell .week-day-tabs span {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.crm-app-shell .week-day-tabs small {
+  color: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
+.crm-app-shell .week-day-plan {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #e5eaf3;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fbfcff;
+}
+
+.crm-app-shell .week-day-plan span {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 8px;
+  color: #344054;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.crm-app-shell .week-day-plan b {
+  color: #275efe;
+  font-size: 11px;
+}
+
+.crm-app-shell .journey-workspace .lesson-checklist {
+  display: grid;
+  gap: 7px;
+}
+
+.crm-app-shell .journey-workspace .lesson-item {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  border: 1px solid #d8e0ee;
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: #344054;
+  background: #ffffff;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.crm-app-shell .journey-workspace .lesson-item b {
+  width: auto;
+  color: #275efe;
+  font-size: 10px;
+}
+
+.crm-app-shell .journey-workspace .lesson-item.done {
+  border-color: rgba(19, 166, 112, 0.28);
+  color: #0f5138;
+  background: #f0fbf7;
+}
+
+.crm-app-shell .week-proof-section {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8e0ee;
+  border-radius: 11px;
+  padding: 12px;
+  color: #344054;
+  background: #f8fafc;
+}
+
+.crm-app-shell .week-proof-section strong {
+  color: #101828;
+  font-size: 13px;
+}
+
+.crm-app-shell .week-proof-section .proof-task-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.crm-app-shell .week-proof-section .proof-task-list span {
+  border: 1px solid #cdd8ea;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #275efe;
+  background: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.crm-app-shell .week-proof-section textarea,
+.crm-app-shell .week-proof-section input {
+  width: 100%;
+  border: 1px solid #cdd8ea;
+  border-radius: 9px;
+  padding: 9px 10px;
+  color: #101828;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.crm-app-shell .week-proof-section textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.crm-app-shell .week-proof-section textarea:disabled,
+.crm-app-shell .week-proof-section input:disabled,
+.crm-app-shell .week-proof-section button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.crm-app-shell .week-proof-section small {
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.crm-app-shell .journey-after-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(39, 94, 254, 0.25);
+  border-radius: 12px;
+  padding: 15px;
+  color: #344054;
+  background: #f6f9ff;
+}
+
+.crm-app-shell .journey-after-card > span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #ffffff;
+  background: #275efe;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.crm-app-shell .journey-after-card h3 {
+  margin: 0 0 4px;
+  color: #101828;
+  font-size: 17px;
+}
+
+.crm-app-shell .journey-after-card p,
+.crm-app-shell .journey-after-card small {
+  display: block;
+  margin: 0;
+  color: #475467;
+  line-height: 1.4;
+}
+
+.crm-app-shell .passport-card-enhanced,
+.crm-app-shell .passport-proof-strip span,
+.crm-app-shell .consent-scope-grid span,
+.crm-app-shell .credential-list span {
+  color: #101828;
+  background: #ffffff;
+}
+
+.crm-app-shell .passport-proof-strip b,
+.crm-app-shell .consent-scope-grid b {
+  color: #101828;
+}
+
+@media (max-width: 980px) {
+  .crm-app-shell .journey-page-head,
+  .crm-app-shell .journey-after-card {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-app-shell .journey-page-head {
+    display: grid;
+  }
+
+  .crm-app-shell .journey-week-grid,
+  .crm-app-shell .journey-readiness-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .crm-app-shell .journey-workspace {
+    padding: 14px;
+  }
+
+  .crm-app-shell .journey-page-head h2 {
+    font-size: 22px;
+  }
+
+  .crm-app-shell .week-day-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .crm-app-shell .week-day-plan span {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

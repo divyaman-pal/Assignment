@@ -161,12 +161,23 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
     /computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|office assistant|bpo|call center|retail billing/.test(
       aspirations,
     ) && !dataScienceIntent;
+  const aspirationNonStudyIntent =
+    dataScienceIntent ||
+    localOfficeIntent ||
+    /job|naukri|employment|hiring|vacancy|resume|typing|data entry|office assistant|customer service|self.?employment|business|enterprise|poultry|mushroom|shop|training|course|skill|college|internship|placement/i.test(
+      aspirations,
+    );
   const academicGoalType = profile.academic_goal?.type || '';
   const academicGoalOverridesStaleCareer =
     academicGoalType === 'entrance_exam_prep' ||
     academicGoalType === 'class_12_exam_prep' ||
     academicGoalType === 'school_study_support';
-  const studyLaneActive = !profile.learner_goal?.intent || profile.learner_goal.intent === 'study' || academicGoalOverridesStaleCareer;
+  const explicitNonStudyGoal =
+    Boolean(profile.learner_goal?.intent && profile.learner_goal.intent !== 'study') ||
+    aspirationNonStudyIntent ||
+    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(profile.learner_goal?.type || '');
+  const studyLaneActive =
+    !explicitNonStudyGoal && (!profile.learner_goal?.intent || profile.learner_goal.intent === 'study' || academicGoalOverridesStaleCareer);
   if (studyLaneActive && isEntranceExamPrepProfile(profile)) {
     const exam = profile.academic_goal?.exam || 'entrance exam';
     const subjects = profile.academic_goal?.subjects?.length ? profile.academic_goal.subjects.join(', ') : 'syllabus topics';
@@ -293,7 +304,7 @@ export function sourceLimitedPathways(profile = DEMO_PROFILE) {
     ];
   }
   const goalType = profile.learner_goal?.type || '';
-  if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) {
+  if (['job_search_only', 'formal_skill_job_search', 'college_job_search', 'local_office_job'].includes(goalType)) {
     const role = titleCase(firstAspiration || 'job');
     if (localOfficeIntent) {
       const commute = profile.commute_km ? `${profile.commute_km} km` : 'safe commute range';
@@ -1136,13 +1147,14 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   const jobLikeGoal =
     ['job', 'career', 'proof_to_work'].includes(profile.learner_goal?.intent) ||
     ['job_search_only', 'formal_skill_job_search', 'college_job_search', 'local_office_job'].includes(goalType);
+  const routeJobText = /\bjob\b|job search|\bncs\b|employer|hiring|role|vacancy|application|outreach/.test(routeText);
   const localOfficeText =
     /computer basics|typing|customer service|data entry|computer operator|front desk|reception|billing|office assistant|bpo|call center|retail billing|local data entry|office roles/.test(
       text,
     );
   const dataScienceText = /data science|machine learning|data analyst|analytics|python|sql|\bai\b|artificial intelligence/.test(text);
 
-  if (goalType === 'local_office_job' || (jobLikeGoal && localOfficeText && !dataScienceText)) return 'local office job';
+  if (goalType === 'local_office_job' || ((jobLikeGoal || routeJobText) && localOfficeText && !dataScienceText)) return 'local office job';
   if (jobLikeGoal && dataScienceText) return 'data science';
   if (profile.academic_goal?.type === 'entrance_exam_prep' || goalType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bcat\b|\bclat\b|\bnda\b|\bupsc\b|\bssc\b|railway|bank exam|entrance exam|competitive exam/.test(text)) {
     return 'entrance exam preparation';
@@ -2245,7 +2257,7 @@ const ROUTE_FAMILY_RULES = {
   },
   job: {
     requireAny: /\bjob\b|vacancy|employer|outreach|resume|proof|\bncs\b|\brole\b|hiring|apprentice|placement|search/i,
-    deny: /\bjee\b|\biit\b|neet|ncert|sample paper/i,
+    deny: /\bjee\b|\biit\b|neet|ncert|sample paper|pmkvy|training centre|training center|skill upgrade|generic skilling/i,
   },
   vocational: {
     requireAny: /training|course|center|centre|practice|apprentice|foundation|skill|certificate/i,
@@ -2685,18 +2697,31 @@ export function goalFamily(profile = {}, context = {}) {
   const goalType = profile.learner_goal?.type || '';
   const intent = profile.learner_goal?.intent || '';
   const text = `${(profile.aspirations || []).join(' ')} ${profile.class_level || ''} ${profile.education_status || ''} ${goalType}`.toLowerCase();
-  if (context.entrancePrep || academicType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bclat\b|\bnda\b|entrance exam|competitive exam/.test(text)) {
+  const explicitNonStudyGoal =
+    Boolean(intent && intent !== 'study') ||
+    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(goalType) ||
+    /job|naukri|employment|hiring|vacancy|resume|typing|data entry|office assistant|customer service|self.?employment|business|enterprise|poultry|mushroom|shop|training|course|skill|college|internship|placement/i.test(
+      text,
+    );
+  if (
+    context.entrancePrep ||
+    (!explicitNonStudyGoal &&
+      (academicType === 'entrance_exam_prep' || /\bjee\b|\biit\b|\bneet\b|\bcuet\b|\bgate\b|\bclat\b|\bnda\b|entrance exam|competitive exam/.test(text)))
+  ) {
     return 'entrance_exam';
   }
-  if (['job_search_only', 'formal_skill_job_search'].includes(goalType) || intent === 'job') {
+  if (['job_search_only', 'formal_skill_job_search', 'local_office_job', 'college_job_search'].includes(goalType) || intent === 'job') {
     const earlyDataScience = /data science|machine learning|data analyst|analytics|\bpython\b|\bsql\b|artificial intelligence/.test(text);
     if (earlyDataScience) return 'data_science_job';
     return 'job';
   }
-  if (context.academicPrep || academicType === 'class_12_exam_prep' || /class 12|board exam|12th|twelfth/.test(text)) {
+  if (
+    context.academicPrep ||
+    (!explicitNonStudyGoal && (academicType === 'class_12_exam_prep' || /class 12|board exam|12th|twelfth/.test(text)))
+  ) {
     return 'board_exam';
   }
-  if (context.schoolStudy || academicType === 'school_study_support' || (/class \d/.test(text) && intent === 'study')) {
+  if (context.schoolStudy || (!explicitNonStudyGoal && academicType === 'school_study_support') || (/class \d/.test(text) && intent === 'study')) {
     return 'school_study';
   }
   if (goalType === 'self_employment_enterprise' || /poultry|mushroom|goat|dairy|food processing|enterprise|self.?employment|apna kaam/.test(text)) {
@@ -2710,7 +2735,7 @@ export function goalFamily(profile = {}, context = {}) {
   if (goalType === 'informal_skill_validation' || intent === 'proof_to_work' || /informal|\brpl\b|certificate nahi|workshop mein|seekha hai/.test(text)) {
     return 'informal_skill';
   }
-  if (['job_search_only', 'formal_skill_job_search'].includes(goalType) || intent === 'job') return 'job';
+  if (['job_search_only', 'formal_skill_job_search', 'local_office_job', 'college_job_search'].includes(goalType) || intent === 'job') return 'job';
   if (goalType === 'vocational_training' || intent === 'training') return 'vocational';
   return 'generic';
 }

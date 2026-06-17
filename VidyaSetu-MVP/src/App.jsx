@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Languages,
   LayoutDashboard,
+  Lock,
   MessageCircle,
   Mic,
   Search,
@@ -2200,8 +2201,8 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
         <div className="bridge">
           <div className="bstep done"><div className="bc">✓</div><small>Foundation</small></div>
           <div className="bstep now"><div className="bc">2</div><small>{academicMode ? 'Study plan' : 'Skill build'}</small></div>
-          <div className="bstep locked"><div className="bc">🔒</div><small>Proof</small></div>
-          <div className="bstep locked"><div className="bc">🔒</div><small>Outreach</small></div>
+          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>Proof</small></div>
+          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>Outreach</small></div>
         </div>
         <p>
           {activeRoute
@@ -2282,6 +2283,30 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
   );
 }
 
+function weekDayPlan(module = {}, lessons = [], practiceTasks = [], proofTasks = []) {
+  const dailyMicroTasks = Array.isArray(module.daily_micro_tasks) ? module.daily_micro_tasks : [];
+  const learningSteps = [
+    ...dailyMicroTasks.map((text) => ({ kind: 'Daily', text })),
+    ...lessons.map((text) => ({ kind: 'Learn', text })),
+    ...practiceTasks.map((text) => ({ kind: 'Practice', text })),
+  ].filter((item) => uiText(item.text));
+  const proofText = uiText(proofTasks[0], uiText(module.proof, 'Save one short proof note or photo.'));
+  const reviewText = uiText(
+    module.unlocks || module.unlock_after_completion || module.unlock,
+    'Review the week and prepare the next step.',
+  );
+
+  return Array.from({ length: 7 }, (_, index) => {
+    if (index < 5) {
+      const fallback = { kind: 'Daily', text: uiText(module.goal, 'Continue this week task.') };
+      const item = learningSteps[index] || learningSteps[index % Math.max(learningSteps.length, 1)] || fallback;
+      return { day: index + 1, kind: item.kind, text: uiText(item.text, fallback.text) };
+    }
+    if (index === 5) return { day: 6, kind: 'Proof', text: proofText };
+    return { day: 7, kind: 'Review', text: reviewText };
+  });
+}
+
 function JourneyTab({
   journey,
   selectedRoute,
@@ -2298,8 +2323,6 @@ function JourneyTab({
   t = getTranslations('English'),
 }) {
   const modules = Array.isArray(journey?.modules) ? journey.modules : [];
-  const delivery = journey?.delivery && typeof journey.delivery === 'object' ? journey.delivery : {};
-  const duration = journey?.duration && typeof journey.duration === 'object' ? journey.duration : {};
   const learningContract = journey?.learning_contract && typeof journey.learning_contract === 'object' ? journey.learning_contract : {};
   const baseProgress = journey?.progress && typeof journey.progress === 'object' ? journey.progress : {};
   const progress = { ...baseProgress, ...progressState };
@@ -2321,57 +2344,41 @@ function JourneyTab({
       : 0;
   const academicMode = journey?.mode === 'entrance_exam_prep' || journey?.mode === 'academic_exam_prep' || journey?.mode === 'school_study_support';
   const moduleStatusById = new Map((Array.isArray(progress.module_status) ? progress.module_status : []).map((module) => [module.id, module]));
-  const firstIncompleteModule = modules.find((module) => module.id === progress.current_module_id) || modules.find((module) => {
-    const lessons = Array.isArray(module.lessons) ? module.lessons : [];
-    const practiceTasks = Array.isArray(module.practice_tasks) ? module.practice_tasks : [];
-    return [...lessons, ...practiceTasks].some((item) => {
-      const kind = lessons.includes(item) ? 'lesson' : 'task';
-      return !completedLessons[`${module.id}::${kind}::${item}`];
-    });
-  });
   const proofReadyCount = Number(progress.proof_ready_count || 0);
   const proofRequiredCount = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
   const passportEligible = Boolean(progress.passport_eligible);
-  const currentModule = firstIncompleteModule || modules[0] || null;
-  const currentTitle = currentModule ? `${t.journey.week} ${currentModule.week || 1}: ${uiText(currentModule.title)}` : '';
+  const currentModule = modules.find((module) => module.id === progress.current_module_id) || modules[0] || null;
+  const routeName = uiText(selectedRoute?.name, uiText(journey?.route_name, academicMode ? 'Study route' : 'Career route'));
+  const finalUnlock = uiText(
+    learningContract.opportunity_unlock,
+    academicMode ? 'Review the study record and choose the next chapter or mentor support.' : 'Create the Skill Passport, then move to consent-gated opportunity steps.',
+  );
+  const nextAction = uiText(
+    progress.next_action,
+    currentModule ? `Continue Week ${currentModule.week || 1}: ${uiText(currentModule.title, 'current task')}.` : 'Create the journey first.',
+  );
+  const proofPlaceholder = academicMode
+    ? 'Example: solved one section, scored 7/10, and noted two mistakes.'
+    : 'Example: resume done, typing score saved, or two safe job sources checked.';
   return (
     <div className="workspace-card journey-workspace">
-      <p className="eyebrow">This week</p>
-      <h2>{currentTitle || journey?.title || 'Choose a pathway, then create the first weekly plan.'}</h2>
-      <div className="action-row">
+      <div className="journey-page-head">
+        <div>
+          <p className="eyebrow">Learner Journey</p>
+          <h2>{journey ? routeName : 'Choose a pathway, then create the four-week plan.'}</h2>
+          <p>
+            {journey
+              ? 'Four clear weeks. Each week has seven day tabs and its own proof box.'
+              : 'The journey will be built from the selected pathway and learner profile.'}
+          </p>
+        </div>
         <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
-          {journey ? 'Refresh plan' : academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
+          {journey ? 'Refresh journey' : academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
         </button>
-        <span>{selectedRoute ? `Pathway: ${selectedRoute.name}` : 'Choose a pathway first.'}</span>
       </div>
       {!journey && <EmptyState text="Choose the route first. VidyaSetu will create only the weekly actions needed for that route." />}
       {journey && (
         <>
-          {(firstIncompleteModule || journey.start_here) && (() => {
-            const startModule = firstIncompleteModule || {};
-            const start = journey.start_here || {};
-            const startWeek = startModule.week || start.week || 1;
-            const startTitle = uiText(startModule.title, uiText(start.title, 'Week 1'));
-            const startWhy = uiText(startModule.goal, uiText(start.why_it_matters));
-            const startToday = uiText(
-              Array.isArray(startModule.daily_micro_tasks) && startModule.daily_micro_tasks.length ? startModule.daily_micro_tasks[0] : '',
-              uiText(start.today_task, 'Start the first lesson and finish one small task.'),
-            );
-            const startHow = uiText(startModule.checkpoint, uiText(startModule.completion_criteria, uiText(start.how_to_complete, 'Finish the lesson/practice, tap it done, then save a short proof note.')));
-            const startProof = uiText(startModule.proof_task, uiText(startModule.proof, uiText(start.proof_required, 'a short note or photo of what you did')));
-            const startUnlocks = uiText(startModule.unlocks, uiText(startModule.unlock_after_completion, uiText(start.unlocks_next, 'the next week')));
-            return (
-              <div className="today-card journey-today-card">
-                <span>{t.journey.startHere}</span>
-                <strong>{t.journey.week} {startWeek}: {startTitle}</strong>
-                {startWhy ? <p>{startWhy}</p> : null}
-                <small><b>{t.journey.todaysTask}:</b> {startToday}</small>
-                <small><b>{t.journey.howToComplete}:</b> {startHow}</small>
-                <small><b>{t.journey.proofRequired}:</b> {startProof}</small>
-                <small><b>{t.journey.unlocksNext}:</b> {startUnlocks}</small>
-              </div>
-            );
-          })()}
           <div className="journey-readiness-grid">
             <span><b>{completionPercent}%</b>progress</span>
             <span><b>{proofReadyCount}/{proofRequiredCount || 1}</b>proof saved</span>
@@ -2384,13 +2391,12 @@ function JourneyTab({
             </div>
             <i><b style={{ width: `${completionPercent}%` }} /></i>
           </div>
-          <div className="module-grid">
-            {modules.map((module) => {
+          <div className="journey-week-grid">
+            {modules.slice(0, 4).map((module, moduleIndex) => {
               const lessons = Array.isArray(module.lessons) ? module.lessons : [];
-              const dailyMicroTasks = Array.isArray(module.daily_micro_tasks) ? module.daily_micro_tasks : [];
               const practiceTasks = Array.isArray(module.practice_tasks) ? module.practice_tasks : [];
               const proofTasks = Array.isArray(module.proof_tasks) ? module.proof_tasks : [];
-              const progressMetrics = Array.isArray(module.progress_metrics) ? module.progress_metrics : [];
+              const dayPlan = weekDayPlan(module, lessons, practiceTasks, proofTasks);
               const moduleItems = [
                 ...lessons.map((item) => `${module.id}::lesson::${item}`),
                 ...practiceTasks.map((item) => `${module.id}::task::${item}`),
@@ -2401,7 +2407,7 @@ function JourneyTab({
               const proofArtifact = proofArtifacts[module.id] ?? savedStatus.proof_artifact ?? '';
               const modulePercent = moduleItems.length ? Math.round((moduleDone / moduleItems.length) * 100) : 0;
               const proofReady = Boolean(String(proofNote || proofArtifact).trim()) && moduleDone > 0;
-              const unlocked = savedStatus.unlocked ?? modules.findIndex((item) => item.id === module.id) === 0;
+              const unlocked = savedStatus.unlocked ?? moduleIndex === 0;
               const locked = !unlocked && !savedStatus.module_complete;
               const moduleStatus = savedStatus.module_complete
                 ? 'Complete'
@@ -2413,17 +2419,32 @@ function JourneyTab({
                       ? 'Add proof'
                       : 'Start';
               return (
-                <article className={locked ? 'module-card locked' : 'module-card'} key={module.id}>
-                  <div className="module-card-topline">
-                    <span>Week {module.week}</span>
+                <article className={locked ? 'journey-week-card locked' : 'journey-week-card'} key={module.id}>
+                  <div className="journey-week-topline">
+                    <span>Week {module.week || moduleIndex + 1}</span>
                     <b className={savedStatus.module_complete || proofReady ? 'status-pill done' : locked ? 'status-pill locked' : 'status-pill'}>{moduleStatus}</b>
                   </div>
-                  <h3>{module.title}</h3>
-                  <p>{module.goal}</p>
-                  <small className="module-unlock-hint">{t.journey.unlocksNext}: {module.unlocks || module.unlock_after_completion || module.unlock || 'next step'}</small>
+                  <h3>{uiText(module.title, `Week ${module.week || moduleIndex + 1}`)}</h3>
+                  <p>{uiText(module.goal, 'Complete this week before moving ahead.')}</p>
                   <div className="module-progress-line">
                     <strong>{moduleDone}/{moduleItems.length} complete</strong>
                     <i><b style={{ width: `${modulePercent}%` }} /></i>
+                  </div>
+                  <div className="week-day-tabs" role="tablist" aria-label={`Week ${module.week || moduleIndex + 1} day plan`}>
+                    {dayPlan.map((day) => (
+                      <button className={day.day === 1 && !moduleDone && !locked ? 'active' : ''} key={`${module.id}-day-${day.day}`} type="button">
+                        <span>Day {day.day}</span>
+                        <small>{day.kind}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="week-day-plan">
+                    {dayPlan.map((day) => (
+                      <span key={`${module.id}-task-${day.day}`}>
+                        <b>Day {day.day}</b>
+                        {day.text}
+                      </span>
+                    ))}
                   </div>
                   <div className="lesson-checklist">
                     {lessons.map((lesson) => {
@@ -2445,8 +2466,8 @@ function JourneyTab({
                       );
                     })}
                   </div>
-                  <div className="proof-capture">
-                    <strong>Proof to save: {module.proof}</strong>
+                  <div className="week-proof-section">
+                    <strong>Proof for Week {module.week || moduleIndex + 1}: {uiText(module.proof, 'short proof note or photo')}</strong>
                     {proofTasks.length > 0 && (
                       <div className="proof-task-list">
                         {proofTasks.map((proofTask) => (
@@ -2457,7 +2478,7 @@ function JourneyTab({
                     <textarea
                       disabled={locked}
                       value={proofNote}
-                      placeholder="Example: completed exercise 1-12, scored 7/10, or stitched one sample."
+                      placeholder={proofPlaceholder}
                       onBlur={() => saveJourneyProgress?.('proof_note_saved')}
                       onChange={(event) => updateProofNote?.(module.id, event.target.value)}
                     />
@@ -2471,19 +2492,19 @@ function JourneyTab({
                     <button className="ghost-button" disabled={locked} onClick={() => saveJourneyProgress?.('proof_note_saved')}>
                       Save proof for Week {module.week}
                     </button>
-                    <small>{proofReady ? 'Proof saved. Next week unlocks after all items are complete.' : `Unlocks: ${module.unlock}`}</small>
+                    <small>{proofReady ? 'Proof saved. Next week unlocks after all items are complete.' : `Unlocks: ${uiText(module.unlocks || module.unlock_after_completion || module.unlock, 'next week')}`}</small>
                   </div>
                 </article>
               );
             })}
           </div>
-          <div className="journey-next-line">
-            <b>{t.journey.todaysTask}:</b> {progress.next_action || 'Complete the Week 1 lesson and save a short proof note.'}
-          </div>
-          <div className="action-row">
-            <button className="ghost-button" onClick={() => saveJourneyProgress?.('manual_progress_saved')}>
-              Save course progress
-            </button>
+          <div className="journey-after-card" role="tab">
+            <span>After Week 4</span>
+            <div>
+              <h3>{academicMode ? 'Study record review' : 'Skill Passport and next step'}</h3>
+              <p>{finalUnlock}</p>
+              <small><b>Next now:</b> {nextAction}</small>
+            </div>
             <button className="primary-button" onClick={savePassport}>
               {academicMode ? 'Save study record' : passportEligible ? 'Create proof-ready Skill Passport' : 'Create draft Skill Passport'}
             </button>

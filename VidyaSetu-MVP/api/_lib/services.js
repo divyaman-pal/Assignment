@@ -659,6 +659,20 @@ export function inferLearnerGoal(text = '', hints = {}) {
       recommended_next_step: 'Build setup roadmap, verify training/scheme/local support, check cost heads, buyers, suppliers, and risks before any loan or investment.',
     };
   }
+  if (
+    /job|naukri|placement|work|role|hiring|vacancy|employment/i.test(text) &&
+    /computer basics|typing|data entry|computer operator|front desk|reception|billing|office assistant|office job|local office|bpo|call center|customer service|retail billing/i.test(
+      combined,
+    )
+  ) {
+    return {
+      type: 'local_office_job',
+      label: 'Local office job search',
+      intent: 'job',
+      needs_location_for_offline: true,
+      recommended_next_step: 'Build resume/typing proof, shortlist nearby day-shift office roles, then apply only with learner consent.',
+    };
+  }
   if (/informal|without certificate|no certificate|certificate nahi|ghar par|home based|seekha hai|workshop mein|self taught/i.test(text)) {
     return {
       type: 'informal_skill_validation',
@@ -1045,19 +1059,36 @@ export async function generatePathways(profile, question = '') {
     academicGoalType === 'entrance_exam_prep' ||
     academicGoalType === 'class_12_exam_prep' ||
     academicGoalType === 'school_study_support';
-  const studyLaneActive = !activeGoal.intent || activeGoal.intent === 'study' || academicGoalOverridesStaleCareer;
   const latestEntrancePrep = isEntranceExamPrepText(question);
   const latestAcademicPrep = !latestEntrancePrep && isAcademicPrepText(question);
   const latestSchoolStudy = !latestEntrancePrep && !latestAcademicPrep && isSchoolStudyText(question);
+  const latestStudyRequest = latestEntrancePrep || latestAcademicPrep || latestSchoolStudy;
+  const inferredGoal = inferLearnerGoal(question, {
+    entrancePrep: latestEntrancePrep,
+    academicPrep: latestAcademicPrep,
+    schoolStudy: latestSchoolStudy,
+    aspirations: profile.aspirations || [],
+  });
+  const latestNonStudyRequest =
+    Boolean(String(question || '').trim()) &&
+    Boolean(inferredGoal.intent && !['study', 'unknown'].includes(inferredGoal.intent));
+  const explicitNonStudyGoal =
+    Boolean(activeGoal.intent && activeGoal.intent !== 'study') ||
+    latestNonStudyRequest ||
+    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(
+      `${activeGoal.type || ''} ${inferredGoal.type || ''}`,
+    );
+  const studyLaneActive =
+    latestStudyRequest ||
+    (!explicitNonStudyGoal && (!activeGoal.intent || activeGoal.intent === 'study' || academicGoalOverridesStaleCareer));
   const entrancePrep = latestEntrancePrep || (studyLaneActive && isEntranceExamPrepProfile(profile, ''));
   const academicPrep = !entrancePrep && (latestAcademicPrep || (studyLaneActive && isAcademicPrepProfile(profile, '')));
   const schoolStudy = !entrancePrep && !academicPrep && (latestSchoolStudy || (studyLaneActive && isSchoolStudyProfile(profile, '')));
   const academicMode = entrancePrep || academicPrep || schoolStudy;
-  const inferredGoal = inferLearnerGoal(question, { entrancePrep, aspirations: profile.aspirations || [] });
-  const goal = academicMode ? inferredGoal : profile.learner_goal || inferredGoal;
+  const goal = academicMode ? inferredGoal : latestNonStudyRequest ? inferredGoal : profile.learner_goal || inferredGoal;
   const pathwayProfile = academicMode
     ? academicPathwayProfile(profile, question, { entrancePrep, academicPrep, schoolStudy, goal })
-    : profile;
+    : { ...profile, learner_goal: goal };
   const relocationText = String(profile.relocation_preference || '').toLowerCase();
   const negativeMobility = /\bno\b|nahi|not |local|same city|same town|won'?t|cannot|can'?t/.test(relocationText);
   const positiveMobility =
