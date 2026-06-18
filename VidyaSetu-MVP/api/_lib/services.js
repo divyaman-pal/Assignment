@@ -1041,7 +1041,7 @@ function plannerFallbackRoutes(profile = {}, goal = {}, question = '') {
       archetype: 'profile_specific_proof_route',
       source_url: sourceUrl,
       source_title: sourceTitle,
-      tradeoff: `Starts from what the learner already has: ${focus}. No job or income is promised before proof/source check.`,
+      tradeoff: `Start small with ${skill}; first save proof and check the source before money or outreach.`,
       time: profile.time_available || 'time needs confirmation',
       distance: `${place}; ${commute}`,
       income: 'Only after proof and verified local demand/source review.',
@@ -1062,7 +1062,7 @@ function plannerFallbackRoutes(profile = {}, goal = {}, question = '') {
       archetype: 'profile_specific_training_route',
       source_url: 'https://www.skillindiadigital.gov.in',
       source_title: 'Skill India Digital',
-      tradeoff: 'Slower than direct work, but safer if the learner needs basic practice or certification.',
+      tradeoff: `Use free/official learning for ${skill}, then save one practice proof.`,
       time: profile.time_available || 'time needs confirmation',
       distance: `${place}; offline centre only inside safe commute.`,
       income: 'Income depends on verified demand after practice/certificate/proof.',
@@ -1083,7 +1083,7 @@ function plannerFallbackRoutes(profile = {}, goal = {}, question = '') {
       archetype: 'profile_specific_source_review',
       source_url: 'https://www.ncs.gov.in/',
       source_title: 'National Career Service',
-      tradeoff: 'Useful for discovering local demand, but no employer/contact should be trusted without source review.',
+      tradeoff: `Check real demand near ${place}; do not trust any contact before source review.`,
       time: profile.time_available || 'time needs confirmation',
       distance: `${place}; ${commute}`,
       income: 'Depends on verified role/client/source.',
@@ -2063,15 +2063,162 @@ function learnerTargetForRoute(profile = {}, route = {}, family = '') {
 }
 
 function compactRouteName(route = {}, index = 0, profile = {}, family = '', cardKind = '') {
-  const existing = safeRouteText(route.title || route.name);
   const target = learnerTargetForRoute(profile, route, family);
-  const targetNeedsVisible =
-    /machine learning|data science/i.test(target) && !/machine learning|\bml\b|data science|data analyst|analyst|python|sql/i.test(existing);
-  if (!targetNeedsVisible && !routeNameLooksNoisy(existing)) return existing;
   const kind = cardKind || cardKindForRoute(route, index, profile);
-  if (kind === 'earn_fast') return `${target} proof-first route`;
-  if (kind === 'build_bigger') return `${target} practice route`;
-  return `${target} verified-source route`;
+  const lang = simpleLanguageKind(profile);
+  const text = [
+    route.name,
+    route.title,
+    route.tradeoff,
+    profile.learner_goal?.label,
+    ...(profile.aspirations || []),
+    ...(profile.skills || []),
+  ]
+    .map((value) => safeRouteText(value))
+    .join(' ')
+    .toLowerCase();
+
+  if (/school_study|board_exam|entrance_exam/.test(family) || profile.learner_goal?.intent === 'study') {
+    if (kind === 'earn_fast') return lang === 'hi' ? 'कमज़ोर chapter पकड़कर practice शुरू करो' : 'Weak chapter pakdo aur practice shuru karo';
+    if (kind === 'build_bigger') return lang === 'hi' ? 'NCERT/DIKSHA से रोज़ practice करो' : 'NCERT/DIKSHA se roz practice karo';
+    return lang === 'hi' ? 'Mock test देकर mistake list बनाओ' : 'Mock test dekar mistake list banao';
+  }
+
+  if (profile.learner_goal?.intent === 'self_employment' || /enterprise/.test(family)) {
+    const business = /mushroom|मशरूम/.test(text)
+      ? lang === 'hi'
+        ? 'मशरूम'
+        : 'mushroom'
+      : /poultry|chicken|broiler|layer|मुर्गी|पोल्ट्री/.test(text)
+        ? lang === 'hi'
+          ? 'poultry'
+          : 'poultry'
+        : lang === 'hi'
+          ? 'छोटे business'
+          : 'chhote business';
+    if (kind === 'earn_fast') {
+      return lang === 'hi'
+        ? `${business} का छोटा trial घर पर करो`
+        : `Ghar par chhota ${business} trial karo`;
+    }
+    if (kind === 'build_bigger') {
+      return lang === 'hi'
+        ? 'Training और scheme पहले check करो'
+        : 'Training aur scheme pehle check karo';
+    }
+    return lang === 'hi'
+      ? 'Buyer और kharcha पहले पूछो'
+      : 'Buyer aur kharcha pehle puchho';
+  }
+
+  if (/machine learning/i.test(target)) {
+    if (kind === 'earn_fast') return 'GitHub project se ML job proof banao';
+    if (kind === 'build_bigger') return 'Python-SQL practice se shortlist strong karo';
+    return 'Verified ML roles par consent se apply karo';
+  }
+
+  if (/data science/i.test(target)) {
+    if (kind === 'earn_fast') return 'GitHub project se Data job proof banao';
+    if (kind === 'build_bigger') return 'Python-SQL practice se profile strong karo';
+    return 'Verified Data roles par consent se apply karo';
+  }
+
+  if (/mobile repair/i.test(target)) {
+    if (kind === 'earn_fast') return 'Phone repair ka pehla proof banao';
+    if (kind === 'build_bigger') return 'Free video se daily repair practice karo';
+    return 'Safe repair shop/centre verify karo';
+  }
+
+  if (/tailoring/i.test(target)) {
+    if (kind === 'earn_fast') return 'Silai sample dikha kar pehla order puchho';
+    if (kind === 'build_bigger') return 'Alteration practice se proof strong karo';
+    return 'Local customer/source verify karo';
+  }
+
+  if (/plumbing/i.test(target)) {
+    if (kind === 'earn_fast') return 'Pipe fitting ka chhota proof banao';
+    if (kind === 'build_bigger') return 'Safety ke saath plumbing practice karo';
+    return 'Verified helper route check karo';
+  }
+
+  if (/electrician/i.test(target)) {
+    if (kind === 'earn_fast') return 'Wiring proof aur safety check karo';
+    if (kind === 'build_bigger') return 'Tool practice se profile strong karo';
+    return 'Verified electrician role check karo';
+  }
+
+  if (kind === 'earn_fast') return `${target} ka chhota proof banao`;
+  if (kind === 'build_bigger') return `${target} ki daily practice karo`;
+  return `${target} ka verified next step check karo`;
+}
+
+function compactRouteSummary(route = {}, index = 0, profile = {}, family = '', cardKind = '') {
+  const kind = cardKind || cardKindForRoute(route, index, profile);
+  const lang = simpleLanguageKind(profile);
+  const target = learnerTargetForRoute(profile, route, family);
+  const isHindi = lang === 'hi';
+
+  if (/school_study|board_exam|entrance_exam/.test(family) || profile.learner_goal?.intent === 'study') {
+    if (kind === 'earn_fast') return isHindi ? 'पहले weak topic साफ होगा, फिर रोज़ practice.' : 'Pehle weak topic clear hoga, phir roz practice.';
+    if (kind === 'build_bigger') return isHindi ? 'Official resource से पढ़ाई और notebook proof बनेगा.' : 'Official resource se padhai aur notebook proof banega.';
+    return isHindi ? 'Mock score और mistake list से अगला step तय होगा.' : 'Mock score aur mistake list se agla step decide hoga.';
+  }
+
+  if (profile.learner_goal?.intent === 'self_employment' || /enterprise/.test(family)) {
+    if (kind === 'earn_fast') return isHindi ? 'पहले छोटा trial और proof; income promise नहीं.' : 'Pehle chhota trial aur proof; income promise nahi.';
+    if (kind === 'build_bigger') return isHindi ? 'Training, scheme और loan risk खर्च से पहले check होंगे.' : 'Training, scheme aur loan risk kharch se pehle check honge.';
+    return isHindi ? 'Buyer, supplier और kharcha पूछकर ही आगे बढ़ना है.' : 'Buyer, supplier aur kharcha puchhkar hi aage badhna hai.';
+  }
+
+  if (/machine learning|data science/i.test(target)) {
+    if (kind === 'earn_fast') return 'Pehle project proof aur GitHub strong hoga; direct job promise nahi.';
+    if (kind === 'build_bigger') return 'Daily practice se Python, SQL, project aur resume gap close hoga.';
+    return 'Sirf verified roles par learner consent ke baad apply hoga.';
+  }
+
+  if (kind === 'earn_fast') return `Pehle ${target} ka chhota proof banao; promise nahi, proof first.`;
+  if (kind === 'build_bigger') return `Free/official resource se ${target} ki practice strong karo.`;
+  return `Safe source verify karke ${target} ka next step chuno.`;
+}
+
+function compactNextStep(route = {}, index = 0, profile = {}, family = '', cardKind = '') {
+  const kind = cardKind || cardKindForRoute(route, index, profile);
+  const lang = simpleLanguageKind(profile);
+  const target = learnerTargetForRoute(profile, route, family);
+  const isHindi = lang === 'hi';
+  const text = [
+    route.name,
+    route.title,
+    profile.learner_goal?.label,
+    ...(profile.aspirations || []),
+    ...(profile.skills || []),
+  ]
+    .map((value) => safeRouteText(value))
+    .join(' ')
+    .toLowerCase();
+
+  if (/school_study|board_exam|entrance_exam/.test(family) || profile.learner_goal?.intent === 'study') {
+    if (kind === 'earn_fast') return isHindi ? 'आज एक weak chapter चुनकर 10 सवाल solve करो.' : 'Aaj ek weak chapter chuno aur 10 sawal solve karo.';
+    if (kind === 'build_bigger') return isHindi ? 'Official lesson खोलकर notebook में 5 line proof लिखो.' : 'Official lesson kholo aur notebook mein 5 line proof likho.';
+    return isHindi ? 'एक छोटा mock देकर गलती की list बनाओ.' : 'Ek chhota mock do aur mistake list banao.';
+  }
+
+  if (profile.learner_goal?.intent === 'self_employment' || /enterprise/.test(family)) {
+    if (kind === 'earn_fast') return isHindi ? 'आज जगह, सामान और छोटा trial note बनाओ.' : 'Aaj jagah, samaan aur chhota trial note banao.';
+    if (kind === 'build_bigger') return isHindi ? 'एक free/official training source खोलकर fee और duration लिखो.' : 'Ek free/official training source kholo, fee aur duration likho.';
+    if (/mushroom|मशरूम/.test(text)) return isHindi ? '5 buyer/supplier के नाम और अनुमानित खर्च लिखो.' : '5 buyer/supplier ke naam aur estimated kharcha likho.';
+    return isHindi ? '5 buyer/customer और खर्च की list बनाओ.' : '5 buyer/customer aur kharcha ki list banao.';
+  }
+
+  if (/machine learning|data science/i.test(target)) {
+    if (kind === 'earn_fast') return 'Aaj ek GitHub project link aur 4-line project summary ready karo.';
+    if (kind === 'build_bigger') return 'Aaj Python/SQL ka 30-minute practice proof save karo.';
+    return 'Aaj 3 verified roles shortlist karo; apply consent ke baad hi hoga.';
+  }
+
+  if (kind === 'earn_fast') return `Aaj ${target} ka ek photo/note/voice proof save karo.`;
+  if (kind === 'build_bigger') return `Aaj ek free resource se ${target} ki 20-minute practice karo.`;
+  return `Aaj ${target} ke 2 safe sources verify karo.`;
 }
 
 function applyPathwayCardContract(route = {}, index = 0, profile = {}, context = {}, matchedFacts = [], blockers = []) {
@@ -2080,12 +2227,16 @@ function applyPathwayCardContract(route = {}, index = 0, profile = {}, context =
   const sources = normalizeSourceList(route.sources || route.source_urls || route.source_url);
   const firstStep = firstStepForRoute(route, context);
   const title = compactRouteName(route, index, profile, family, cardKind);
+  const learnerSummary = compactRouteSummary(route, index, profile, family, cardKind);
+  const learnerNextStep = compactNextStep(route, index, profile, family, cardKind);
   return {
     ...route,
     card_kind: cardKind,
     archetype: safeRouteText(route.archetype, archetypeForRoute(family, cardKind)),
     title: title || `Pathway option ${index + 1}`,
     name: title || safeRouteText(route.name, `Pathway option ${index + 1}`),
+    learner_summary: learnerSummary,
+    learner_next_step: learnerNextStep,
     first_income_in: safeRouteText(route.first_income_in || route.time, context.academicMode ? 'progress starts this week' : 'varies'),
     income_path: safeRouteText(route.income_path || route.income || route.expected_outcome, context.academicMode ? 'study progress now -> stronger next option' : 'income depends on verified opportunity'),
     what_it_asks: safeRouteText(route.what_it_asks, whatItAsksForRoute(route, blockers)),

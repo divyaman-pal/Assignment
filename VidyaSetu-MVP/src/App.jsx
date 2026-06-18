@@ -2316,11 +2316,7 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
   ));
   const selectedIndex = routes.findIndex((route) => sameRoute(activeRoute, route));
   const selectedRouteName = uiText(activeRoute?.name, academicMode ? 'Study pathway' : 'Career pathway');
-  const kindCopy = academicMode ? t.pathway.studyCardKinds || t.pathway.cardKinds : t.pathway.cardKinds;
-  const kindLabel = (route, index = 0) => {
-    const kind = uiText(route?.card_kind);
-    return (kindCopy && kindCopy[kind]) || `${t.pathway.option} ${index + 1}`;
-  };
+  const optionLabel = (index = 0) => `${t.pathway.option || 'Option'} ${index + 1}`;
   const activeSources = activeRoute ? pathwaySourceItems(activeRoute) : [];
   const blockers = Array.isArray(activeRoute?.trace?.blockers) && activeRoute.trace.blockers.length
     ? activeRoute.trace.blockers.map((item) => uiText(item)).filter(Boolean)
@@ -2334,7 +2330,10 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
       : {};
   const firstSource = activeSources[0] || null;
   const routeTitle = uiText(activeRoute?.title, selectedRouteName);
-  const routeSummary = uiText(activeRoute?.tradeoff, uiText(activeRoute?.why_this_fits_you, 'Profile ke hisaab se realistic route.'));
+  const routeSummary = uiText(
+    activeRoute?.learner_summary,
+    uiText(activeRoute?.why_this_fits_you, uiText(activeRoute?.first_step, 'Profile ke hisaab se realistic route.')),
+  );
   const simpleRole = uiText(pathwayDetail.realistic_role, routeTitle);
   const simpleWhy = uiText(
     pathwayDetail.why_realistic,
@@ -2344,7 +2343,10 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
     pathwayDetail.what_to_check,
     uiText(activeRoute?.what_it_asks, blockers[0] || 'Verify source, fees, safety, location, and consent first.'),
   );
-  const simpleStep = uiText(activeRoute?.first_step, uiText(activeRoute?.next_action, 'Build the learner journey and start the first proof task.'));
+  const simpleStep = uiText(
+    activeRoute?.learner_next_step,
+    uiText(activeRoute?.first_step, uiText(activeRoute?.next_action, 'Build the learner journey and start the first proof task.')),
+  );
   const promiseText = uiText(pathwayDetail.not_a_promise, 'This is not a guarantee. Sources, contacts, fees, and consent must be checked before action.');
   const routeChoiceStrip = routes.length > 1 && (
     <div className="reslinks route-choice-strip route-choice-strip-top">
@@ -2352,7 +2354,6 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
         const selected = sameRoute(activeRoute, route);
         return (
           <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
-            <span>{kindLabel(route, index)}</span>
             {uiText(route.name, 'Route')}
           </button>
         );
@@ -2373,7 +2374,7 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
         {activeRoute && (
           <>
           <div className="pathway-card-head simple-pathway-head">
-            <span>{kindLabel(activeRoute, selectedIndex >= 0 ? selectedIndex : 0)}</span>
+            <span>{optionLabel(selectedIndex >= 0 ? selectedIndex : 0)}</span>
             <strong>{routeTitle}</strong>
             <small>{routeSummary}</small>
           </div>
