@@ -5,6 +5,15 @@ import { languageInstruction } from './_lib/language.js';
 import { callAnthropicJson, callClaudeJson } from './_lib/services.js';
 import { tier3PlannerGuide } from './_lib/tier3-roadmaps.js';
 
+const DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS = 90_000;
+const MAX_JOURNEY_CLAUDE_TIMEOUT_MS = 110_000;
+
+function journeyClaudeTimeoutMs() {
+  const configured = Number(process.env.JOURNEY_CLAUDE_TIMEOUT_MS || DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS);
+  if (!Number.isFinite(configured) || configured <= 0) return DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS;
+  return Math.min(configured, MAX_JOURNEY_CLAUDE_TIMEOUT_MS);
+}
+
 function stabilizeJourneySchema(base = {}, localized = {}, options = {}) {
   const localizedObject = localized && typeof localized === 'object' && !Array.isArray(localized) ? localized : {};
   const baseDelivery = base.delivery && typeof base.delivery === 'object' && !Array.isArray(base.delivery) ? base.delivery : {};
@@ -302,7 +311,7 @@ export default async function handler(req, res) {
       ? await callAnthropicJson({
           fallback: fallbackJourney,
           maxTokens: Number(process.env.JOURNEY_CLAUDE_MAX_TOKENS || 6_000),
-          timeoutMs: Number(process.env.JOURNEY_CLAUDE_TIMEOUT_MS || 60_000),
+          timeoutMs: journeyClaudeTimeoutMs(),
           models: [process.env.ANTHROPIC_PLANNER_MODEL || process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001'],
           toolSchema: JOURNEY_TOOL_SCHEMA,
           system: `You create VidyaSetu learner journeys for Tier-3 India. ${languageInstruction(profile, route.name || route.tradeoff || '')} Use the learner profile and selected pathway, not generic templates. Return valid JSON only.`,
