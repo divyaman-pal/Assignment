@@ -494,6 +494,21 @@ export function inferLearnerGoal(text = '', hints = {}) {
   const lower = String(text).toLowerCase();
   const aspirations = (hints.aspirations || []).join(' ').toLowerCase();
   const combined = `${lower} ${aspirations}`;
+  const hasDataMlTarget =
+    /data science|data analyst|analytics|machine learning|ml engineer|python|sql|\bai\b|artificial intelligence|डेटा\s*साइंस|मशीन\s*लर्निंग|पायथन/i.test(
+      combined,
+    );
+  const dataMlLabel = /machine learning|ml engineer|मशीन\s*लर्निंग/i.test(combined)
+    ? 'Machine learning job pathway'
+    : 'Data science job pathway';
+  const hasJobAsk =
+    /job|naukri|placement|hire|hirer|hiring|vacancy|employment|full.?time|role|नौकरी|रोजगार|प्लेसमेंट/i.test(
+      text,
+    );
+  const hasTrainingAsk =
+    /training|course|vocational|skill course|learn skill|seekhna|sikhna|apprentice|apprenticeship|pmkvy|skill india|nsdc|हुनर|कौशल|स्किल|प्रशिक्षण|सीखना|सीखनी|सीखूं|सीखें/i.test(
+      text,
+    );
 
   if (
     /switch.*career|career.*switch|job counseling|career counseling|career\/job|career.*job|job.*career|employability|opportunity search|outreach pipeline|hirer outreach/i.test(
@@ -553,12 +568,21 @@ export function inferLearnerGoal(text = '', hints = {}) {
   if (/college|btech|b\.tech|engineering|semester|campus|undergraduate|university|कॉलेज|इंजीनियरिंग/i.test(text) && /job|naukri|placement|hire|hirer|hiring|vacancy|नौकरी|रोजगार/i.test(text)) {
     return {
       type: 'college_job_search',
-      label: /data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql|\bai\b|artificial intelligence/i.test(combined)
-        ? 'College to data science job pathway'
+      label: hasDataMlTarget
+        ? dataMlLabel
         : 'College to job pathway',
       intent: 'job',
       needs_location_for_offline: true,
       recommended_next_step: 'Build skill-gap plan, portfolio proof, job search, and consent-limited hirer outreach.',
+    };
+  }
+  if (hasDataMlTarget && hasJobAsk) {
+    return {
+      type: 'college_job_search',
+      label: dataMlLabel,
+      intent: 'job',
+      needs_location_for_offline: true,
+      recommended_next_step: 'Build a machine-learning/data portfolio, resume proof, job search, and consent-limited outreach.',
     };
   }
   if (
@@ -618,11 +642,13 @@ export function inferLearnerGoal(text = '', hints = {}) {
   if (/job only|only job|sirf job|bas job|job search|find job|job opportunity|job opportunities|hiring|vacancy|naukri|नौकरी|रोजगार|job chahiye|work from home|remote work|remote job|wfh|freelance/i.test(text)) {
     const hasFormalSignal = /certified|certificate|diploma|degree|iti|experience|graduate|bcom|b\.com|tally|gst|license|driving/i.test(text);
     return {
-      type: hasFormalSignal ? 'formal_skill_job_search' : 'job_search_only',
-      label: hasFormalSignal ? 'Formal skill job search' : 'Job search only',
+      type: hasDataMlTarget ? 'college_job_search' : hasFormalSignal ? 'formal_skill_job_search' : 'job_search_only',
+      label: hasDataMlTarget ? dataMlLabel : hasFormalSignal ? 'Formal skill job search' : 'Job search only',
       intent: 'job',
       needs_location_for_offline: true,
-      recommended_next_step: 'Search location-specific jobs and prepare consent-limited outreach.',
+      recommended_next_step: hasDataMlTarget
+        ? 'Build a machine-learning/data portfolio, resume proof, job search, and consent-limited outreach.'
+        : 'Search location-specific jobs and prepare consent-limited outreach.',
     };
   }
   if (
@@ -637,10 +663,10 @@ export function inferLearnerGoal(text = '', hints = {}) {
       recommended_next_step: 'Search role-specific jobs and prepare consent-limited outreach.',
     };
   }
-  if (/training|course|vocational|skill course|learn skill|seekhna|sikhna|apprentice|apprenticeship|pmkvy|skill india|nsdc/i.test(text) && !/job only|only job|sirf job|bas job/i.test(text)) {
+  if (hasTrainingAsk && !/job only|only job|sirf job|bas job/i.test(text)) {
     return {
       type: 'vocational_training',
-      label: 'Vocational training',
+      label: hasDataMlTarget ? 'Machine learning training pathway' : 'Vocational training',
       intent: 'training',
       needs_location_for_offline: true,
       recommended_next_step: 'Find local/online training routes and build practice-to-proof journey.',
@@ -1076,12 +1102,12 @@ function plannerFallbackRoutes(profile = {}, goal = {}, question = '') {
 
 function plannerFallbackSkill(profile = {}, goal = {}, focus = '') {
   const candidates = [
-    ...(Array.isArray(profile.skills) ? profile.skills : []),
-    ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
     goal.label,
+    ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
+    ...(Array.isArray(profile.skills) ? profile.skills : []),
     focus,
   ]
-    .map((item) => safeRouteText(item))
+    .map((item) => safeRouteText(item).replace(/\s+pathway$/i, '').trim())
     .filter(Boolean)
     .filter((item) => !/generate|personalized|pathway|recommendation|route map|open counseling/i.test(item));
   if (candidates.length) return candidates[0];
@@ -1099,7 +1125,7 @@ Family=${family}
 Roadmap guide=${guide.guide}
 
 Use the emit_json tool. Its top-level input must contain "routes": an array of exactly 3 concise pathway cards in the learner language/script.
-Rules: concrete route names tied to the learner condition; never use abstract comparison cards; if no exact skill is known, create starter proof/source routes and clearly name the missing fact; mention location/commute; no fake jobs, wages, contacts, centres, or guaranteed scheme eligibility; source/proof/consent before outreach; loan/business only with cost-buyer-supplier-risk caution.
+Rules: concrete route names tied to the learner condition; route name must be 3-8 words and must not copy transcript/prose; never use abstract comparison cards; if the learner has a specific target like machine learning, mushroom, plumbing, or electrician, every route must keep that target visible; if no exact skill is known, create starter proof/source routes and clearly name the missing fact; mention location/commute only where useful; no fake jobs, wages, contacts, centres, or guaranteed scheme eligibility; source/proof/consent before outreach; loan/business only with cost-buyer-supplier-risk caution. Keep each field short: one simple sentence, not a paragraph.
 
 Tool input shape:
 {"routes":[{"id":"","name":"","card_kind":"earn_fast|build_bigger|explore","archetype":"","source_url":"https://...","source_title":"","sources":["https://..."],"tradeoff":"","time":"","distance":"","income":"","confidence":0.8,"first_income_in":"","income_path":"","what_it_asks":"","why_this_fits_you":"","first_step":"","locked_until":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","why_realistic":"","learner_conditions":"","what_to_check":"","journey_preview":["","","",""],"not_a_promise":""}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
@@ -1995,16 +2021,71 @@ function whatItAsksForRoute(route = {}, blockers = []) {
   return parts.length ? parts.slice(0, 3).join(' ') : 'Time, travel, fees, and documents must be checked before acting.';
 }
 
+function routeNameLooksNoisy(name = '') {
+  const text = safeRouteText(name);
+  if (!text) return true;
+  const words = text.split(/\s+/).filter(Boolean);
+  return (
+    words.length > 10 ||
+    text.length > 86 ||
+    /starts from|learner already|what the learner|profile proof|proof\/source|no job or income|before proof|\/ studying|selected pathway/i.test(
+      text,
+    )
+  );
+}
+
+function learnerTargetForRoute(profile = {}, route = {}, family = '') {
+  const text = [
+    profile.learner_goal?.label,
+    ...(profile.aspirations || []),
+    ...(profile.skills || []),
+    route.name,
+    route.title,
+  ]
+    .map((value) => safeRouteText(value))
+    .join(' ')
+    .toLowerCase();
+  if (/school_study|board_exam|entrance_exam/.test(family) || profile.learner_goal?.intent === 'study') return 'Study plan';
+  if (profile.learner_goal?.intent === 'self_employment' || /enterprise/.test(family)) {
+    if (/mushroom|मशरूम/.test(text)) return 'Mushroom business';
+    if (/poultry|chicken|broiler|layer/.test(text)) return 'Poultry business';
+    return 'Small business';
+  }
+  if (/machine learning|ml engineer|मशीन\s*लर्निंग/.test(text)) return 'Machine Learning job';
+  if (/data science|data analyst|analytics|python|sql|डेटा\s*साइंस/.test(text)) return 'Data Science job';
+  if (/mushroom|मशरूम/.test(text)) return 'Mushroom business';
+  if (/poultry|chicken|broiler|layer/.test(text)) return 'Poultry business';
+  if (/plumb|pipe fitter|sanitary|water fitting/.test(text)) return 'Plumbing work';
+  if (/electrician|electrical|wiring|wireman/.test(text)) return 'Electrician work';
+  if (/mobile|repair|technician/.test(text)) return 'Mobile repair';
+  if (/tailor|silai|stitch|garment/.test(text)) return 'Tailoring work';
+  return safeRouteText(profile.learner_goal?.label || route.realistic_role || route.entry_role, 'Career pathway');
+}
+
+function compactRouteName(route = {}, index = 0, profile = {}, family = '', cardKind = '') {
+  const existing = safeRouteText(route.title || route.name);
+  const target = learnerTargetForRoute(profile, route, family);
+  const targetNeedsVisible =
+    /machine learning|data science/i.test(target) && !/machine learning|\bml\b|data science|data analyst|analyst|python|sql/i.test(existing);
+  if (!targetNeedsVisible && !routeNameLooksNoisy(existing)) return existing;
+  const kind = cardKind || cardKindForRoute(route, index, profile);
+  if (kind === 'earn_fast') return `${target} proof-first route`;
+  if (kind === 'build_bigger') return `${target} practice route`;
+  return `${target} verified-source route`;
+}
+
 function applyPathwayCardContract(route = {}, index = 0, profile = {}, context = {}, matchedFacts = [], blockers = []) {
   const family = context.family || goalFamily(profile, context);
   const cardKind = cardKindForRoute(route, index, profile);
   const sources = normalizeSourceList(route.sources || route.source_urls || route.source_url);
   const firstStep = firstStepForRoute(route, context);
+  const title = compactRouteName(route, index, profile, family, cardKind);
   return {
     ...route,
     card_kind: cardKind,
     archetype: safeRouteText(route.archetype, archetypeForRoute(family, cardKind)),
-    title: safeRouteText(route.title || route.name, `Pathway option ${index + 1}`),
+    title: title || `Pathway option ${index + 1}`,
+    name: title || safeRouteText(route.name, `Pathway option ${index + 1}`),
     first_income_in: safeRouteText(route.first_income_in || route.time, context.academicMode ? 'progress starts this week' : 'varies'),
     income_path: safeRouteText(route.income_path || route.income || route.expected_outcome, context.academicMode ? 'study progress now -> stronger next option' : 'income depends on verified opportunity'),
     what_it_asks: safeRouteText(route.what_it_asks, whatItAsksForRoute(route, blockers)),

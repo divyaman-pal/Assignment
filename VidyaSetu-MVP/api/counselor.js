@@ -23,9 +23,54 @@ function hasValue(value) {
   return value !== undefined && value !== null && value !== '';
 }
 
-function mergeProfile(base = {}, update = {}) {
+function isGenericGoal(goal = {}) {
+  return !goal?.intent || goal.intent === 'unknown' || ['open_counseling', 'goal_clarification_needed'].includes(goal.type);
+}
+
+function goalSpecificity(goal = {}) {
+  const text = `${goal.label || ''} ${goal.type || ''} ${goal.intent || ''}`.toLowerCase();
+  let score = 0;
+  if (goal.intent && goal.intent !== 'unknown') score += 1;
+  if (goal.type && !['open_counseling', 'goal_clarification_needed'].includes(goal.type)) score += 1;
+  if (/machine learning|data science|data analyst|python|sql|mushroom|poultry|plumbing|electrician|mobile repair|tailor|accounting|driving|nursing/i.test(text)) {
+    score += 2;
+  }
+  if (/job|business|enterprise|self_employment|training|internship/i.test(text)) score += 1;
+  if (/college career|college pathway|skill pathway exploration|vocational training/i.test(text)) score -= 1;
+  return score;
+}
+
+function latestIsBackgroundContext(latestText = '') {
+  const text = String(latestText || '').toLowerCase();
+  const hasBackground =
+    /college|semester|year|final year|fourth year|4th year|department|branch|civil engineering|mechanical|btech|b\.tech|degree|youtube|series|github|project|course|कोर्स|कॉलेज|सेमेस्टर|डिपार्टमेंट|सिविल|यूट्यूब|गिटहब|प्रोजेक्ट/i.test(
+      text,
+    );
+  const explicitSwitch =
+    /instead|change|switch|leave|not that|actually now|sirf|only|bas|business|व्यापार|बिजनेस|छोटा व्यापार|study only|exam only/i.test(
+      text,
+    );
+  return hasBackground && !explicitSwitch;
+}
+
+function mergeLearnerGoal(baseGoal = {}, nextGoal = {}, latestText = '') {
+  if (!hasValue(nextGoal)) return baseGoal;
+  if (!baseGoal || isGenericGoal(baseGoal)) return nextGoal;
+  if (isGenericGoal(nextGoal)) return baseGoal;
+  if (baseGoal.intent === 'job' && nextGoal.intent === 'college' && latestIsBackgroundContext(latestText)) return baseGoal;
+  if (baseGoal.intent === 'job' && nextGoal.intent === 'career' && latestIsBackgroundContext(latestText)) return baseGoal;
+  if (goalSpecificity(baseGoal) > goalSpecificity(nextGoal) && latestIsBackgroundContext(latestText)) return baseGoal;
+  return goalSpecificity(nextGoal) >= goalSpecificity(baseGoal) ? nextGoal : baseGoal;
+}
+
+function mergeProfile(base = {}, update = {}, { latestText = '' } = {}) {
   const merged = { ...base };
   Object.entries(update || {}).forEach(([key, value]) => {
+    if (key === 'learner_goal') {
+      const goal = mergeLearnerGoal(base.learner_goal, value, latestText);
+      if (hasValue(goal)) merged.learner_goal = goal;
+      return;
+    }
     if (['aspirations', 'skills', 'content_preferences', 'support_needs'].includes(key)) {
       const baseValues = Array.isArray(base[key]) ? base[key] : [];
       const nextValues = Array.isArray(value) ? value : [];
@@ -172,7 +217,7 @@ function applyGeneralGoal(profile = {}, latestText = '') {
   const existingGoal = profile.learner_goal;
   const hasMeaningfulExtractedGoal = Boolean(extractedGoal?.intent && extractedGoal.intent !== 'unknown');
   const latestExplicitChange =
-    /actually|instead|change(?:d)?|\bab\b|now|also|too|sirf|only|bas|but|first|pehle|career|job|internship|placement|training|course|naukri|पहले|बट/i.test(
+    /actually|instead|change(?:d)?|\bab\b|now|also|too|sirf|only|bas|but|first|pehle|career|job|role|full.?time|internship|placement|training|course|naukri|नौकरी|रोजगार|प्लेसमेंट|पहले|बट/i.test(
       latestText,
     );
   const latestChangesLane =
@@ -180,7 +225,7 @@ function applyGeneralGoal(profile = {}, latestText = '') {
     extractedGoal?.intent &&
     extractedGoal.intent !== 'unknown' &&
     extractedGoal.intent !== existingGoal.intent &&
-    /job|naukri|career|internship|placement|training|course|study|exam|jee|neet|marks|score|padh|padhai|पढ़|नौकरी|परीक्षा/i.test(
+    /job|role|full.?time|naukri|career|internship|placement|training|course|study|exam|jee|neet|marks|score|padh|padhai|नौकरी|रोजगार|प्लेसमेंट|पढ़|परीक्षा/i.test(
       latestText,
     );
   const shouldUseLatest =
@@ -540,7 +585,20 @@ function fieldHasValue(profile = {}, field) {
     return hasClearLearnerGoal(profile);
   }
   if (field === 'skill_signal') {
-    return Boolean(profile.aspirations?.length || profile.skills?.length || profile.proof_available?.length);
+    const specificSignals = [
+      ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
+      ...(Array.isArray(profile.skills) ? profile.skills : []),
+      ...(Array.isArray(profile.proof_available) ? profile.proof_available : []),
+    ]
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+      .filter(
+        (item) =>
+          !/^(?:work skill|kaam ka hunar|hunar|skill|skill training|vocational training|learn skill|learn a skill|skill learning|काम का हुनर|हुनर|हुनर सीखना|कौशल|कौशल सीखना|प्रशिक्षण|स्किल सीखना)$/i.test(
+            item,
+          ),
+      );
+    return specificSignals.length > 0;
   }
   if (field === 'mobility_signal') {
     const relocation = String(profile.relocation_preference || '').toLowerCase();
@@ -1147,7 +1205,7 @@ function avoidRepeat(reply = '', previous = '', profile = {}, latestText = '') {
 function fallbackCounselor({ messages, profile }) {
   const text = messages.filter((message) => message.role === 'user').map((message) => message.content).join('\n');
   const latestText = latestUserContent(messages);
-  const extracted = applyLowEducationSignal(mergeProfile(profile, fallbackProfileFromTranscript(text)), latestText);
+  const extracted = applyLowEducationSignal(mergeProfile(profile, fallbackProfileFromTranscript(text), { latestText }), latestText);
   const { missing, complete } = profileCompleteness(extracted);
   const nextQuestion = nextQuestionForMissing(missing, extracted, latestText);
 
@@ -1228,7 +1286,7 @@ export default async function handler(req, res) {
       prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If asking education, say it simply in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If enough information is available, say the next step briefly and tell the learner to press the pathway/rasta button. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
     });
 
-    const mergedGeneratedProfile = mergeProfile(profile, generated.data.profile || {});
+    const mergedGeneratedProfile = mergeProfile(profile, generated.data.profile || {}, { latestText });
     let nextProfile = applyLatestSignals(mergedGeneratedProfile, latestText);
     nextProfile = applyLowEducationSignal(nextProfile, latestText);
     nextProfile = applyEntranceExamIntent(nextProfile, latestText);

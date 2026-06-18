@@ -2322,13 +2322,6 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
     return (kindCopy && kindCopy[kind]) || `${t.pathway.option} ${index + 1}`;
   };
   const activeSources = activeRoute ? pathwaySourceItems(activeRoute) : [];
-  const facts = Array.isArray(activeRoute?.trace?.matched_facts) && activeRoute.trace.matched_facts.length
-    ? activeRoute.trace.matched_facts.map((fact) => `${uiText(fact.label, 'Fit')}: ${uiText(fact.value, 'matched')}`)
-    : [
-      uiText(activeRoute?.tradeoff, 'This route matches the learner profile collected by Meera.'),
-      uiText(activeRoute?.time, 'Time commitment will be confirmed after route selection.'),
-      uiText(activeRoute?.distance, 'Delivery mode will be phone-first where possible.'),
-    ].filter(Boolean);
   const blockers = Array.isArray(activeRoute?.trace?.blockers) && activeRoute.trace.blockers.length
     ? activeRoute.trace.blockers.map((item) => uiText(item)).filter(Boolean)
     : [
@@ -2339,7 +2332,20 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
     activeRoute?.pathway_detail && typeof activeRoute.pathway_detail === 'object' && !Array.isArray(activeRoute.pathway_detail)
       ? activeRoute.pathway_detail
       : {};
-  const journeyPreview = Array.isArray(pathwayDetail.journey_preview) ? pathwayDetail.journey_preview : [];
+  const firstSource = activeSources[0] || null;
+  const routeTitle = uiText(activeRoute?.title, selectedRouteName);
+  const routeSummary = uiText(activeRoute?.tradeoff, uiText(activeRoute?.why_this_fits_you, 'Profile ke hisaab se realistic route.'));
+  const simpleRole = uiText(pathwayDetail.realistic_role, routeTitle);
+  const simpleWhy = uiText(
+    pathwayDetail.why_realistic,
+    uiText(activeRoute?.why_this_fits_you, 'Meera uses the learner goal, current proof, location, and safety before suggesting this route.'),
+  );
+  const simpleCheck = uiText(
+    pathwayDetail.what_to_check,
+    uiText(activeRoute?.what_it_asks, blockers[0] || 'Verify source, fees, safety, location, and consent first.'),
+  );
+  const simpleStep = uiText(activeRoute?.first_step, uiText(activeRoute?.next_action, 'Build the learner journey and start the first proof task.'));
+  const promiseText = uiText(pathwayDetail.not_a_promise, 'This is not a guarantee. Sources, contacts, fees, and consent must be checked before action.');
   const routeChoiceStrip = routes.length > 1 && (
     <div className="reslinks route-choice-strip route-choice-strip-top">
       {routes.map((route, index) => {
@@ -2366,67 +2372,44 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
         )}
         {activeRoute && (
           <>
-          <div className="pathway-card-head">
+          <div className="pathway-card-head simple-pathway-head">
             <span>{kindLabel(activeRoute, selectedIndex >= 0 ? selectedIndex : 0)}</span>
-            <strong>{uiText(activeRoute.title, selectedRouteName)}</strong>
-            <small>{uiText(activeRoute.tradeoff, 'Profile ke hisaab se realistic route.')}</small>
+            <strong>{routeTitle}</strong>
+            <small>{routeSummary}</small>
           </div>
-          <div className="route-outcome-grid">
-            <span><b>{academicMode ? t.pathway.timeToProgress : t.pathway.firstIncome}</b>{uiText(activeRoute.first_income_in, uiText(activeRoute.time, 'varies'))}</span>
-            <span><b>{academicMode ? t.pathway.progressPath : t.pathway.incomePath}</b>{uiText(activeRoute.income_path, uiText(activeRoute.income, 'Depends on verified opportunity.'))}</span>
-            <span><b>{t.pathway.whatItAsks}</b>{uiText(activeRoute.what_it_asks, uiText(activeRoute.distance, 'Time/travel/fees must be checked.'))}</span>
-            <span><b>{t.pathway.firstStep}</b>{uiText(activeRoute.first_step, uiText(activeRoute.next_action, 'Create the four-week journey.'))}</span>
-          </div>
-          <div className="pathway-detail-panel">
+          <div className="simple-pathway-sections">
             <section>
-              <b>{t.pathway.realisticRole || 'Realistic first role'}</b>
-              <p>{uiText(pathwayDetail.realistic_role, uiText(activeRoute.title, selectedRouteName))}</p>
+              <b>{t.pathway.pathwayLabel || 'Pathway'}</b>
+              <p>{simpleRole}</p>
+              <small>{simpleStep}</small>
             </section>
             <section>
-              <b>{t.pathway.whyThisRoute || 'Why this route'}</b>
-              <p>{uiText(pathwayDetail.why_realistic, uiText(activeRoute.why_this_route, 'Meera uses the learner profile before building the journey.'))}</p>
+              <b>{t.pathway.whyThisRoute || 'Why Meera chose this'}</b>
+              <p>{simpleWhy}</p>
             </section>
             <section>
-              <b>{t.pathway.checkBefore || 'Check before acting'}</b>
-              <p>{uiText(pathwayDetail.what_to_check, blockers[0] || 'Verify source, fees, safety, location, and consent first.')}</p>
-            </section>
-            {journeyPreview.length > 0 && (
-              <section className="pathway-journey-preview">
-                <b>{t.pathway.journeyPreview || 'What the 4-week journey will do'}</b>
-                <ol>
-                  {journeyPreview.map((item) => <li key={uiText(item)}>{uiText(item)}</li>)}
-                </ol>
-              </section>
-            )}
-            <section className="pathway-honesty-note">
-              <b>{t.pathway.honestyNote || 'Honesty note'}</b>
-              <p>{uiText(pathwayDetail.not_a_promise, 'This is not a guaranteed job. Sources and contacts must be verified first.')}</p>
+              <b>{t.pathway.checkBefore || 'Before you start'}</b>
+              <p>{simpleCheck}</p>
+              <small>{promiseText}</small>
             </section>
           </div>
-          {activeRoute.requires_worker_confirmation && (
-            <div className="pathway-worker-note">
-              {t.pathway.workerConfirmation}
-            </div>
-          )}
-          </>
-        )}
-        {activeSources.length > 0 && (
-          <div className="pathway-source-list" aria-label={t.pathway.sources}>
-            <b>{t.pathway.sources}</b>
-            {activeSources.map((source) => (
-              <a className="pathway-source-link" href={source.url} key={source.url} rel="noreferrer" target="_blank">
-                {t.btn.open}: {source.title}
+          <div className="pathway-card-actions">
+            <button className="primary-button" onClick={() => createJourney(activeRoute)}>
+              {t.btn.startThisWeek}
+            </button>
+            {firstSource && (
+              <a className="ghost-button" href={firstSource.url} rel="noreferrer" target="_blank">
+                {t.btn.open}: {firstSource.title}
               </a>
-            ))}
+            )}
+            {activeRoute.requires_worker_confirmation && <span>{t.pathway.workerConfirmation}</span>}
           </div>
+          </>
         )}
       </div>
       <div className="action-row">
         <button className="primary-button" onClick={generatePathway}>
           {t.btn.refreshRecommendations}
-        </button>
-        <button className="ghost-button" disabled={!activeRoute} onClick={() => createJourney(activeRoute)}>
-          {t.btn.startThisWeek}
         </button>
         <span>
           {pathway?.callback_flag

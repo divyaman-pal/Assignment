@@ -2142,6 +2142,75 @@ button:disabled {
   text-transform: capitalize;
 }
 
+.simple-pathway-head {
+  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  margin-top: 4px;
+}
+
+.simple-pathway-head small {
+  grid-column: 2;
+  max-width: 760px;
+  text-transform: none;
+  line-height: 1.45;
+}
+
+.simple-pathway-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.simple-pathway-sections section {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid #d8e0ee;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fbfdff;
+  min-height: 155px;
+}
+
+.simple-pathway-sections b {
+  color: #123b9f;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.simple-pathway-sections p,
+.simple-pathway-sections small {
+  margin: 0;
+  color: #344054;
+  font-size: 0.9rem;
+  line-height: 1.48;
+}
+
+.simple-pathway-sections small {
+  color: #667085;
+}
+
+.pathway-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pathway-card-actions span {
+  border: 1px solid #fedf89;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  color: #7a2e0e;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .pathway-detail-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2218,8 +2287,17 @@ button:disabled {
 
 @media (max-width: 640px) {
   .route-outcome-grid,
-  .pathway-detail-panel {
+  .pathway-detail-panel,
+  .simple-pathway-sections {
     grid-template-columns: 1fr;
+  }
+
+  .simple-pathway-head {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-pathway-head small {
+    grid-column: 1;
   }
 }
 
