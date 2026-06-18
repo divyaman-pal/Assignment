@@ -2,7 +2,7 @@ import { methodNotAllowed, readJson, sendJson } from './_lib/http.js';
 import { insertRows, patchRows } from './_lib/supabase.js';
 import { buildLearningJourney } from './_lib/mvp.js';
 import { languageInstruction } from './_lib/language.js';
-import { callAnthropicJson, callFireworksJson } from './_lib/services.js';
+import { callAnthropicJson, callClaudeJson } from './_lib/services.js';
 import { tier3PlannerGuide } from './_lib/tier3-roadmaps.js';
 
 function stabilizeJourneySchema(base = {}, localized = {}, options = {}) {
@@ -309,7 +309,7 @@ export default async function handler(req, res) {
           prompt: buildClaudeJourneyPrompt(profile, route, fallbackJourney),
         })
       : process.env.ENABLE_AI_JOURNEY_LOCALIZATION === 'true' || body.ai_localize === true
-        ? await callFireworksJson({
+        ? await callClaudeJson({
             fallback: fallbackJourney,
             maxTokens: 1200,
             system: `You localize and personalize VidyaSetu learning journeys. ${languageInstruction(profile, route.name || route.tradeoff || '')} Preserve the exact JSON schema, enum-like values, ids, mode, route_id, numeric readiness_score, URLs, source names, module count, lesson/task structure, and completion/progress fields. Do not invent certifications, employers, or fees. Translate only learner-facing labels, module titles, lesson names, practice_tasks, proof names, and feedback into the same language/style. Return strict JSON only.`,

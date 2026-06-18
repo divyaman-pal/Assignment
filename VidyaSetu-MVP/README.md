@@ -128,7 +128,7 @@ flowchart TD
 - **Hosting:** Vercel static frontend plus serverless API functions.
 - **Database:** Supabase REST for learners, progress, passports, and outreach state.
 - **Primary reasoning LLM:** Anthropic Claude, used for higher quality counseling and structured reasoning.
-- **Fallback LLM:** OpenAI and Fireworks where configured.
+- **Reasoning LLM:** Anthropic Claude for counselor, profile, pathway, journey, opportunity-plan, and resume JSON generation.
 - **Live search:** OpenAI web search for broad discovery.
 - **Deep web/contact verification:** Firecrawl, used sparingly and only where needed.
 - **Voice:** Browser speech recognition/playback first, Sarvam STT/TTS fallback for Indian language accessibility.
@@ -179,7 +179,6 @@ SUPABASE_SERVICE_KEY=replace-with-service-role-key
 OPENAI_API_KEY=replace-with-openai-key
 ANTHROPIC_API_KEY=replace-with-anthropic-key
 SARVAM_API_KEY=replace-with-sarvam-key
-FIREWORKS_API_KEY=replace-with-fireworks-key
 FIRECRAWL_API_KEY=replace-with-firecrawl-key
 AGENTMAIL_API_KEY=placeholder
 WHATSAPP_SENDER_ID=replace-with-demo-sender-number

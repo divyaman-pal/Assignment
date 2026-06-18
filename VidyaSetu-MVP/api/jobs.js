@@ -1,7 +1,7 @@
 import { methodNotAllowed, readJson, sendJson } from './_lib/http.js';
 import { insertRows, patchRows } from './_lib/supabase.js';
 import { scoreJobs } from './_lib/mvp.js';
-import { callFireworksJson, discoverWithFirecrawl, discoverWithOpenAIWeb } from './_lib/services.js';
+import { callClaudeJson, discoverWithFirecrawl, discoverWithOpenAIWeb } from './_lib/services.js';
 import { phrase } from './_lib/language.js';
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
@@ -259,7 +259,7 @@ async function refineSearchPlanWithPrimaryLLM({ profile = {}, segment = {}, resu
     ],
   };
 
-  const generated = await callFireworksJson({
+  const generated = await callClaudeJson({
     fallback,
     maxTokens: 1100,
     system:

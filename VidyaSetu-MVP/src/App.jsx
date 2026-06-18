@@ -489,7 +489,11 @@ function normalizedDisplayKey(value = '') {
 function localizedProfileValue(value, copy = {}, fallback = '') {
   const text = uiText(value, fallback);
   if (!text) return fallback;
-  return copy.valueMap?.[normalizedDisplayKey(text)] || text;
+  const key = normalizedDisplayKey(text);
+  if (['goal not clear yet', 'goal clarification needed'].includes(key)) {
+    return copy.discovering || fallback;
+  }
+  return copy.valueMap?.[key] || text;
 }
 
 function localizedProfileNeed(value, copy = {}) {
@@ -497,7 +501,11 @@ function localizedProfileNeed(value, copy = {}) {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => copy.needMap?.[normalizedDisplayKey(item)] || item)
+    .map((item) => {
+      const key = normalizedDisplayKey(item);
+      if (key === 'goal signal') return copy.goal || 'goal';
+      return copy.needMap?.[key] || item;
+    })
     .join(', ');
 }
 

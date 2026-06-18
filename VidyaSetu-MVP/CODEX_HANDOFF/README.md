@@ -71,7 +71,7 @@
 | File | Purpose |
 | --- | --- |
 | `api/_lib/mvp.js` | **Core deterministic brain**: KB docs, route templates, journey templates, goal-family validation, route explanations, journey enrichment, this-week actions, scoring, ADEWS. Most logic lives here. |
-| `api/_lib/services.js` | LLM/provider wrappers (`callFireworksJson` = Anthropic→OpenAI→Fireworks), `generatePathways`, profile extraction, OpenAI web search, Firecrawl, Sarvam STT. |
+| `api/_lib/services.js` | Claude/provider wrappers (`callClaudeJson` / `callAnthropicJson`), `generatePathways`, profile extraction, OpenAI web search, Firecrawl, Sarvam STT. |
 | `api/_lib/language.js` | Language detection, same-language reply policy, STT/TTS metadata. |
 | `api/_lib/supabase.js` | Supabase REST wrapper **with an in-memory fallback** when env is absent. |
 | `api/_lib/http.js` | Request/response helpers. |
@@ -120,13 +120,12 @@ DISABLE_PATHWAY_WEB_SEARCH=true npm run serve:mvp   # http://localhost:4175
 
 `.env.local` (git-ignored — never commit real keys):
 ```
-ANTHROPIC_API_KEY=...      # primary LLM (callFireworksJson tries Anthropic first)
+ANTHROPIC_API_KEY=...      # Claude reasoning model for counselor/pathway/journey/resume/jobs
 OPENAI_API_KEY=...         # fallback + web-search evidence
 # Optional (production Vercel project already has these set):
 SUPABASE_REST_URL=... SUPABASE_SERVICE_KEY=...
 SARVAM_API_KEY=...         # Indic STT/TTS (voice)
 FIRECRAWL_API_KEY=...      # deep verification (NOT on every request)
-FIREWORKS_API_KEY=...
 ANTHROPIC_MODEL=claude-sonnet-4-5
 OPENAI_MODEL=gpt-4.1-mini
 MODEL_JSON_TIMEOUT_MS=20000
@@ -171,7 +170,7 @@ SLICE6_BASE_URL=http://localhost:4175    node scripts/slice6-final-smoke.mjs
 
 - **Local Supabase is in-memory** (`globalThis.__VIDYASETU_FALLBACK_DB__`) — persists only within one running server process. Production uses real Supabase.
 - **Language auto-switch is intentional**: the counselor updates `profile.preferred_language` from detection, but the UI chrome reads `uiLanguage` (the explicit login pick) so the menus don't flip when a learner types in English. Do **not** revert this to `preferred_language`.
-- **Provider order** in `callFireworksJson` (`services.js`): Anthropic → OpenAI → Fireworks. Set `ANTHROPIC_API_KEY` for best quality.
+- **Provider order** in `callClaudeJson` (`services.js`): Anthropic Claude → deterministic fallback. Set `ANTHROPIC_API_KEY` for live AI.
 - **Pathway web search is slow** (~25–30s via OpenAI `web_search`); `DISABLE_PATHWAY_WEB_SEARCH=true` skips it in tests/dev. Production leaves it on.
 - The pathway response includes a `route_validation` object (`family`, `kept`, `rejected`, `replaced`) — a useful debug aid.
 - Journey modules keep BOTH the original string arrays (`lessons`, `practice_tasks`, `proof`) used by `progress.js`/the UI checklist AND the additive enriched fields (`lesson_details`, `proof_task`, etc.). Keep both when editing so progress tracking doesn't break.
@@ -181,7 +180,7 @@ SLICE6_BASE_URL=http://localhost:4175    node scripts/slice6-final-smoke.mjs
 ## 9. Key functions to find fast (all in `api/_lib/mvp.js` unless noted)
 
 `goalFamily` · `routeMatchesGoalFamily` · `rejectUnrelatedRoute` · `validatePathwayRoutes` · `buildLocationGuardrail` · `decorateRouteExplanation` · `buildThisWeekActions` · `enrichJourneyForLearner` · `enrichModule` · `buildTodayTask` · `buildProofTask` · `buildLearningJourney` · `sourceLimitedPathways` · `scoreJobs` · `computeAdews` · `consentLimitedOutreach` · `VOCATIONS`/`crossVocationConflict`.
-Pathway orchestration + LLM + web search + cross-provider fallback: `generatePathways`, `callFireworksJson`, `discoverPathwayEvidence` in `api/_lib/services.js`.
+Pathway orchestration + Claude + web search + deterministic fallback: `generatePathways`, `callClaudeJson`, `discoverPathwayEvidence` in `api/_lib/services.js`.
 UI localization: `getTranslations`, `uiLangCode` in `src/i18n.js`.
 
 ---

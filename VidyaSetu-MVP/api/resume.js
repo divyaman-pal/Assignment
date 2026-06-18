@@ -1,6 +1,6 @@
 import { methodNotAllowed, readJson, sendJson } from './_lib/http.js';
 import { patchRows } from './_lib/supabase.js';
-import { callFireworksJson } from './_lib/services.js';
+import { callClaudeJson } from './_lib/services.js';
 import { languageInstruction } from './_lib/language.js';
 
 export default async function handler(req, res) {
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const journey = body.journey || {};
     const existingText = String(body.resumeText || '').trim();
     const fallback = buildResume(profile, journey, existingText);
-    const generated = await callFireworksJson({
+    const generated = await callClaudeJson({
       fallback,
       maxTokens: 900,
       system: `You are VidyaSetu resume builder for Indian rural, college, formal, and informal job seekers. ${languageInstruction(profile, existingText)} Build truthful resumes only from given profile/resume facts. Do not invent degrees, companies, certificates, salaries, or experience. If proof is missing, say proof pending. Keep official degree/course/company names unchanged. Return strict JSON.`,

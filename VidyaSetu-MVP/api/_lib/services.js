@@ -54,62 +54,6 @@ function extractOpenAIText(payload = {}) {
     .trim();
 }
 
-async function callOpenAIJson({ system, prompt, fallback, maxTokens = 900 }) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return { data: fallback, ok: false, provider: 'openai', error: 'OPENAI_API_KEY missing' };
-
-  const models = uniqueModelList([
-    process.env.OPENAI_MODEL,
-    'gpt-4.1-mini',
-    'gpt-4o-mini',
-  ]);
-  const errors = [];
-
-  for (const model of models) {
-    const timeout = timeoutSignal(Number(process.env.MODEL_JSON_TIMEOUT_MS || 12_000));
-    try {
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        signal: timeout.signal,
-        headers: {
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          max_output_tokens: Math.max(maxTokens, 1200),
-          input: [
-            {
-              role: 'system',
-              content: `${system}\nReturn valid JSON only. Do not include markdown.`,
-            },
-            { role: 'user', content: prompt },
-          ],
-          text: { format: { type: 'json_object' } },
-        }),
-      });
-      timeout.clear();
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        errors.push(`${model}: ${payload?.error?.message || response.statusText}`);
-        continue;
-      }
-      const text = extractOpenAIText(payload);
-      const parsed = parseModelJson(text, fallback);
-      if (!parsed.parsed) {
-      errors.push(`${model}: model did not return valid JSON`);
-        continue;
-      }
-      return { data: parsed.data, ok: true, provider: 'openai', model, error: null };
-    } catch (error) {
-      timeout.clear();
-      errors.push(`${model}: ${error.message}`);
-    }
-  }
-
-  return { data: fallback, ok: false, provider: 'openai', error: errors.join(' | ') || 'OpenAI unavailable' };
-}
-
 export async function callAnthropicJson({
   system,
   prompt,
@@ -203,75 +147,27 @@ export async function callAnthropicJson({
   return { data: fallback, ok: false, provider: 'anthropic', error: errors.join(' | ') || 'Anthropic unavailable' };
 }
 
-async function callFireworksOnlyJson({ system, prompt, fallback, maxTokens = 900 }) {
-  const key = process.env.FIREWORKS_API_KEY;
-  if (!key) {
-    return { data: fallback, ok: false, provider: 'fireworks', error: 'FIREWORKS_API_KEY missing' };
-  }
-
-  const timeout = timeoutSignal(Number(process.env.FIREWORKS_JSON_TIMEOUT_MS || 10_000));
-  try {
-    const response = await fetch('https://api.fireworks.ai/inference/v1/chat/completions', {
-      method: 'POST',
-      signal: timeout.signal,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/gpt-oss-120b',
-        max_tokens: Math.max(maxTokens, 1200),
-        temperature: 0.1,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: `${system}\nReturn valid JSON only. Do not include markdown.` },
-          { role: 'user', content: prompt },
-        ],
-      }),
-    });
-    timeout.clear();
-
-    const payload = await response.json();
-    if (!response.ok) {
-      return {
-        data: fallback,
-        ok: false,
-        provider: 'fireworks',
-        error: payload?.error?.message || response.statusText,
-      };
-    }
-
-    const text = payload?.choices?.[0]?.message?.content || '';
-    const parsed = parseModelJson(text, fallback);
-    if (!parsed.parsed) {
-      return { data: fallback, ok: false, provider: 'fireworks', error: text ? 'Model did not return valid JSON' : 'Empty model content' };
-    }
-    return { data: parsed.data, ok: true, provider: 'fireworks', model: process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/gpt-oss-120b', error: null };
-  } catch (error) {
-    timeout.clear();
-    return { data: fallback, ok: false, provider: 'fireworks', error: error.message };
-  }
-}
-
-export async function callFireworksJson({ system, prompt, fallback, maxTokens = 900 }) {
-  const attempts = [];
-  const providers = [callAnthropicJson, callOpenAIJson, callFireworksOnlyJson];
-  for (const provider of providers) {
-    const result = await provider({ system, prompt, fallback, maxTokens });
-    if (result.ok) {
-      return {
-        ...result,
-        fallback_chain: attempts,
-      };
-    }
-    attempts.push(providerError(result.provider, result.error));
-  }
+export async function callClaudeJson({
+  system,
+  prompt,
+  fallback,
+  maxTokens = 900,
+  timeoutMs = null,
+  models = null,
+  toolSchema = null,
+}) {
+  const result = await callAnthropicJson({
+    system,
+    prompt,
+    fallback,
+    maxTokens,
+    timeoutMs,
+    models,
+    toolSchema,
+  });
   return {
-    data: fallback,
-    ok: false,
-    provider: 'fallback',
-    error: attempts.join(' | '),
-    fallback_chain: attempts,
+    ...result,
+    fallback_chain: result.ok ? [] : [providerError(result.provider, result.error)],
   };
 }
 
@@ -618,11 +514,11 @@ export function inferLearnerGoal(text = '', hints = {}) {
     !/career|job|internship|placement|employability|naukri|opportunity|outreach|hiring|vacancy/i.test(text)
   ) {
     return {
-      type: 'open_counseling',
-      label: 'Still choosing a path',
+      type: 'goal_clarification_needed',
+      label: 'Goal not clear yet',
       intent: 'unknown',
       needs_location_for_offline: false,
-      recommended_next_step: 'Ask one more question to identify study, training, job, or support need.',
+      recommended_next_step: 'Ask one simple question to identify study, skill training, job, internship, enterprise, or support need.',
     };
   }
 
@@ -778,11 +674,11 @@ export function inferLearnerGoal(text = '', hints = {}) {
     };
   }
   return {
-    type: 'open_counseling',
-    label: 'Still choosing a path',
+    type: 'goal_clarification_needed',
+    label: 'Goal not clear yet',
     intent: 'unknown',
     needs_location_for_offline: false,
-    recommended_next_step: 'Ask one more question to identify study, training, job, or support need.',
+    recommended_next_step: 'Ask one simple question to identify study, skill training, job, internship, enterprise, or support need.',
   };
 }
 
@@ -1054,7 +950,7 @@ function titleCase(value = '') {
 
 export async function generateProfile(transcript) {
   const fallback = fallbackProfileFromTranscript(transcript);
-  return callFireworksJson({
+  return callClaudeJson({
     fallback,
     system:
       'You extract a rural learner intake profile. Never infer caste, religion, or community. Return strict JSON only.',
@@ -1105,7 +1001,7 @@ function plannerFallbackRoutes(profile = {}, goal = {}, question = '') {
   const focus = learnerFocusText(profile, question) || goal.label || 'learner goal';
   const place = profile.location || profile.relocation_preference || 'local area';
   const commute = profile.commute_km ? `${profile.commute_km} km safe commute` : 'safe commute not fixed';
-  const skill = (profile.skills || profile.aspirations || [focus])[0] || focus;
+  const skill = plannerFallbackSkill(profile, goal, focus);
   const resources = plannerResourceHints(profile, question);
   const source = resources.find((item) => /^.+https?:\/\//.test(item)) || 'Skill India Digital - https://www.skillindiadigital.gov.in';
   const sourceUrl = source.match(/https?:\/\/\S+/)?.[0] || 'https://www.skillindiadigital.gov.in';
@@ -1177,6 +1073,24 @@ function plannerFallbackRoutes(profile = {}, goal = {}, question = '') {
   ];
 }
 
+function plannerFallbackSkill(profile = {}, goal = {}, focus = '') {
+  const candidates = [
+    ...(Array.isArray(profile.skills) ? profile.skills : []),
+    ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
+    goal.label,
+    focus,
+  ]
+    .map((item) => safeRouteText(item))
+    .filter(Boolean)
+    .filter((item) => !/generate|personalized|pathway|recommendation|route map|open counseling/i.test(item));
+  if (candidates.length) return candidates[0];
+  if (goal.intent === 'job') return 'local beginner job';
+  if (goal.intent === 'training') return 'starter skill training';
+  if (goal.intent === 'self_employment') return 'small business setup';
+  if (profile.class_level || profile.education_status) return 'starter skill';
+  return 'safe first skill';
+}
+
 function buildClaudePathwayPrompt(profile = {}, goal = {}, question = '', family = 'generic') {
   const guide = tier3PlannerGuide(profile, question);
   return `Profile=${JSON.stringify(conciseProfileForPlanner(profile, question))}
@@ -1184,7 +1098,7 @@ Family=${family}
 Roadmap guide=${guide.guide}
 
 Use the emit_json tool. Its top-level input must contain "routes": an array of exactly 3 concise pathway cards in the learner language/script.
-Rules: concrete route names; no generic "Compare study/government exam" unless no skill/role is known; mention location/commute; no fake jobs, wages, contacts, centres, or guaranteed scheme eligibility; source/proof/consent before outreach; loan/business only with cost-buyer-supplier-risk caution.
+Rules: concrete route names tied to the learner condition; never use abstract comparison cards; if no exact skill is known, create starter proof/source routes and clearly name the missing fact; mention location/commute; no fake jobs, wages, contacts, centres, or guaranteed scheme eligibility; source/proof/consent before outreach; loan/business only with cost-buyer-supplier-risk caution.
 
 Tool input shape:
 {"routes":[{"id":"","name":"","card_kind":"earn_fast|build_bigger|explore","archetype":"","source_url":"https://...","source_title":"","sources":["https://..."],"tradeoff":"","time":"","distance":"","income":"","confidence":0.8,"first_income_in":"","income_path":"","what_it_asks":"","why_this_fits_you":"","first_step":"","locked_until":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","why_realistic":"","learner_conditions":"","what_to_check":"","journey_preview":["","","",""],"not_a_promise":""}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
@@ -1268,6 +1182,25 @@ function coerceGeneratedRoutes(data = {}) {
 
 export async function generatePathways(profile, question = '') {
   const outputLanguage = `${languageInstruction(profile, question)} Keep official scheme, exam, employer, and source names unchanged. Translate or localize route names, tradeoffs, time, distance, income, callback messages, lesson titles, and learner-facing suggestions into that language/style.`;
+  if (needsGoalClarificationBeforePathway(profile, question)) {
+    const guardData = enrichPathwayData(
+      {
+        routes: [],
+        confidence: 0.62,
+        callback_flag: true,
+        callback_message: goalClarificationMessage(profile, question),
+        callback_reason: goalClarificationMessage(profile, question),
+      },
+      profile,
+      { evidenceProvider: 'goal_clarification_guardrail', evidenceCount: 0 },
+    );
+    return {
+      data: guardData,
+      ok: true,
+      provider: 'goal_clarification_guardrail',
+      error: null,
+    };
+  }
   const enterpriseContext =
     profile.learner_goal?.type === 'self_employment_enterprise' ||
     /business|enterprise|scheme|mudra|pmegp|pmfme|udyam|setup|\bshop\b|farm|poultry|mushroom|dairy|self.?employ|apna kaam/i.test(
@@ -1426,7 +1359,7 @@ export async function generatePathways(profile, question = '') {
       system: `${outputLanguage} You are VidyaSetu's Tier-3 India livelihood pathway planner. You are not a search engine. You reason from the learner condition and the supplied roadmap guide. Return only concise structured JSON.`,
       prompt: buildClaudePathwayPrompt(pathwayProfile, goal, question || 'Generate a personalized pathway map.', family),
     })
-    : await callFireworksJson({
+    : await callClaudeJson({
         fallback,
         system: `${outputLanguage} ${pathwaySystem}`,
         prompt: `Learner profile:\n${JSON.stringify(profile)}\n\nEvidence:\n${JSON.stringify(evidence)}\n\nQuestion: ${question || 'Generate a personalized pathway map.'}`,
@@ -1470,6 +1403,28 @@ export async function generatePathways(profile, question = '') {
       profilePlanner: useClaudeProfilePlanner,
     }),
   };
+}
+
+function needsGoalClarificationBeforePathway(profile = {}, question = '') {
+  if (isEntranceExamPrepText(question) || isAcademicPrepText(question) || isSchoolStudyText(question)) return false;
+  const inferred = inferLearnerGoal(question, { aspirations: [...(profile.aspirations || []), ...(profile.skills || [])] });
+  const profileGoal = profile.learner_goal || {};
+  const profileGoalClear = Boolean(
+    profileGoal.intent &&
+      profileGoal.intent !== 'unknown' &&
+      !['open_counseling', 'goal_clarification_needed'].includes(profileGoal.type),
+  );
+  const goal = profileGoalClear ? profileGoal : inferred || {};
+  const hasClearIntent = Boolean(goal.intent && goal.intent !== 'unknown');
+  const hasClearType = Boolean(goal.type && !['open_counseling', 'goal_clarification_needed'].includes(goal.type));
+  return !hasClearIntent || !hasClearType;
+}
+
+function goalClarificationMessage(profile = {}, question = '') {
+  const kind = simpleLanguageKind(profile);
+  if (kind === 'hi') return 'पहले एक बात बताइए: मदद पढ़ाई में चाहिए, कोई काम का skill सीखना है, नौकरी चाहिए, internship चाहिए, या छोटा business शुरू करना है?';
+  if (kind === 'hinglish') return 'Pehle ek baat batao: help padhai mein chahiye, kaam ka skill seekhna hai, job chahiye, internship chahiye, ya chhota business start karna hai?';
+  return 'First tell Meera one thing: do you want help with study, learning a work skill, finding a job, internship, or starting a small business?';
 }
 
 function academicPathwayProfile(profile = {}, question = '', context = {}) {
@@ -1588,22 +1543,7 @@ function enrichPathwayData(data = {}, profile = {}, context = {}) {
 }
 
 function shouldUseDecisionCounselingRoutes(profile = {}, context = {}) {
-  if (context.profilePlanner) return false;
-  const goal = context.goal || profile.learner_goal || {};
-  const text = `${goal.type || ''} ${goal.intent || ''} ${goal.label || ''} ${(profile.aspirations || []).join(' ')}`.toLowerCase();
-  const hasConcreteSkillOrEducation = Boolean(
-    (profile.aspirations || []).length ||
-      (profile.skills || []).length ||
-      /iti|diploma|electrician|mobile|repair|tailor|silai|plumb|computer|typing|data entry|beauty|food|shop|driving|solar|nursing|drone/i.test(
-        `${profile.class_level || ''} ${profile.education_status || ''} ${text}`,
-      ),
-  );
-  if (hasConcreteSkillOrEducation && goal.type === 'skill_pathway_exploration') return false;
-  return (
-    goal.type === 'open_counseling' ||
-    (goal.type === 'skill_pathway_exploration' &&
-      /confused|not sure|unsure|counsel|government exam|private job|design|compare|open counseling/.test(text))
-  );
+  return false;
 }
 
 function buildDecisionCounselingRoutes(profile = {}) {
@@ -1611,27 +1551,27 @@ function buildDecisionCounselingRoutes(profile = {}) {
   const time = safeRouteText(profile.time_available, 'time not fixed yet');
   return [
     {
-      id: 'decision-study-route',
-      name: 'Compare study / government-exam route first',
+      id: 'starter-study-check',
+      name: 'Study-support readiness check',
       card_kind: 'explore',
       archetype: 'study_or_exam_check',
       source_url: 'https://diksha.gov.in/',
       source_title: 'DIKSHA / official learning reference',
-      tradeoff: 'Good if the learner can study regularly; slow for immediate earning.',
+      tradeoff: 'Useful only when the learner says study time is possible; it is not an income route.',
       time,
       distance: 'Can start from phone; coaching/centre only after family and cost check.',
       income: 'No immediate income; builds exam/study option.',
       confidence: 0.78,
       first_income_in: 'not immediate',
-      income_path: 'study proof -> exam readiness -> later option',
+      income_path: 'study proof -> readiness check -> later option',
       what_it_asks: 'Daily study time, subjects/exam, and whether family can support the preparation period.',
       first_step: 'Try one 20-minute official lesson or previous-question practice and save the score.',
       entry_ids: ['diksha_or_ncert_practice'],
       requires_worker_confirmation: false,
     },
     {
-      id: 'decision-skill-route',
-      name: 'Compare skill-training route',
+      id: 'starter-skill-route',
+      name: 'Starter skill training route',
       card_kind: 'build_bigger',
       archetype: 'skill_training_check',
       source_url: 'https://www.skillindiadigital.gov.in/',
@@ -1649,8 +1589,8 @@ function buildDecisionCounselingRoutes(profile = {}) {
       requires_worker_confirmation: true,
     },
     {
-      id: 'decision-job-route',
-      name: 'Compare local / private-job route',
+      id: 'starter-local-source-route',
+      name: 'Local verified-source route',
       card_kind: 'earn_fast',
       archetype: 'job_readiness_check',
       source_url: 'https://www.ncs.gov.in/',
@@ -1929,7 +1869,7 @@ function realisticRoleForRoute(route = {}, profile = {}, family = '') {
   if (/cook|kitchen|hotel|hospitality/.test(text)) return 'kitchen helper trainee';
   if (/data science|analyst|python|sql/.test(text)) return 'data analyst intern / junior project role';
   if (goalType === 'skill_pathway_exploration' || goalType === 'open_counseling') {
-    return safeRouteText(route.realistic_role || route.entry_role, 'first realistic route after profile check');
+    return safeRouteText(route.realistic_role || route.entry_role, 'first safe skill or work direction after profile check');
   }
   return safeRouteText(route.realistic_role || route.entry_role, 'beginner trainee / helper role');
 }
@@ -1949,10 +1889,10 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
     ? blockers[0]
     : goalIntent === 'study' || /school_study|board_exam|entrance_exam/.test(family)
       ? 'Use official syllabus/DIKSHA/NCERT first, keep one notebook proof, and do not switch to jobs from this study plan.'
-      : goalIntent === 'self_employment' || goalType === 'self_employment_enterprise' || /enterprise/.test(family)
+        : goalIntent === 'self_employment' || goalType === 'self_employment_enterprise' || /enterprise/.test(family)
         ? 'Verify local training/support, buyer demand, supplier cost, scheme eligibility, and loan risk before spending money.'
         : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
-          ? 'Compare study, skill-training, job, and enterprise routes before choosing one.'
+          ? 'Confirm one realistic interest, daily time, phone access, location/commute, family safety, and one small proof task before the next step.'
           : 'Verify training/source, location, fees if any, safety, and consent before sharing details.';
   const journeyPreview =
     goalIntent === 'study' || /school_study|board_exam|entrance_exam/.test(family)
@@ -1971,10 +1911,10 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
           ]
         : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
           ? [
-              'Week 1: compare study, skill, job, and enterprise routes.',
-              'Week 2: try two small proof tasks before choosing.',
-              'Week 3: check time, cost, location, and family support.',
-              'Week 4: choose one first four-week route and save backup.',
+              'Week 1: choose one safe starter direction and save why it fits.',
+              'Week 2: try one tiny practice task using a free or official resource.',
+              'Week 3: check time, cost, location, family support, and consent.',
+              'Week 4: save Skill Passport proof and choose the next verified step.',
             ]
           : [
               'Week 1: skill ke basic words, tools, safety, aur pehla notebook/voice proof.',
@@ -1988,7 +1928,7 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
       : goalIntent === 'self_employment'
         ? 'Yeh income ya loan approval guarantee nahi hai. Cost, buyer, scheme, aur risk verify hone ke baad hi next step hoga.'
         : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
-          ? 'Yeh final recommendation nahi hai. Pehle options compare honge, phir learner ek route choose karega.'
+          ? 'Yeh job ya course guarantee nahi hai. Pehle chhota proof, safety/source check, aur learner consent hoga.'
           : 'Yeh guaranteed job nahi hai. Contact, fee, salary, aur employer/source verify hone ke baad hi share/apply hoga.';
   if (kind === 'hinglish') {
     return {
@@ -2033,7 +1973,7 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
         : goalIntent === 'self_employment'
           ? 'This is not an income or loan-approval guarantee. Cost, buyers, schemes, and risk must be verified before spending.'
           : goalType === 'skill_pathway_exploration' || goalType === 'open_counseling'
-            ? 'This is not a final recommendation. The learner compares options first, then chooses one route.'
+            ? 'This is not a job or course guarantee. The learner saves a small proof, checks safety/source risk, and gives consent before any next step.'
             : 'This is not a guaranteed job. Contact, fee, salary, and employer/source must be verified before sharing or applying.',
   };
 }

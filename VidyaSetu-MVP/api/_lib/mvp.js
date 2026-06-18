@@ -1408,18 +1408,18 @@ const SKILL_JOURNEY_PROFILES = {
   },
   'career exploration': {
     id: 'career-exploration',
-    label: 'Career decision counseling',
-    entry_role: 'chosen first realistic route after comparison',
-    caution: 'No job, course, exam, or loan recommendation is final until the learner compares fit, cost, time, location, and proof needed.',
-    search_terms: 'career options after school rural India Hindi skills jobs government exam',
+    label: 'Goal clarification',
+    entry_role: 'chosen first realistic direction after one clear goal answer',
+    caution: 'No job, course, exam, or loan recommendation is final until the learner confirms one goal plus fit, cost, time, location, and proof needed.',
+    search_terms: 'career options after school rural India Hindi skills jobs',
     official_terms: 'National Career Service career counselling Skill India courses',
     weeks: [
       {
-        title: 'Choice map',
-        goal: 'Learner names 2-3 possible directions and why each is attractive or risky.',
-        lessons: ['Study route vs training route vs job route', 'Income now vs bigger route later', 'Family and commute constraints'],
-        practice_tasks: ['Pick top three options', 'Mark each option as easy, medium, or hard for time/money/travel'],
-        proof: 'Three-option choice map',
+        title: 'One goal answer',
+        goal: 'Learner chooses the first direction to explore in simple words.',
+        lessons: ['What help do I need first', 'Income now vs learning first', 'Family and commute constraints'],
+        practice_tasks: ['Pick one first direction', 'Mark what is easy, hard, or risky for time/money/travel'],
+        proof: 'First direction note',
         unlock: 'Mini proof trials',
       },
       {
@@ -1428,14 +1428,14 @@ const SKILL_JOURNEY_PROFILES = {
         lessons: ['One study practice task', 'One skill practice task', 'One job-readiness task'],
         practice_tasks: ['Finish two mini tasks', 'Record which task felt possible and why'],
         proof: 'Mini trial notes',
-        unlock: 'Route comparison',
+        unlock: 'Safety and source check',
       },
       {
-        title: 'Route comparison',
-        goal: 'Learner compares cost, time, safety, documents, and proof for the top two routes.',
+        title: 'Safety and source check',
+        goal: 'Learner checks cost, time, safety, documents, and proof for the selected direction.',
         lessons: ['Cost and document check', 'Safe commute/location check', 'Proof needed before opportunity'],
-        practice_tasks: ['Compare top two routes in a table', 'Ask Meera one doubt about each route'],
-        proof: 'Top-two route comparison',
+        practice_tasks: ['Mark the selected direction safe, unsure, or reject', 'Ask Meera one doubt about this direction'],
+        proof: 'Selected direction safety note',
         unlock: 'First four-week route',
       },
       {
@@ -3143,9 +3143,18 @@ function crossVocationConflict(profile = {}, route = {}, extraLearnerText = '') 
 }
 
 export function rejectUnrelatedRoute(profile = {}, route = {}, family = goalFamily(profile), options = {}) {
+  if (genericComparisonRoute(route)) return true;
   if (!routeMatchesGoalFamily(profile, route, family)) return true;
   if (['vocational', 'informal_skill', 'generic', 'job', 'data_science_job', 'college'].includes(family) && crossVocationConflict(profile, route, options.learner_text || '')) return true;
   return false;
+}
+
+function genericComparisonRoute(route = {}) {
+  const text = routeTextOf(route).toLowerCase();
+  const hasAbstractCompare = /\bcompare\b/.test(text) && /\bstudy\b/.test(text) && /\b(job|skill|enterprise|business)\b/.test(text);
+  const hasGenericExamCard = /government-?exam/.test(text) && /\broute\b/.test(text) && !/\bjee|neet|cuet|ssc|railway|bank\b/.test(text);
+  const hasNonRoleFallback = /first route after/.test(text) && /\bstudy\b/.test(text) && /\bjob\b/.test(text);
+  return hasAbstractCompare || hasGenericExamCard || hasNonRoleFallback;
 }
 
 export function validatePathwayRoutes(profile = {}, routes = [], options = {}) {
@@ -3507,8 +3516,8 @@ function resourceCardsForModule(skill = '', profile = {}, module = {}, index = 0
         source_url: 'https://www.ncs.gov.in/',
         search_query: `${terms.place} career counselling skills training job`,
         how_to_use:
-          'Use NCS to understand broad job families and counselling options. Do not pick a job yet; first compare study, skill, job, and enterprise routes.',
-        proof_to_save: `Three-option comparison note for Week ${week}`,
+          'Use NCS only to understand broad job families. Pick one realistic interest, write why it fits your time/location, and do not trust any contact or fee without review.',
+        proof_to_save: `Starter interest and safety note for Week ${week}`,
       },
       {
         title: 'Skill India course family search',

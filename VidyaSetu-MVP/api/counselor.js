@@ -1,7 +1,7 @@
 import { methodNotAllowed, readJson, sendJson } from './_lib/http.js';
 import { insertRows, patchRows, selectRows } from './_lib/supabase.js';
 import {
-  callFireworksJson,
+  callClaudeJson,
   fallbackProfileFromTranscript,
   inferLearnerGoal,
   isAcademicPrepText,
@@ -182,7 +182,7 @@ function applyGeneralGoal(profile = {}, latestText = '') {
     );
   const shouldUseLatest =
     !existingGoal ||
-    (existingGoal.type === 'open_counseling' && hasMeaningfulExtractedGoal) ||
+    (['open_counseling', 'goal_clarification_needed'].includes(existingGoal.type) && hasMeaningfulExtractedGoal) ||
     extractedGoal?.type === 'informal_skill_validation' ||
     extractedGoal?.type === 'entrance_exam_prep' ||
     extractedGoal?.intent === 'study' ||
@@ -388,7 +388,9 @@ function applyLowEducationSignal(profile = {}, latestText = '') {
   next.support_needs = [...new Set([...(next.support_needs || []), 'low-literacy counseling'])];
   if (
     (next.aspirations?.length || next.skills?.length) &&
-    (!next.learner_goal || next.learner_goal.intent === 'unknown' || next.learner_goal.type === 'open_counseling')
+    (!next.learner_goal ||
+      next.learner_goal.intent === 'unknown' ||
+      ['open_counseling', 'goal_clarification_needed'].includes(next.learner_goal.type))
   ) {
     next.learner_goal = inferLearnerGoal(latestText, { aspirations: [...(next.aspirations || []), ...(next.skills || [])] });
   }
@@ -432,6 +434,15 @@ function profileCompleteness(profile = {}) {
   return { missing, complete: missing.length === 0 };
 }
 
+function hasClearLearnerGoal(profile = {}) {
+  const goal = profile.learner_goal || {};
+  return Boolean(
+    goal.intent &&
+      goal.intent !== 'unknown' &&
+      !['open_counseling', 'goal_clarification_needed'].includes(goal.type),
+  );
+}
+
 function profileConfidence(profile = {}, missing = []) {
   const required = requiredFieldsForProfile(profile);
   const coveredRequired = Math.max(0, required.length - missing.length);
@@ -467,6 +478,9 @@ function counselorPersona(profile = {}) {
 }
 
 function fieldHasValue(profile = {}, field) {
+  if (field === 'goal_signal') {
+    return hasClearLearnerGoal(profile);
+  }
   if (field === 'skill_signal') {
     return Boolean(profile.aspirations?.length || profile.skills?.length || profile.proof_available?.length);
   }
@@ -488,7 +502,10 @@ function fieldHasValue(profile = {}, field) {
 }
 
 function requiredFieldsForProfile(profile = {}) {
-  const goalType = profile.learner_goal?.type || 'open_counseling';
+  if (!hasClearLearnerGoal(profile)) {
+    return ['goal_signal'];
+  }
+  const goalType = profile.learner_goal?.type || 'goal_clarification_needed';
   const lowEducation = lowEducationProfile(profile);
   if (['school_study_support', 'school_exam_prep', 'entrance_exam_prep'].includes(goalType)) {
     return ['class_level', 'academic_subjects', 'time_available', 'phone_access'];
@@ -509,7 +526,8 @@ function requiredFieldsForProfile(profile = {}) {
 }
 
 function nextQuestionForMissing(missing = [], profile = {}, latestText = '') {
-  const goalType = profile.learner_goal?.type || 'open_counseling';
+  const goalType = profile.learner_goal?.type || 'goal_clarification_needed';
+  if (missing.includes('goal_signal')) return oneThingQuestion('goal_signal', profile, latestText);
   if (missing.includes('class_level')) {
     return lowEducationProfile(profile, latestText) ? lowEducationLine(profile, latestText, 'goal') : phrase(profile, latestText, 'missing_class', {});
   }
@@ -533,6 +551,7 @@ function nextBestIntakeField(missing = [], profile = {}) {
   const jobLike = ['job', 'career', 'training', 'proof_to_work', 'self_employment'].includes(goal.intent);
   const lowEducation = lowEducationProfile(profile);
   if (!profile.name) return 'name';
+  if (missing.includes('goal_signal')) return 'goal_signal';
   if (missing.includes('class_level') && !lowEducation) return 'class_level';
   if (missing.includes('academic_subjects')) return 'academic_subjects';
   if (missing.includes('college_goal')) return 'college_goal';
@@ -546,6 +565,18 @@ function nextBestIntakeField(missing = [], profile = {}) {
 }
 
 function oneThingQuestion(field = '', profile = {}, latestText = '') {
+  if (field === 'goal_signal') {
+    if (lowEducationProfile(profile, latestText)) return lowEducationLine(profile, latestText, 'goal');
+    return localizedLine(profile, latestText, {
+      English: 'What do you want help with first: study, learning a work skill, job, internship, or starting a small business?',
+      Hinglish: 'Sabse pehle kis cheez mein help chahiye: padhai, kaam ka skill seekhna, job, internship, ya chhota business?',
+      Hindi: 'सबसे पहले किस चीज़ में मदद चाहिए: पढ़ाई, काम का skill सीखना, नौकरी, internship, या छोटा business?',
+      Marathi: 'Sagleat aadhi kashat madat havi: padhai, kaamacha skill, job, internship, ki chhota business?',
+      Tamil: 'முதலில் எதில் உதவி வேண்டும்: படிப்பு, வேலை skill கற்றல், job, internship, அல்லது சிறு business?',
+      Telugu: 'ముందుగా ఏ విషయంలో సహాయం కావాలి: చదువు, పని skill నేర్చుకోవడం, job, internship, లేదా చిన్న business?',
+      Odia: 'ପ୍ରଥମେ କେଉଁଥିରେ ସହାୟତା ଦରକାର: ପଢ଼ା, କାମ skill ଶିଖିବା, job, internship, କିମ୍ବା ଛୋଟ business?',
+    });
+  }
   if (field === 'name') {
     return localizedLine(profile, latestText, {
       English: 'First, what name should I call you?',
@@ -1106,7 +1137,7 @@ export default async function handler(req, res) {
     const academicIntent = !entranceExamIntent && isAcademicPrepText(latestText);
     const schoolStudyIntent = !entranceExamIntent && !academicIntent && isSchoolStudyText(latestText);
     const fallback = fallbackCounselor({ messages, profile });
-    const generated = await callFireworksJson({
+    const generated = await callClaudeJson({
       fallback,
       maxTokens: 420,
       system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. When asking about education, use learner words in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to click Generate Pathway and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
