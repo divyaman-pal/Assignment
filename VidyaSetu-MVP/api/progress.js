@@ -145,7 +145,7 @@ function buildProgressState({
   const minimumProofs = Math.min(2, Math.max(1, proofRequiredCount));
   const passportEligible = academicMode
     ? completionPercent >= 25 || proofReadyCount >= 1
-    : completionPercent >= 30 && proofReadyCount >= minimumProofs;
+    : proofReadyCount >= minimumProofs || (completionPercent >= 30 && proofReadyCount >= 1);
   const placementUnlocked = !academicMode && passportEligible;
   const learningUnlocked = academicMode && passportEligible;
 

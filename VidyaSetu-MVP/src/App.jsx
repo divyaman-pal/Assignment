@@ -2269,21 +2269,25 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
       ? activeRoute.pathway_detail
       : {};
   const journeyPreview = Array.isArray(pathwayDetail.journey_preview) ? pathwayDetail.journey_preview : [];
+  const routeChoiceStrip = routes.length > 1 && (
+    <div className="reslinks route-choice-strip route-choice-strip-top">
+      {routes.map((route, index) => {
+        const selected = sameRoute(activeRoute, route);
+        return (
+          <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
+            <span>{kindLabel(route, index)}</span>
+            {uiText(route.name, 'Route')}
+          </button>
+        );
+      })}
+    </div>
+  );
   return (
     <div className="prototype-screen pathway-screen">
       {!routes.length && <EmptyState text={t.pathway.empty} />}
-      <div className="card">
-        <div className="bridge">
-          <div className="bstep done"><div className="bc">✓</div><small>{t.pathway.foundation}</small></div>
-          <div className="bstep now"><div className="bc">2</div><small>{academicMode ? t.pathway.studyPlan : t.pathway.skillBuild}</small></div>
-          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>{t.pathway.proof}</small></div>
-          <div className="bstep locked"><div className="bc"><Lock size={15} strokeWidth={2.6} /></div><small>{t.pathway.outreach}</small></div>
-        </div>
-        <p>
-          {activeRoute
-            ? formatCopy(t.pathway.onRoute, { route: selectedRouteName, detail: uiText(activeRoute.tradeoff, 'VidyaSetu will build the next weekly plan after you confirm this route.') })
-            : t.pathway.generateAfterProfile}
-        </p>
+      {routeChoiceStrip}
+      <div className="card pathway-detail-card">
+        {!activeRoute && <p>{t.pathway.generateAfterProfile}</p>}
         {pathway?.result_type === 'human_callback' && pathway?.callback_reason && (
           <div className="pathway-worker-note">
             {uiText(pathway.callback_reason)}
@@ -2294,15 +2298,13 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
           <div className="pathway-card-head">
             <span>{kindLabel(activeRoute, selectedIndex >= 0 ? selectedIndex : 0)}</span>
             <strong>{uiText(activeRoute.title, selectedRouteName)}</strong>
-            <small>{uiText(activeRoute.grounding_status, 'source_backed').replace(/_/g, ' ')}</small>
+            <small>{uiText(activeRoute.tradeoff, 'Profile ke hisaab se realistic route.')}</small>
           </div>
           <div className="route-outcome-grid">
             <span><b>{academicMode ? t.pathway.timeToProgress : t.pathway.firstIncome}</b>{uiText(activeRoute.first_income_in, uiText(activeRoute.time, 'varies'))}</span>
             <span><b>{academicMode ? t.pathway.progressPath : t.pathway.incomePath}</b>{uiText(activeRoute.income_path, uiText(activeRoute.income, 'Depends on verified opportunity.'))}</span>
             <span><b>{t.pathway.whatItAsks}</b>{uiText(activeRoute.what_it_asks, uiText(activeRoute.distance, 'Time/travel/fees must be checked.'))}</span>
-            <span><b>{t.pathway.whyFitsYou}</b>{uiText(activeRoute.why_this_fits_you, uiText(activeRoute.why_this_route, 'Matches the learner profile collected by Meera.'))}</span>
             <span><b>{t.pathway.firstStep}</b>{uiText(activeRoute.first_step, uiText(activeRoute.next_action, 'Create the four-week journey.'))}</span>
-            <span><b>{t.pathway.unlocksAfter}</b>{uiText(activeRoute.locked_until, 'proof, location if offline, and consent.')}</span>
           </div>
           <div className="pathway-detail-panel">
             <section>
@@ -2312,10 +2314,6 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             <section>
               <b>{t.pathway.whyThisRoute || 'Why this route'}</b>
               <p>{uiText(pathwayDetail.why_realistic, uiText(activeRoute.why_this_route, 'Meera uses the learner profile before building the journey.'))}</p>
-            </section>
-            <section>
-              <b>{t.pathway.learnerConditions || 'Learner conditions used'}</b>
-              <p>{uiText(pathwayDetail.learner_conditions, facts.join(' '))}</p>
             </section>
             <section>
               <b>{t.pathway.checkBefore || 'Check before acting'}</b>
@@ -2352,18 +2350,6 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
           </div>
         )}
       </div>
-      {routes.length > 1 && (
-        <div className="reslinks route-choice-strip">
-          {routes.map((route, index) => {
-            const selected = sameRoute(activeRoute, route);
-            return (
-              <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
-                {kindLabel(route, index)}: {uiText(route.name, 'Route')}
-              </button>
-            );
-          })}
-        </div>
-      )}
       <div className="action-row">
         <button className="primary-button" onClick={generatePathway}>
           {t.btn.refreshRecommendations}
@@ -2459,6 +2445,9 @@ function JourneyTab({
     progress.next_action,
     currentModule ? formatCopy(copy.continueWeek, { week: currentModule.week || 1, title: uiText(currentModule.title, 'current task') }) : copy.createJourneyFirst,
   );
+  const moduleLimit = Math.min(Math.max(modules.length, 4), 12);
+  const visibleModules = modules.slice(0, moduleLimit);
+  const journeyLengthText = uiText(journey?.duration?.mvp, modules.length ? `${modules.length}-week journey` : copy.fourWeeks);
   const proofPlaceholder = academicMode
     ? copy.proofPlaceholderStudy
     : copy.proofPlaceholderWork;
@@ -2470,7 +2459,7 @@ function JourneyTab({
           <h2>{journey ? routeName : copy.choosePathway}</h2>
           <p>
             {journey
-              ? copy.fourWeeks
+              ? journeyLengthText
               : copy.builtFromPathway}
           </p>
         </div>
@@ -2494,7 +2483,7 @@ function JourneyTab({
             <i><b style={{ width: `${completionPercent}%` }} /></i>
           </div>
           <div className="journey-week-grid">
-            {modules.slice(0, 4).map((module, moduleIndex) => {
+            {visibleModules.map((module, moduleIndex) => {
               const lessons = Array.isArray(module.lessons) ? module.lessons : [];
               const practiceTasks = Array.isArray(module.practice_tasks) ? module.practice_tasks : [];
               const proofTasks = Array.isArray(module.proof_tasks) ? module.proof_tasks : [];

@@ -2,9 +2,10 @@ import { methodNotAllowed, readJson, sendJson } from './_lib/http.js';
 import { insertRows, patchRows } from './_lib/supabase.js';
 import { buildLearningJourney } from './_lib/mvp.js';
 import { languageInstruction } from './_lib/language.js';
-import { callFireworksJson } from './_lib/services.js';
+import { callAnthropicJson, callFireworksJson } from './_lib/services.js';
+import { tier3PlannerGuide } from './_lib/tier3-roadmaps.js';
 
-function stabilizeJourneySchema(base = {}, localized = {}) {
+function stabilizeJourneySchema(base = {}, localized = {}, options = {}) {
   const localizedObject = localized && typeof localized === 'object' && !Array.isArray(localized) ? localized : {};
   const baseDelivery = base.delivery && typeof base.delivery === 'object' && !Array.isArray(base.delivery) ? base.delivery : {};
   const localizedDelivery =
@@ -64,7 +65,22 @@ function stabilizeJourneySchema(base = {}, localized = {}) {
     },
   };
 
-  stable.modules = (base.modules || []).map((baseModule, moduleIndex) => {
+  const moduleSource =
+    options.allowModuleCountChange && Array.isArray(localizedObject.modules) && localizedObject.modules.length
+      ? localizedObject.modules
+      : base.modules || [];
+  stable.modules = moduleSource.map((sourceModule, moduleIndex) => {
+    const baseModule =
+      options.allowModuleCountChange && sourceModule
+        ? {
+            id: sourceModule.id || `journey-week-${moduleIndex + 1}`,
+            week: sourceModule.week || moduleIndex + 1,
+            lessons: [],
+            daily_micro_tasks: [],
+            practice_tasks: [],
+            proof_tasks: [],
+          }
+        : sourceModule;
     const nextModule =
       Array.isArray(localizedObject.modules) && localizedObject.modules[moduleIndex] && typeof localizedObject.modules[moduleIndex] === 'object'
         ? localizedObject.modules[moduleIndex]
@@ -113,7 +129,162 @@ function stabilizeJourneySchema(base = {}, localized = {}) {
     };
   });
 
-  return stable;
+  return syncJourneyProgress(stable);
+}
+
+function syncJourneyProgress(journey = {}) {
+  const modules = Array.isArray(journey.modules) ? journey.modules : [];
+  const totalCount = modules.reduce((sum, module) => {
+    const lessons = Array.isArray(module.lessons) ? module.lessons.length : 0;
+    const practice = Array.isArray(module.practice_tasks) ? module.practice_tasks.length : 0;
+    return sum + lessons + practice;
+  }, 0);
+  const proofRequired = modules.filter((module) => module.proof || (Array.isArray(module.proof_tasks) && module.proof_tasks.length)).length;
+  return {
+    ...journey,
+    duration: {
+      ...(journey.duration || {}),
+      mvp: journey.duration?.mvp || `${modules.length || 4}-week journey`,
+    },
+    learning_contract: {
+      ...(journey.learning_contract || {}),
+      week_shape:
+        journey.learning_contract?.week_shape ||
+        'Each week has daily tasks, one practice task, resources, proof, and an unlock rule.',
+    },
+    progress: {
+      ...(journey.progress || {}),
+      total_count: Number(journey.progress?.total_count || 0) || totalCount,
+      proof_required_count: Number(journey.progress?.proof_required_count || 0) || proofRequired,
+      completion_percent: Number(journey.progress?.completion_percent || 0),
+      completed_count: Number(journey.progress?.completed_count || 0),
+      proof_ready_count: Number(journey.progress?.proof_ready_count || 0),
+    },
+  };
+}
+
+const JOURNEY_TOOL_SCHEMA = {
+  type: 'object',
+  required: ['title', 'duration', 'modules'],
+  additionalProperties: true,
+  properties: {
+    id: { type: 'string' },
+    title: { type: 'string' },
+    mode: { type: 'string' },
+    route_id: { type: 'string' },
+    route_name: { type: 'string' },
+    readiness_score: { type: 'number' },
+    duration: {
+      type: 'object',
+      additionalProperties: true,
+      properties: {
+        mvp: { type: 'string' },
+        full: { type: 'string' },
+      },
+    },
+    delivery: { type: 'object', additionalProperties: true },
+    learning_contract: { type: 'object', additionalProperties: true },
+    modules: {
+      type: 'array',
+      minItems: 4,
+      items: {
+        type: 'object',
+        required: ['title', 'goal', 'lessons', 'daily_micro_tasks', 'practice_tasks', 'proof', 'proof_tasks', 'resources'],
+        additionalProperties: true,
+        properties: {
+          id: { type: 'string' },
+          week: { type: 'number' },
+          title: { type: 'string' },
+          goal: { type: 'string' },
+          lessons: { type: 'array', items: { type: 'string' } },
+          daily_micro_tasks: { type: 'array', items: { type: 'string' } },
+          practice_tasks: { type: 'array', items: { type: 'string' } },
+          proof: { type: 'string' },
+          proof_tasks: { type: 'array', items: { type: 'string' } },
+          resources: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['title', 'how_to_use', 'proof_to_save'],
+              additionalProperties: true,
+              properties: {
+                title: { type: 'string' },
+                type: { type: 'string' },
+                source_url: { type: 'string' },
+                search_query: { type: 'string' },
+                how_to_use: { type: 'string' },
+                proof_to_save: { type: 'string' },
+              },
+            },
+          },
+          completion_criteria: { type: 'string' },
+          low_data_alternative: { type: 'string' },
+          voice_whatsapp_version: { type: 'string' },
+          unlock_after_completion: { type: 'string' },
+        },
+      },
+    },
+    progress: { type: 'object', additionalProperties: true },
+  },
+};
+
+function hasUsableGeneratedModules(journey = {}) {
+  const modules = Array.isArray(journey.modules) ? journey.modules : [];
+  if (!modules.length) return false;
+  return modules.every(
+    (module) =>
+      typeof module?.title === 'string' &&
+      module.title.trim() &&
+      typeof module?.goal === 'string' &&
+      module.goal.trim() &&
+      Array.isArray(module.lessons) &&
+      module.lessons.length &&
+      Array.isArray(module.daily_micro_tasks) &&
+      module.daily_micro_tasks.length &&
+      Array.isArray(module.practice_tasks) &&
+      module.practice_tasks.length &&
+      typeof module.proof === 'string' &&
+      module.proof.trim(),
+  );
+}
+
+function buildClaudeJourneyPrompt(profile = {}, route = {}, fallbackJourney = {}) {
+  const guide = tier3PlannerGuide(profile, route.name || route.tradeoff || '', route);
+  return `Profile=${JSON.stringify({
+    language: profile.preferred_language || profile.language || 'learner language',
+    education: profile.class_level || profile.education_status || '',
+    goal: profile.learner_goal?.label || (profile.aspirations || [])[0] || route.name || '',
+    skills: profile.skills || [],
+    proof_available: profile.proof_available || [],
+    location: profile.location || '',
+    commute_km: profile.commute_km || '',
+    time_available: profile.time_available || '',
+    phone_access: profile.phone_access || profile.device || '',
+    earning_urgency: profile.earning_urgency || '',
+    support_needs: profile.support_needs || [],
+  })}
+Route=${JSON.stringify({
+    id: route.id,
+    name: route.name,
+    tradeoff: route.tradeoff,
+    time: route.time,
+    distance: route.distance,
+    first_step: route.first_step,
+    income_path: route.income_path,
+    locked_until: route.locked_until,
+    realistic_role: route.pathway_detail?.realistic_role,
+  })}
+Roadmap guide=${guide.guide}
+Base=${JSON.stringify({
+    id: fallbackJourney.id,
+    mode: fallbackJourney.mode,
+    route_id: fallbackJourney.route_id,
+  })}
+
+Use the emit_json tool. Its top-level input must contain "modules": the learner journey weeks in the learner language/script. Week count must match the role: 4 for a short proof sprint, 8/10/12 if the roadmap says so. Every week: title, goal, 2 lessons, 5 daily_micro_tasks, 1 practice task, proof/proof_tasks, 1-2 resources with how_to_use/proof_to_save, completion_criteria, low_data_alternative, voice_whatsapp_version, unlock_after_completion. No fake jobs, centres, fees, salaries, contacts, or guaranteed outcomes. Unsafe trade = safety/supervised practice.
+
+Tool input shape:
+{"id":"","title":"","mode":"${fallbackJourney.mode || 'career_pathway'}","route_id":"${fallbackJourney.route_id || route.id || 'selected_route'}","route_name":"","readiness_score":0,"duration":{"mvp":"8-week journey","full":""},"delivery":{"primary_channel":"voice + WhatsApp + low data","accessibility":"phone-first"},"learning_contract":{"week_shape":"","resource_policy":"","proof_gate":"","opportunity_unlock":""},"modules":[{"id":"week-1","week":1,"title":"","goal":"","lessons":["",""],"daily_micro_tasks":["Day 1:","Day 2:","Day 3:","Day 4:","Day 5:"],"practice_tasks":[""],"proof":"","proof_tasks":[""],"resources":[{"title":"","type":"official|free_video_search|practice","source_url":"https://...","search_query":"","how_to_use":"","proof_to_save":""}],"completion_criteria":"","low_data_alternative":"","voice_whatsapp_version":"","unlock_after_completion":""}],"progress":{"completion_percent":0,"completed_count":0,"proof_ready_count":0,"passport_eligible":false,"placement_unlocked":false,"next_action":"Week 1: start Day 1"}}`;
 }
 
 export default async function handler(req, res) {
@@ -126,8 +297,18 @@ export default async function handler(req, res) {
     const profile = body.profile || {};
     const route = body.route || {};
     const fallbackJourney = buildLearningJourney(profile, route);
-    const generated =
-      process.env.ENABLE_AI_JOURNEY_LOCALIZATION === 'true' || body.ai_localize === true
+    const useClaudeJourney = body.disable_ai_journey !== true && process.env.DISABLE_AI_JOURNEY !== 'true';
+    const generated = useClaudeJourney
+      ? await callAnthropicJson({
+          fallback: fallbackJourney,
+          maxTokens: Number(process.env.JOURNEY_CLAUDE_MAX_TOKENS || 6_000),
+          timeoutMs: Number(process.env.JOURNEY_CLAUDE_TIMEOUT_MS || 60_000),
+          models: [process.env.ANTHROPIC_PLANNER_MODEL || process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001'],
+          toolSchema: JOURNEY_TOOL_SCHEMA,
+          system: `You create VidyaSetu learner journeys for Tier-3 India. ${languageInstruction(profile, route.name || route.tradeoff || '')} Use the learner profile and selected pathway, not generic templates. Return valid JSON only.`,
+          prompt: buildClaudeJourneyPrompt(profile, route, fallbackJourney),
+        })
+      : process.env.ENABLE_AI_JOURNEY_LOCALIZATION === 'true' || body.ai_localize === true
         ? await callFireworksJson({
             fallback: fallbackJourney,
             maxTokens: 1200,
@@ -142,7 +323,12 @@ export default async function handler(req, res) {
             fallback_chain: [],
             error: null,
           };
-    const journey = stabilizeJourneySchema(fallbackJourney, generated.data);
+    const usableGeneratedModules = useClaudeJourney && generated.ok && hasUsableGeneratedModules(generated.data);
+    const generatedData =
+      useClaudeJourney && generated.ok && !usableGeneratedModules
+        ? { ...generated.data, modules: fallbackJourney.modules, duration: fallbackJourney.duration }
+        : generated.data;
+    const journey = stabilizeJourneySchema(fallbackJourney, generatedData, { allowModuleCountChange: usableGeneratedModules });
 
     let persistence = await insertRows('learning_journeys', {
       learner_id: profile.learner_id || null,

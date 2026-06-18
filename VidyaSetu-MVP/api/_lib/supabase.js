@@ -27,6 +27,12 @@ const fallbackDb = globalThis.__VIDYASETU_FALLBACK_DB__ || {
 };
 globalThis.__VIDYASETU_FALLBACK_DB__ = fallbackDb;
 
+function timeoutSignal(ms = Number(process.env.SUPABASE_TIMEOUT_MS || 5_000)) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(timeout) };
+}
+
 export function hasSupabaseConfig() {
   return Boolean(restUrl() && serviceKey());
 }
@@ -41,9 +47,11 @@ export async function insertRows(table, rows, { upsert = false, onConflict = '' 
     query.searchParams.set('on_conflict', onConflict);
   }
 
+  const timeout = timeoutSignal();
   try {
     const response = await fetch(query, {
       method: 'POST',
+      signal: timeout.signal,
       headers: headers({
         Prefer: upsert
           ? 'resolution=merge-duplicates,return=representation'
@@ -61,6 +69,8 @@ export async function insertRows(table, rows, { upsert = false, onConflict = '' 
     return { ok: true, data, error: null };
   } catch (error) {
     return { ok: false, data: null, error: error.message };
+  } finally {
+    timeout.clear();
   }
 }
 
@@ -72,9 +82,11 @@ export async function patchRows(table, filters, payload) {
   const query = new URL(`${restUrl()}/${table}`);
   Object.entries(filters).forEach(([key, value]) => query.searchParams.set(key, `eq.${value}`));
 
+  const timeout = timeoutSignal();
   try {
     const response = await fetch(query, {
       method: 'PATCH',
+      signal: timeout.signal,
       headers: headers({ Prefer: 'return=representation' }),
       body: JSON.stringify(payload),
     });
@@ -88,6 +100,8 @@ export async function patchRows(table, filters, payload) {
     return { ok: true, data, error: null };
   } catch (error) {
     return { ok: false, data: null, error: error.message };
+  } finally {
+    timeout.clear();
   }
 }
 
@@ -99,9 +113,11 @@ export async function deleteRows(table, filters) {
   const query = new URL(`${restUrl()}/${table}`);
   Object.entries(filters).forEach(([key, value]) => query.searchParams.set(key, `eq.${value}`));
 
+  const timeout = timeoutSignal();
   try {
     const response = await fetch(query, {
       method: 'DELETE',
+      signal: timeout.signal,
       headers: headers({ Prefer: 'return=minimal' }),
     });
     const text = await response.text();
@@ -114,6 +130,8 @@ export async function deleteRows(table, filters) {
     return { ok: true, data, error: null };
   } catch (error) {
     return { ok: false, data: null, error: error.message };
+  } finally {
+    timeout.clear();
   }
 }
 
@@ -136,9 +154,11 @@ export async function selectRows(table, { filters = {}, order = '', limit = 50 }
   }
   query.searchParams.set('limit', String(limit));
 
+  const timeout = timeoutSignal();
   try {
     const response = await fetch(query, {
       method: 'GET',
+      signal: timeout.signal,
       headers: headers(),
     });
     const text = await response.text();
@@ -151,6 +171,8 @@ export async function selectRows(table, { filters = {}, order = '', limit = 50 }
     return { ok: true, data, error: null };
   } catch (error) {
     return { ok: false, data: null, error: error.message };
+  } finally {
+    timeout.clear();
   }
 }
 

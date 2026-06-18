@@ -1,4 +1,5 @@
 import { addDays, stableId } from './http.js';
+import { matchedRoadmapPlan } from './tier3-roadmaps.js';
 
 export const DEMO_TRANSCRIPT =
   '';
@@ -958,7 +959,7 @@ function titleCase(value = '') {
 
 export function buildLearningJourney(profile = DEMO_PROFILE, route = {}) {
   const skill = journeyPrimarySkill(profile, route);
-  const template = journeyTemplateForSkill(skill, profile, route);
+  const template = journeyTemplateFromRoadmap(profile, route, skill) || journeyTemplateForSkill(skill, profile, route);
   const language = profile.preferred_language || profile.language || 'Hindi + local language';
   const device = profile.device || profile.phone_access || 'shared mobile phone';
   const urgency = profile.earning_urgency || (profile.income_pressure ? 'high' : 'medium');
@@ -1188,7 +1189,12 @@ function journeyPrimarySkill(profile = {}, route = {}) {
   if (goalType === 'local_office_job' || ((jobLikeGoal || routeJobText) && localOfficeText && !dataScienceText)) return 'local office job';
   if (jobLikeGoal && dataScienceText) return 'data science';
   if (goalType === 'self_employment_enterprise') return 'enterprise setup';
-  if (goalType === 'skill_pathway_exploration' || goalType === 'open_counseling') return 'career exploration';
+  if (
+    (goalType === 'skill_pathway_exploration' || goalType === 'open_counseling') &&
+    !/nursing|\banm\b|\bgnm\b|plumb|pipe fitter|sanitary|water fitting|bathroom fitting|electrician|electrical|wiring|wireman|drone|agriculture|farming|kheti|repair|mobile|technician|cook|hotel|chef|hospitality|kitchen|beauty|mehandi|wellness|computer|digital|typing|data|tailor|silai|stitch|sewing|garment|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|enterprise|self.?employment|business setup/.test(text)
+  ) {
+    return 'career exploration';
+  }
   if (goalIntent === 'training' || goalType === 'vocational_training') {
     if (/nursing|\banm\b|\bgnm\b|health aide|patient care|healthcare/.test(text)) return 'nursing';
     if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/.test(text)) return 'plumbing';
@@ -1467,6 +1473,79 @@ function journeyTemplateForSkill(skill = 'career skill', profile = {}, route = {
         'Meera sends a voice recap, learner replies with one voice note and one photo/note proof.',
     })),
   };
+}
+
+function journeyTemplateFromRoadmap(profile = {}, route = {}, skill = '') {
+  const roadmap = matchedRoadmapPlan(profile, route.name || route.tradeoff || route.income_path || '', route);
+  if (!roadmap?.weeks_detail?.length) return null;
+  const templateId = `tier3-${roadmap.id.replace(/_/g, '-')}`;
+  return {
+    id: templateId,
+    modules: roadmap.weeks_detail.map((week, index) => {
+      const next = roadmap.weeks_detail[index + 1];
+      const role = roadmap.title;
+      const shortSkill = skill && skill !== 'vocational training' ? skill : role;
+      return {
+        title: week.title,
+        goal: week.goal,
+        lessons: [
+          `${week.title}: key words, safety, and real examples`,
+          `Use one free/official resource for ${role}`,
+        ],
+        daily_micro_tasks: [
+          `Day 1: Understand ${week.title} in simple words and write 3 new terms.`,
+          `Day 2: Watch/read one small free resource part; stop after the matching step.`,
+          `Day 3: Do one safe practice task for ${week.title}.`,
+          `Day 4: Ask Meera or a trusted person to review one doubt or mistake.`,
+          `Day 5: Save ${week.proof} and decide what is safe to try next.`,
+        ],
+        practice_tasks: [`Complete one supervised or low-risk practice task for ${week.title}`],
+        proof: week.proof,
+        proof_tasks: [week.proof],
+        unlock: next ? `Week ${next.week}: ${next.title}` : 'Skill Passport + verified next step',
+        unlock_after_completion: next ? `Week ${next.week}: ${next.title}` : 'Skill Passport + verified next step',
+        completion_criteria: `${week.proof} saved, one practice task finished, and safety/source doubt marked.`,
+        low_data_alternative: 'Use one short voice note, one notebook page, or one photo instead of long video watching.',
+        voice_whatsapp_version: `Voice note: this week I learnt ${week.title}; my proof is ${week.proof}.`,
+        family_support_note: 'Explain the task, timing, travel/fee risk, and proof before spending money or going outside.',
+        safety_commute_note: /electric|solar|driving|repair/i.test(role)
+          ? 'Do not practise unsafe work alone; use supervision and never touch live or risky equipment.'
+          : 'Keep practice local, low-cost, and consent-based.',
+        dropout_prevention_trigger: 'If two day tasks are missed, Meera asks what blocked the learner and restarts from the smallest safe task.',
+        progress_metrics: ['daily task done', 'practice done', 'proof saved', 'source/safety checked'],
+        resources: roadmapResourceCards(roadmap, profile, week, index, shortSkill),
+        worker_check: `Review ${role}, learner safety, fees/commute, and whether the proof is enough for the next step.`,
+      };
+    }),
+  };
+}
+
+function roadmapResourceCards(roadmap = {}, profile = {}, week = {}, index = 0, skill = '') {
+  const weekNo = index + 1;
+  const resources = Array.isArray(roadmap.resources) ? roadmap.resources : [];
+  const cards = resources.slice(0, 2).map((resource, resourceIndex) => {
+    const raw = String(resource || '');
+    const url = raw.match(/https?:\/\/\S+/)?.[0] || '';
+    const title = raw.replace(/\s*-\s*https?:\/\/\S+.*$/, '').trim() || `Free resource ${resourceIndex + 1}`;
+    const isVideo = /youtube|video/i.test(raw);
+    return {
+      title,
+      type: isVideo ? 'free_video_search' : 'official',
+      source_url:
+        url ||
+        externalSearchUrl(
+          'https://www.youtube.com/results?search_query=',
+          `${roadmap.title || skill} ${week.title || ''} beginner Hindi`,
+        ),
+      search_query: `${roadmap.title || skill} ${week.title || ''} ${profile.location || ''}`.trim(),
+      how_to_use: isVideo
+        ? 'Watch only the part matching this week. Pause, copy the steps in a notebook, then do the safe practice task. Skip paid-job promises.'
+        : 'Open the official/free source only for this week task. Note language, fee if any, duration, and whether it matches your location and safety.',
+      proof_to_save: week.proof || `Week ${weekNo} proof note`,
+    };
+  });
+  if (cards.length) return cards;
+  return resourceCardsForModule(skill, profile, { title: week.title, proof: week.proof }, index);
 }
 
 function deliveryMode(device = '') {
