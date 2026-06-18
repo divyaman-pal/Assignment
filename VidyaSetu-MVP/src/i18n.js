@@ -821,8 +821,9 @@ const PROFILE_DYNAMIC_COPY = {
   en: {
     counselorNeeds: 'Meera still needs a few details.',
     valueMap: {
-      'unsure exploration': 'Open counseling',
-      'open counseling': 'Open counseling',
+      'unsure exploration': 'Still choosing a path',
+      'open counseling': 'Still choosing a path',
+      'still choosing a path': 'Still choosing a path',
       'study support': 'Study support',
       'job readiness': 'Job readiness',
       'training pathway': 'Training pathway',
@@ -850,8 +851,9 @@ const PROFILE_DYNAMIC_COPY = {
   hinglish: {
     counselorNeeds: 'Meera ko abhi kuch details chahiye.',
     valueMap: {
-      'unsure exploration': 'khuli counseling',
-      'open counseling': 'khuli counseling',
+      'unsure exploration': 'abhi rasta chun rahe hain',
+      'open counseling': 'abhi rasta chun rahe hain',
+      'still choosing a path': 'abhi rasta chun rahe hain',
       'study support': 'padhai support',
       'job readiness': 'job taiyari',
       'training pathway': 'training pathway',
@@ -879,8 +881,9 @@ const PROFILE_DYNAMIC_COPY = {
   hi: {
     counselorNeeds: 'मीरा को अभी कुछ details चाहिए.',
     valueMap: {
-      'unsure exploration': 'खुली काउंसलिंग',
-      'open counseling': 'खुली काउंसलिंग',
+      'unsure exploration': 'अभी रास्ता चुन रहे हैं',
+      'open counseling': 'अभी रास्ता चुन रहे हैं',
+      'still choosing a path': 'अभी रास्ता चुन रहे हैं',
       'study support': 'पढ़ाई सहायता',
       'job readiness': 'नौकरी तैयारी',
       'training pathway': 'ट्रेनिंग pathway',
@@ -908,8 +911,9 @@ const PROFILE_DYNAMIC_COPY = {
   or: {
     counselorNeeds: 'Meera କୁ ଆଉ କିଛି detail ଦରକାର.',
     valueMap: {
-      'unsure exploration': 'ଖୋଲା counselling',
-      'open counseling': 'ଖୋଲା counselling',
+      'unsure exploration': 'ଏବେ ରାସ୍ତା ବାଛୁଛନ୍ତି',
+      'open counseling': 'ଏବେ ରାସ୍ତା ବାଛୁଛନ୍ତି',
+      'still choosing a path': 'ଏବେ ରାସ୍ତା ବାଛୁଛନ୍ତି',
       'study support': 'ପଢ଼ା ସହାୟତା',
       'job readiness': 'ଚାକିରି ପ୍ରସ୍ତୁତି',
       'training pathway': 'training pathway',
@@ -937,8 +941,9 @@ const PROFILE_DYNAMIC_COPY = {
   mr: {
     counselorNeeds: 'Meera ला अजून काही details हवेत.',
     valueMap: {
-      'unsure exploration': 'खुली counseling',
-      'open counseling': 'खुली counseling',
+      'unsure exploration': 'अजून मार्ग निवडत आहेत',
+      'open counseling': 'अजून मार्ग निवडत आहेत',
+      'still choosing a path': 'अजून मार्ग निवडत आहेत',
       'study support': 'अभ्यास मदत',
       'job readiness': 'नोकरी तयारी',
       'training pathway': 'training pathway',
@@ -966,8 +971,9 @@ const PROFILE_DYNAMIC_COPY = {
   bn: {
     counselorNeeds: 'Meera-র আরও কিছু details দরকার.',
     valueMap: {
-      'unsure exploration': 'খোলা counseling',
-      'open counseling': 'খোলা counseling',
+      'unsure exploration': 'এখনও পথ বেছে নিচ্ছেন',
+      'open counseling': 'এখনও পথ বেছে নিচ্ছেন',
+      'still choosing a path': 'এখনও পথ বেছে নিচ্ছেন',
       'study support': 'পড়াশোনার সাহায্য',
       'job readiness': 'চাকরির প্রস্তুতি',
       'training pathway': 'training pathway',
@@ -1005,8 +1011,9 @@ const PROFILE_DYNAMIC_COPY = {
     profileComplete: 'பரிந்துரைக்கு விவரம் போதும்.',
     counselorNeeds: 'Meeraக்கு இன்னும் சில விவரங்கள் தேவை.',
     valueMap: {
-      'unsure exploration': 'திறந்த ஆலோசனை',
-      'open counseling': 'திறந்த ஆலோசனை',
+      'unsure exploration': 'இன்னும் பாதை தேர்வு செய்கிறார்',
+      'open counseling': 'இன்னும் பாதை தேர்வு செய்கிறார்',
+      'still choosing a path': 'இன்னும் பாதை தேர்வு செய்கிறார்',
       'study support': 'படிப்பு உதவி',
       'job readiness': 'வேலை தயாரிப்பு',
       'training pathway': 'பயிற்சி பாதை',
@@ -1034,8 +1041,9 @@ const PROFILE_DYNAMIC_COPY = {
   te: {
     counselorNeeds: 'Meeraకి ఇంకా కొన్ని details కావాలి.',
     valueMap: {
-      'unsure exploration': 'ఓపెన్ counseling',
-      'open counseling': 'ఓపెన్ counseling',
+      'unsure exploration': 'ఇంకా మార్గం ఎంచుకుంటున్నారు',
+      'open counseling': 'ఇంకా మార్గం ఎంచుకుంటున్నారు',
+      'still choosing a path': 'ఇంకా మార్గం ఎంచుకుంటున్నారు',
       'study support': 'చదువు సహాయం',
       'job readiness': 'ఉద్యోగ సిద్ధత',
       'training pathway': 'training pathway',
@@ -1063,8 +1071,9 @@ const PROFILE_DYNAMIC_COPY = {
   gu: {
     counselorNeeds: 'Meeraને હજુ થોડી details જોઈએ.',
     valueMap: {
-      'unsure exploration': 'ખુલ્લું counseling',
-      'open counseling': 'ખુલ્લું counseling',
+      'unsure exploration': 'હજુ માર્ગ પસંદ કરી રહ્યા છે',
+      'open counseling': 'હજુ માર્ગ પસંદ કરી રહ્યા છે',
+      'still choosing a path': 'હજુ માર્ગ પસંદ કરી રહ્યા છે',
       'study support': 'ભણતર મદદ',
       'job readiness': 'નોકરી તૈયારી',
       'training pathway': 'training pathway',

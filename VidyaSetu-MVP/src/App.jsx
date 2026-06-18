@@ -466,7 +466,7 @@ function counselorFocus(profile = {}) {
   if (intent === 'job') return profile.learner_goal?.label || 'Job readiness';
   if (intent === 'training') return profile.learner_goal?.label || 'Training pathway';
   if (intent === 'proof_to_work') return 'Proof-first work pathway';
-  return persona || 'Open counseling';
+  return persona || 'Still choosing a path';
 }
 
 function nextCounselorNeed(profile = {}) {

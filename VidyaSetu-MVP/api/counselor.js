@@ -645,9 +645,9 @@ function directAnswerForLatest(profile = {}, latestText = '') {
       English:
         'Yes, I can prepare hirer outreach, but only after your proof/resume, target role, location or relocation, and consent are clear.',
       Hinglish:
-        'हाँ, मीरा hirer outreach prepare कर सकती है, लेकिन proof/resume, target role, location या relocation, और consent clear होने के बाद.',
-      Hindi:
         'Haan, Meera hirer outreach prepare kar sakti hai, lekin proof/resume, target role, location ya relocation, aur consent clear hone ke baad.',
+      Hindi:
+        'हाँ, मीरा hirer outreach prepare कर सकती है, लेकिन proof/resume, target role, location या relocation, और consent clear होने के बाद.',
       Marathi:
         'Ho, mi hirer outreach tayar karu shakto, pan proof/resume, target role, location/relocation ani consent clear zalyavar.',
     });
@@ -657,9 +657,9 @@ function directAnswerForLatest(profile = {}, latestText = '') {
       English:
         'Yes, I can build a safe setup plan first: training, cost heads, buyer/supplier checks, scheme eligibility, and loan risk. I will not promise income.',
       Hinglish:
-        'हाँ, पहले safe setup plan बनेगा: training, cost heads, buyer/supplier check, scheme eligibility, और loan risk. मीरा income guarantee नहीं देगी.',
-      Hindi:
         'Haan, pehle safe setup plan banega: training, cost heads, buyer/supplier check, scheme eligibility, aur loan risk. Meera income guarantee nahi degi.',
+      Hindi:
+        'हाँ, पहले safe setup plan बनेगा: training, cost heads, buyer/supplier check, scheme eligibility, और loan risk. मीरा income guarantee नहीं देगी.',
       Marathi:
         'Ho, aadhi safe setup plan banavto: training, cost heads, buyer/supplier check, scheme eligibility ani loan risk. Income guarantee denar nahi.',
     });
@@ -679,7 +679,7 @@ function directAnswerForLatest(profile = {}, latestText = '') {
     return localizedLine(profile, latestText, {
       English: 'Yes, Meera can help you build a practical training route.',
       Hinglish: 'Haan, Meera practical training route banane mein help karegi.',
-      Hindi: 'Haan, Meera practical training route banane mein help karegi.',
+      Hindi: 'हाँ, मीरा practical training route बनाने में help करेगी.',
       Marathi: 'Ho, Meera practical training route banavnyat madat karel.',
     });
   }
@@ -691,12 +691,7 @@ function directAnswerForLatest(profile = {}, latestText = '') {
       Marathi: 'Ho, study planning madhe madat karu shakto.',
     });
   }
-  return localizedLine(profile, latestText, {
-    English: 'Yes, I can help. I will first understand you clearly, then build the right pathway.',
-    Hinglish: 'Haan, Meera help karegi. Pehle aapko clearly samjhegi, phir right pathway banayegi.',
-    Hindi: 'हाँ, मीरा help करेगी. पहले आपको clearly समझेगी, फिर right pathway बनाएगी.',
-    Marathi: 'Ho, mi madat karen. Aadhee tumhala clearly samjun gheto, mag right pathway banavto.',
-  });
+  return '';
 }
 
 function buildStepwiseReply({
@@ -715,17 +710,19 @@ function buildStepwiseReply({
   if (!profileReady) {
     const nextField = nextBestIntakeField(missing, profile);
     const nextQuestion = oneThingQuestion(nextField, profile, latestText);
-    return cleanCounselorReply(avoidRepeat(
+    const candidate = cleanCounselorReply(avoidRepeat(
       joinParts([ack, directAnswer, nextQuestion]),
       previousAssistant,
       profile,
       latestText,
     ));
+    if (replyMatchesLanguage(candidate, profile, latestText)) return candidate;
+    return cleanCounselorReply(avoidRepeat(nextQuestion, previousAssistant, profile, latestText));
   }
 
   const baseReply = directReply || conciseReadyReply(profile, latestText, modelReply);
   const readyAck = lowEducationProfile(profile, latestText) ? '' : ack;
-  return cleanCounselorReply(avoidRepeat(
+  const candidate = cleanCounselorReply(avoidRepeat(
     joinParts([
       readyAck,
       baseReply,
@@ -734,6 +731,9 @@ function buildStepwiseReply({
     profile,
     latestText,
   ));
+  if (replyMatchesLanguage(candidate, profile, latestText)) return candidate;
+  const localizedReady = lowEducationProfile(profile, latestText) ? lowEducationLine(profile, latestText, 'ready') : readyReply(profile, latestText);
+  return cleanCounselorReply(avoidRepeat(localizedReady, previousAssistant, profile, latestText));
 }
 
 function changedProfileFields(previous = {}, next = {}) {
@@ -768,7 +768,7 @@ function updateLine(updates = [], profile = {}, latestText = '') {
   return localizedLine(profile, latestText, {
     English: 'Got it, I saved that.',
     Hinglish: 'Theek hai, save kar liya.',
-    Hindi: 'ठीक है, save कर लिया.',
+    Hindi: 'ठीक है, सेव कर लिया।',
     Marathi: 'Theek aahe, save kele.',
   });
 }
@@ -796,7 +796,8 @@ function localizedLine(profile = {}, latestText = '', variants = {}) {
   const language = languageVoiceProfile(profile, latestText).preferred_language;
   if (variants[language]) return variants[language];
   if (language === 'English') return variants.English || variants.Hinglish || Object.values(variants)[0] || '';
-  if (['Hinglish', 'Hindi'].includes(language)) return variants.Hinglish || variants.Hindi || variants.English || '';
+  if (language === 'Hinglish') return variants.Hinglish || variants.Hindi || variants.English || '';
+  if (language === 'Hindi') return variants.Hindi || variants.Hinglish || variants.English || '';
   return variants[language] || variants.Hinglish || variants.English || Object.values(variants)[0] || '';
 }
 
@@ -1108,8 +1109,8 @@ export default async function handler(req, res) {
     const generated = await callFireworksJson({
       fallback,
       maxTokens: 420,
-      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to click Generate Pathway and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
-      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If enough information is available, say the next step briefly and tell the learner to click Generate Pathway. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
+      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. When asking about education, use learner words in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to click Generate Pathway and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
+      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If asking education, say it simply in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If enough information is available, say the next step briefly and tell the learner to click Generate Pathway. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
     });
 
     const mergedGeneratedProfile = mergeProfile(profile, generated.data.profile || {});

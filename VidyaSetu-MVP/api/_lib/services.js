@@ -581,7 +581,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
   ) {
     return {
       type: 'open_counseling',
-      label: 'Open counseling',
+      label: 'Still choosing a path',
       intent: 'unknown',
       needs_location_for_offline: false,
       recommended_next_step: 'Ask one more question to identify study, training, job, or support need.',
@@ -741,7 +741,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
   }
   return {
     type: 'open_counseling',
-    label: 'Open counseling',
+    label: 'Still choosing a path',
     intent: 'unknown',
     needs_location_for_offline: false,
     recommended_next_step: 'Ask one more question to identify study, training, job, or support need.',
