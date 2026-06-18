@@ -27,29 +27,29 @@ function languageMeta(language = 'English') {
 function starterMessageForLanguage(language = 'English') {
   const messages = {
     English:
-      'Hello, I am Meera from VidyaSetu. We will go step by step, not as a long form. First, what name should I call you?',
+      'Hello, I am Meera from VidyaSetu. We will talk one by one, not fill a long form. First, what name should I call you?',
     Hinglish:
-      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle batao, Meera aapko kis naam se bulaye?',
+      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek baat poochhkar aapki jankari banayenge, lamba form nahi. Pehle batao, Meera aapko kis naam se bulaye?',
     Hindi:
-      'नमस्ते, मैं VidyaSetu की मीरा हूँ. हम एक-एक करके profile बनाएंगे, long form नहीं. पहले बताइए, मीरा आपको किस नाम से बुलाए?',
+      'नमस्ते, मैं VidyaSetu की मीरा हूँ। मैं एक-एक बात पूछकर आपकी जानकारी बनाऊँगी, लंबा फॉर्म नहीं। पहले बताइए, मीरा आपको किस नाम से बुलाए?',
     Marathi:
-      'नमस्ते, मी VidyaSetu ची Meera आहे. आपण एक-एक करून profile बनवू. आधी सांगा, Meera तुम्हाला कोणत्या नावाने बोलवू?',
+      'नमस्ते, मी VidyaSetu ची Meera आहे. मी एक-एक प्रश्न विचारून तुमची माहिती तयार करेन. आधी सांगा, Meera तुम्हाला कोणत्या नावाने बोलवू?',
     Odia:
-      'ନମସ୍କାର, ମୁଁ VidyaSetu ର Meera. ଆମେ step by step profile ବନାଇବୁ. ପ୍ରଥମେ କୁହନ୍ତୁ, Meera ଆପଣଙ୍କୁ କେଉଁ ନାମରେ ଡାକିବ?',
+      'ନମସ୍କାର, ମୁଁ VidyaSetu ର Meera. ମୁଁ ଗୋଟିଏ ପରେ ଗୋଟିଏ କଥା ପଚାରି ଆପଣଙ୍କ ସୂଚନା ତିଆରି କରିବି. ପ୍ରଥମେ କୁହନ୍ତୁ, Meera ଆପଣଙ୍କୁ କେଉଁ ନାମରେ ଡାକିବ?',
     Bengali:
-      'নমস্কার, আমি VidyaSetu-র Meera. আমরা ধাপে ধাপে profile বানাবো. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
+      'নমস্কার, আমি VidyaSetu-র Meera. আমি এক এক করে প্রশ্ন করে আপনার তথ্য তৈরি করব. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
     Tamil:
       'வணக்கம், நான் VidyaSetu Meera. உங்கள் விவரங்களை ஒவ்வொரு படியாக உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
     Telugu:
-      'నమస్తే, నేను VidyaSetu Meera. మనం step by step profile తయారు చేద్దాం. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
+      'నమస్తే, నేను VidyaSetu Meera. ఒక్కొక్క ప్రశ్న అడిగి మీ వివరాలు తయారు చేస్తాను. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
     Kannada:
-      'ನಮಸ್ತೆ, ನಾನು VidyaSetu Meera. ನಾವು step by step profile ಮಾಡೋಣ. ಮೊದಲು, Meera ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಲಿ?',
+      'ನಮಸ್ತೆ, ನಾನು VidyaSetu Meera. ಒಂದೊಂದೇ ಪ್ರಶ್ನೆ ಕೇಳಿ ನಿಮ್ಮ ಮಾಹಿತಿಯನ್ನು ತಯಾರಿಸುತ್ತೇನೆ. ಮೊದಲು, Meera ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಲಿ?',
     Malayalam:
-      'നമസ്കാരം, ഞാൻ VidyaSetu Meera. നമുക്ക് step by step profile ഉണ്ടാക്കാം. ആദ്യം, Meera നിങ്ങളെ ഏത് പേരിൽ വിളിക്കണം?',
+      'നമസ്കാരം, ഞാൻ VidyaSetu Meera. ഓരോ ചോദ്യം ചോദിച്ച് നിങ്ങളുടെ വിവരം തയ്യാറാക്കാം. ആദ്യം, Meera നിങ്ങളെ ഏത് പേരിൽ വിളിക്കണം?',
     Gujarati:
-      'નમસ્તે, હું VidyaSetu ની Meera છું. આપણે step by step profile બનાવીએ. પહેલા કહો, Meera તમને કયા નામથી બોલાવે?',
+      'નમસ્તે, હું VidyaSetu ની Meera છું. હું એક-એક પ્રશ્ન પૂછીને તમારી માહિતી તૈયાર કરીશ. પહેલા કહો, Meera તમને કયા નામથી બોલાવે?',
     Punjabi:
-      'ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਮੈਂ VidyaSetu ਦੀ Meera ਹਾਂ. ਅਸੀਂ step by step profile ਬਣਾਵਾਂਗੇ. ਪਹਿਲਾਂ ਦੱਸੋ, Meera ਤੁਹਾਨੂੰ ਕਿਸ ਨਾਮ ਨਾਲ ਬੁਲਾਏ?',
+      'ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਮੈਂ VidyaSetu ਦੀ Meera ਹਾਂ. ਮੈਂ ਇਕ-ਇਕ ਸਵਾਲ ਪੁੱਛ ਕੇ ਤੁਹਾਡੀ ਜਾਣਕਾਰੀ ਤਿਆਰ ਕਰਾਂਗੀ. ਪਹਿਲਾਂ ਦੱਸੋ, Meera ਤੁਹਾਨੂੰ ਕਿਸ ਨਾਮ ਨਾਲ ਬੁਲਾਏ?',
   };
   return { role: 'assistant', content: messages[languageMeta(language).name] || messages.English };
 }

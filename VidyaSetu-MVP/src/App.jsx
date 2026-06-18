@@ -169,9 +169,61 @@ function speechLanguageCandidates(option = {}, text = '') {
   const base = hasIndicScript
     ? ['hi-IN', primary, 'en-IN', 'en-US']
     : isHinglish
-      ? ['en-IN', primary, 'hi-IN', 'en-US']
+      ? ['hi-IN', primary, 'en-IN', 'en-US']
       : [primary, 'en-IN', 'en-US', 'hi-IN'];
   return uniqueValues(base);
+}
+
+function simpleVoiceLanguageKind(profile = {}) {
+  const raw = String(profile?.preferred_language || profile?.language || '').toLowerCase();
+  if (raw.includes('hinglish')) return 'hinglish';
+  if (raw.includes('hindi')) return 'hindi';
+  return raw || 'english';
+}
+
+function replaceVoiceTerms(text = '', replacements = []) {
+  return replacements.reduce((current, [pattern, replacement]) => current.replace(pattern, replacement), String(text || ''));
+}
+
+function voiceFriendlyText(text = '', nextProfile = {}) {
+  const kind = simpleVoiceLanguageKind(nextProfile);
+  const compact = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!compact) return '';
+  if (kind === 'hindi') {
+    return replaceVoiceTerms(compact, [
+      [/\bprofile\b/gi, 'जानकारी'],
+      [/\blong form\b/gi, 'लंबा फॉर्म'],
+      [/\bskill\b/gi, 'हुनर'],
+      [/\bskills\b/gi, 'हुनर'],
+      [/\bjob\b/gi, 'नौकरी'],
+      [/\bjobs\b/gi, 'नौकरियाँ'],
+      [/\binternship\b/gi, 'काम सीखने का मौका'],
+      [/\bbusiness\b/gi, 'व्यापार'],
+      [/\bresume\b/gi, 'काम की जानकारी'],
+      [/\bproof\b/gi, 'सबूत'],
+      [/\bpathway\b/gi, 'रास्ता'],
+      [/\bhelp\b/gi, 'मदद'],
+      [/\bsafe travel\b/gi, 'सुरक्षित आना-जाना'],
+    ]);
+  }
+  if (kind === 'hinglish') {
+    return replaceVoiceTerms(compact, [
+      [/\bprofile\b/gi, 'jankari'],
+      [/\blong form\b/gi, 'lamba form'],
+      [/\bskill\b/gi, 'hunar'],
+      [/\bskills\b/gi, 'hunar'],
+      [/\bjob\b/gi, 'naukri'],
+      [/\bjobs\b/gi, 'naukriyan'],
+      [/\binternship\b/gi, 'kaam seekhne ka avsar'],
+      [/\bbusiness\b/gi, 'vyapar'],
+      [/\bresume\b/gi, 'kaam ki jankari'],
+      [/\bproof\b/gi, 'saboot'],
+      [/\bpathway\b/gi, 'rasta'],
+      [/\bhelp\b/gi, 'madad'],
+      [/\bsafe travel\b/gi, 'surakshit aana-jaana'],
+    ]);
+  }
+  return compact;
 }
 
 function voiceScore(voice, lang) {
@@ -257,29 +309,29 @@ function qrCellsForToken(token = '') {
 function starterMessageForLanguage(language = 'English') {
   const messages = {
     English:
-      'Hello, I am Meera from VidyaSetu. We will go step by step, not as a long form. First, what name should I call you?',
+      'Hello, I am Meera from VidyaSetu. We will talk one by one, not fill a long form. First, what name should I call you?',
     Hinglish:
-      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek karke profile banayenge, long form nahi. Pehle batao, Meera aapko kis naam se bulaye?',
+      'Namaste, main VidyaSetu ki Meera hoon. Hum ek-ek baat poochhkar aapki jankari banayenge, lamba form nahi. Pehle batao, Meera aapko kis naam se bulaye?',
     Hindi:
-      'नमस्ते, मैं VidyaSetu की मीरा हूँ. हम एक-एक करके profile बनाएंगे, long form नहीं. पहले बताइए, मीरा आपको किस नाम से बुलाए?',
+      'नमस्ते, मैं VidyaSetu की मीरा हूँ। मैं एक-एक बात पूछकर आपकी जानकारी बनाऊँगी, लंबा फॉर्म नहीं। पहले बताइए, मीरा आपको किस नाम से बुलाए?',
     Marathi:
-      'नमस्ते, मी VidyaSetu ची Meera आहे. आपण एक-एक करून profile बनवू. आधी सांगा, Meera तुम्हाला कोणत्या नावाने बोलवू?',
+      'नमस्ते, मी VidyaSetu ची Meera आहे. मी एक-एक प्रश्न विचारून तुमची माहिती तयार करेन. आधी सांगा, Meera तुम्हाला कोणत्या नावाने बोलवू?',
     Odia:
-      'ନମସ୍କାର, ମୁଁ VidyaSetu ର Meera. ଆମେ step by step profile ବନାଇବୁ. ପ୍ରଥମେ କୁହନ୍ତୁ, Meera ଆପଣଙ୍କୁ କେଉଁ ନାମରେ ଡାକିବ?',
+      'ନମସ୍କାର, ମୁଁ VidyaSetu ର Meera. ମୁଁ ଗୋଟିଏ ପରେ ଗୋଟିଏ କଥା ପଚାରି ଆପଣଙ୍କ ସୂଚନା ତିଆରି କରିବି. ପ୍ରଥମେ କୁହନ୍ତୁ, Meera ଆପଣଙ୍କୁ କେଉଁ ନାମରେ ଡାକିବ?',
     Bengali:
-      'নমস্কার, আমি VidyaSetu-র Meera. আমরা ধাপে ধাপে profile বানাবো. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
+      'নমস্কার, আমি VidyaSetu-র Meera. আমি এক এক করে প্রশ্ন করে আপনার তথ্য তৈরি করব. আগে বলুন, Meera আপনাকে কোন নামে ডাকবে?',
     Tamil:
       'வணக்கம், நான் VidyaSetu Meera. உங்கள் விவரங்களை ஒவ்வொரு படியாக உருவாக்குவோம். முதலில், Meera உங்களை எந்த பெயரில் அழைக்கலாம்?',
     Telugu:
-      'నమస్తే, నేను VidyaSetu Meera. మనం step by step profile తయారు చేద్దాం. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
+      'నమస్తే, నేను VidyaSetu Meera. ఒక్కొక్క ప్రశ్న అడిగి మీ వివరాలు తయారు చేస్తాను. ముందుగా, Meera మిమ్మల్ని ఏ పేరుతో పిలవాలి?',
     Kannada:
-      'ನಮಸ್ತೆ, ನಾನು VidyaSetu Meera. ನಾವು step by step profile ಮಾಡೋಣ. ಮೊದಲು, Meera ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಲಿ?',
+      'ನಮಸ್ತೆ, ನಾನು VidyaSetu Meera. ಒಂದೊಂದೇ ಪ್ರಶ್ನೆ ಕೇಳಿ ನಿಮ್ಮ ಮಾಹಿತಿಯನ್ನು ತಯಾರಿಸುತ್ತೇನೆ. ಮೊದಲು, Meera ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಲಿ?',
     Malayalam:
-      'നമസ്കാരം, ഞാൻ VidyaSetu Meera. നമുക്ക് step by step profile ഉണ്ടാക്കാം. ആദ്യം, Meera നിങ്ങളെ ഏത് പേരിൽ വിളിക്കണം?',
+      'നമസ്കാരം, ഞാൻ VidyaSetu Meera. ഓരോ ചോദ്യം ചോദിച്ച് നിങ്ങളുടെ വിവരം തയ്യാറാക്കാം. ആദ്യം, Meera നിങ്ങളെ ഏത് പേരിൽ വിളിക്കണം?',
     Gujarati:
-      'નમસ્તે, હું VidyaSetu ની Meera છું. આપણે step by step profile બનાવીએ. પહેલા કહો, Meera તમને કયા નામથી બોલાવે?',
+      'નમસ્તે, હું VidyaSetu ની Meera છું. હું એક-એક પ્રશ્ન પૂછીને તમારી માહિતી તૈયાર કરીશ. પહેલા કહો, Meera તમને કયા નામથી બોલાવે?',
     Punjabi:
-      'ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਮੈਂ VidyaSetu ਦੀ Meera ਹਾਂ. ਅਸੀਂ step by step profile ਬਣਾਵਾਂਗੇ. ਪਹਿਲਾਂ ਦੱਸੋ, Meera ਤੁਹਾਨੂੰ ਕਿਸ ਨਾਮ ਨਾਲ ਬੁਲਾਏ?',
+      'ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਮੈਂ VidyaSetu ਦੀ Meera ਹਾਂ. ਮੈਂ ਇਕ-ਇਕ ਸਵਾਲ ਪੁੱਛ ਕੇ ਤੁਹਾਡੀ ਜਾਣਕਾਰੀ ਤਿਆਰ ਕਰਾਂਗੀ. ਪਹਿਲਾਂ ਦੱਸੋ, Meera ਤੁਹਾਨੂੰ ਕਿਸ ਨਾਮ ਨਾਲ ਬੁਲਾਏ?',
   };
   return { role: 'assistant', content: messages[language] || messages.English };
 }
@@ -892,7 +944,10 @@ function App() {
       setVoiceStatus('Voice playback is not supported on this browser.');
       return;
     }
-    const cleanText = String(text).replace(/\s+/g, ' ').trim();
+    const cleanText = voiceFriendlyText(text, {
+      ...nextProfile,
+      preferred_language: nextProfile?.preferred_language || selectedLanguage || nextProfile?.language,
+    });
     if (!cleanText) return;
 
     const requestId = speechRequestRef.current + 1;
@@ -907,6 +962,12 @@ function App() {
     const option = languageOptionFor(nextProfile.preferred_language || selectedLanguage || nextProfile.language);
     setSpeakingIndex(messageIndex);
     setVoiceStatus(`Preparing ${option.label} voice...`);
+
+    const preferServerVoice = option.name !== 'English';
+    if (preferServerVoice) {
+      const serverSpokeFirst = await playServerVoice(cleanText, nextProfile, messageIndex, requestId, option);
+      if (serverSpokeFirst) return;
+    }
 
     if ('speechSynthesis' in window) {
       const voices = await availableSpeechVoices();
@@ -966,8 +1027,10 @@ function App() {
       }
     }
 
-    const serverSpoke = await playServerVoice(cleanText, nextProfile, messageIndex, requestId, option);
-    if (serverSpoke) return;
+    if (!preferServerVoice) {
+      const serverSpoke = await playServerVoice(cleanText, nextProfile, messageIndex, requestId, option);
+      if (serverSpoke) return;
+    }
 
     if (speechRequestRef.current === requestId) {
       setSpeakingIndex(null);

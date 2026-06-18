@@ -267,24 +267,24 @@ const LOW_EDUCATION_COPY = {
   Hinglish: {
     saved: 'Theek hai, save kar liya.',
     education: 'School padhai nahi hui bataya',
-    goal: 'Sabse pehle kis kaam ya kamai mein help chahiye: silai, cooking, shop ka kaam, kheti, phone repair, ya kuch aur?',
-    location: 'Aap abhi kis district ya gaon mein hain?',
+    goal: 'Sabse pehle kis kaam ya kamai mein madad chahiye: silai, rasoi, dukaan ka kaam, kheti, phone theek karna, ya kuch aur?',
+    location: 'Aap abhi kis zila ya gaon mein hain?',
     time: 'Ek din mein kitna time de sakte ho?',
     phone: 'Yeh phone aapka hai ya family ke saath shared hai?',
-    mobility: 'Kaam ya training ke liye ghar se kitni door safe ja sakte ho?',
-    proof: 'Aapke kaam ka koi simple proof hai, jaise photo, video, voice note, ya sample?',
-    ready: 'Theek hai, pathway banane ke liye profile enough hai. Ab Generate Pathway dabao; koi aur sawaal ho to Meera ko yahin poochho.',
+    mobility: 'Kaam ya seekhne ke liye ghar se kitni door surakshit ja sakte ho?',
+    proof: 'Aapke kaam ka koi aasaan saboot hai, jaise photo, video, awaaz note, ya namuna?',
+    ready: 'Theek hai, rasta banane ke liye jankari kafi hai. Ab Rasta banayein dabao; koi aur sawaal ho to Meera ko yahin poochho.',
   },
   Hindi: {
-    saved: 'ठीक है, सेव कर लिया।',
+    saved: 'ठीक है, सहेज लिया।',
     education: 'स्कूल की पढ़ाई नहीं हुई बताया',
-    goal: 'सबसे पहले किस काम या कमाई में मदद चाहिए: सिलाई, खाना बनाना, दुकान का काम, खेती, फोन रिपेयर, या कुछ और?',
+    goal: 'सबसे पहले किस काम या कमाई में मदद चाहिए: सिलाई, खाना बनाना, दुकान का काम, खेती, मोबाइल ठीक करना, या कुछ और?',
     location: 'आप अभी किस जिले या गाँव में हैं?',
     time: 'एक दिन में कितना समय दे सकते हैं?',
     phone: 'यह फोन आपका है या परिवार के साथ साझा है?',
-    mobility: 'काम या ट्रेनिंग के लिए घर से कितनी दूर सुरक्षित जा सकते हैं?',
+    mobility: 'काम या सीखने के लिए घर से कितनी दूर सुरक्षित जा सकते हैं?',
     proof: 'आपके काम का कोई आसान सबूत है, जैसे फोटो, वीडियो, आवाज नोट, या नमूना?',
-    ready: 'ठीक है, pathway बनाने के लिए profile काफी है। अब Generate Pathway दबाएँ; कोई और सवाल हो तो Meera से यहीं पूछें।',
+    ready: 'ठीक है, रास्ता बनाने के लिए जानकारी काफी है। अब रास्ता बनाएँ दबाएँ; कोई और सवाल हो तो मीरा से यहीं पूछें।',
   },
   Marathi: {
     saved: 'ठीक आहे, सेव केले.',
@@ -322,13 +322,13 @@ const LOW_EDUCATION_COPY = {
   Tamil: {
     saved: 'சரி, அதை சேமித்தேன்.',
     education: 'பள்ளி படிப்பு இல்லை என்று தெரிவித்தார்',
-    goal: 'முதலில் எந்த வேலை அல்லது வருமான உதவி வேண்டும்: தையல், சமையல், கடை வேலை, விவசாயம், phone repair, அல்லது வேறு ஏதாவது?',
+    goal: 'முதலில் எந்த வேலை அல்லது வருமான உதவி வேண்டும்: தையல், சமையல், கடை வேலை, விவசாயம், மொபைல் சரி செய்வது, அல்லது வேறு ஏதாவது?',
     location: 'நீங்கள் இப்போது எந்த மாவட்டம் அல்லது ஊரில் இருக்கிறீர்கள்?',
     time: 'ஒரு நாளில் எவ்வளவு நேரம் தர முடியும்?',
     phone: 'இந்த phone உங்களுடையதா, இல்லையா குடும்பத்துடன் பகிர்வதா?',
     mobility: 'வேலை அல்லது பயிற்சிக்காக வீட்டிலிருந்து பாதுகாப்பாக எவ்வளவு தூரம் செல்ல முடியும்?',
-    proof: 'உங்கள் வேலைக்கு photo, video, voice note, அல்லது sample போன்ற எளிய proof ஏதாவது இருக்கிறதா?',
-    ready: 'சரி, பாதை உருவாக்க உங்கள் விவரம் போதும். இப்போது Pathway உருவாக்கு பொத்தானை அழுத்துங்கள்; வேறு கேள்வி இருந்தால் இங்கே கேளுங்கள்.',
+    proof: 'உங்கள் வேலைக்கு புகைப்படம், வீடியோ, குரல் குறிப்பு, அல்லது மாதிரி போன்ற எளிய சான்று ஏதாவது இருக்கிறதா?',
+    ready: 'சரி, பாதை உருவாக்க உங்கள் விவரம் போதும். இப்போது பாதை உருவாக்கு பொத்தானை அழுத்துங்கள்; வேறு கேள்வி இருந்தால் இங்கே கேளுங்கள்.',
   },
   Telugu: {
     saved: 'సరే, సేవ్ చేశాను.',
@@ -397,14 +397,50 @@ function applyLowEducationSignal(profile = {}, latestText = '') {
   return next;
 }
 
+function preserveSelectedLanguage(previousProfile = {}, nextProfile = {}) {
+  const selected =
+    previousProfile.preferred_language ||
+    previousProfile.language_profile?.preferred_language ||
+    previousProfile.language ||
+    '';
+  if (!selected || selected === 'Pending') return nextProfile;
+  return {
+    ...nextProfile,
+    preferred_language: selected,
+    language: selected,
+    language_profile: {
+      ...(nextProfile.language_profile || {}),
+      preferred_language: selected,
+    },
+  };
+}
+
 function suspiciousName(value = '') {
   const text = String(value || '').trim();
   if (!text) return false;
   if (text.length > 40) return true;
+  if (/^(unknown|<unknown>|n\/a|null|none|not provided|na)$/i.test(text)) return true;
   if (/\b(nahi|nahin|nhi|can't|cannot|can not)\b.*\b(bana|bna|make|create|kar|sakta|sakti|skta|skti|paunga|paungi)\b/i.test(text)) return true;
   return /study|plan|career|job|internship|employability|pathway|course|training|business|school|class|board|cbse|jee|neet|padhai|naukri|skill|location|phone|whatsapp|proof|resume/i.test(
     text,
   );
+}
+
+function previousAskedName(previousAssistant = '') {
+  return /name|naam|nav|न[ाा]म|ப[ெே]யர்|పేరు|ಹೆಸರ|નામ|নাম|ନାମ|ਨਾਂ/i.test(String(previousAssistant || ''));
+}
+
+function shortNameCandidate(latestText = '') {
+  const text = String(latestText || '')
+    .replace(/[।.!?]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text || text.length < 2 || text.length > 40) return '';
+  if (/^(yes|haan|han|ha|ji|sahi|correct|no|nahi|nahin|नहीं|हाँ|हां|जी|सही|ठीक)$/i.test(text)) return '';
+  if (/[?]/.test(text)) return '';
+  if (/\d/.test(text)) return '';
+  if (suspiciousName(text)) return '';
+  return text;
 }
 
 function suspiciousLocation(value = '') {
@@ -569,12 +605,12 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     if (lowEducationProfile(profile, latestText)) return lowEducationLine(profile, latestText, 'goal');
     return localizedLine(profile, latestText, {
       English: 'What do you want help with first: study, learning a work skill, job, internship, or starting a small business?',
-      Hinglish: 'Sabse pehle kis cheez mein help chahiye: padhai, kaam ka skill seekhna, job, internship, ya chhota business?',
-      Hindi: 'सबसे पहले किस चीज़ में मदद चाहिए: पढ़ाई, काम का skill सीखना, नौकरी, internship, या छोटा business?',
-      Marathi: 'Sagleat aadhi kashat madat havi: padhai, kaamacha skill, job, internship, ki chhota business?',
-      Tamil: 'முதலில் எதில் உதவி வேண்டும்: படிப்பு, வேலை skill கற்றல், job, internship, அல்லது சிறு business?',
-      Telugu: 'ముందుగా ఏ విషయంలో సహాయం కావాలి: చదువు, పని skill నేర్చుకోవడం, job, internship, లేదా చిన్న business?',
-      Odia: 'ପ୍ରଥମେ କେଉଁଥିରେ ସହାୟତା ଦରକାର: ପଢ଼ା, କାମ skill ଶିଖିବା, job, internship, କିମ୍ବା ଛୋଟ business?',
+      Hinglish: 'Sabse pehle kis cheez mein madad chahiye: padhai, kaam ka hunar seekhna, naukri, kaam seekhne ka avsar, ya chhota vyapar?',
+      Hindi: 'सबसे पहले किस चीज़ में मदद चाहिए: पढ़ाई, काम का हुनर सीखना, नौकरी, काम सीखने का मौका, या छोटा व्यापार?',
+      Marathi: 'सगळ्यात आधी कशात मदत हवी: अभ्यास, कामाचे कौशल्य शिकणे, नोकरी, काम शिकण्याची संधी, की छोटा व्यवसाय?',
+      Tamil: 'முதலில் எதில் உதவி வேண்டும்: படிப்பு, வேலைக்கான திறன் கற்றல், வேலை, வேலை கற்றுக்கொள்ளும் வாய்ப்பு, அல்லது சிறு தொழில்?',
+      Telugu: 'ముందుగా ఏ విషయంలో సహాయం కావాలి: చదువు, పని నైపుణ్యం నేర్చుకోవడం, ఉద్యోగం, పని నేర్చుకునే అవకాశం, లేదా చిన్న వ్యాపారం?',
+      Odia: 'ପ୍ରଥମେ କେଉଁଥିରେ ସହାୟତା ଦରକାର: ପଢ଼ା, କାମର ହୁନର ଶିଖିବା, ଚାକିରି, କାମ ଶିଖିବାର ସୁଯୋଗ, କିମ୍ବା ଛୋଟ ବ୍ୟବସାୟ?',
     });
   }
   if (field === 'name') {
@@ -601,7 +637,7 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     return localizedLine(profile, latestText, {
       English: 'Which city or district are you in right now?',
       Hinglish: 'Aap abhi kis city ya district mein hain?',
-      Hindi: 'आप अभी किस city या district में हैं?',
+      Hindi: 'आप अभी किस शहर या जिले में हैं?',
       Marathi: 'Tumhi sadhya kontya city kiwa district madhe aahat?',
     });
   }
@@ -613,24 +649,24 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     if (goal.intent === 'job' || goal.type === 'job_search_only' || goal.type === 'formal_skill_job_search') {
       return localizedLine(profile, latestText, {
         English: 'Which target role or skill should I prepare you for first? Also mention any proof you already have: resume, certificate, project, sample work, or experience.',
-        Hinglish: 'Sabse pehle target role ya skill batao. Saath mein koi proof ho to batao: resume, certificate, project, sample kaam, ya experience.',
-        Hindi: 'सबसे पहले target role या skill बताइए. साथ में कोई proof हो तो बताइए: resume, certificate, project, sample काम, या experience.',
+        Hinglish: 'Sabse pehle batao, kis kaam ya hunar ke liye taiyari karni hai. Agar koi saboot ho, jaise certificate, sample kaam, ya kaam ka anubhav, to batao.',
+        Hindi: 'सबसे पहले बताइए, किस काम या हुनर के लिए तैयारी करनी है। अगर कोई सबूत हो, जैसे प्रमाणपत्र, काम का नमूना, या काम का अनुभव, तो बताइए।',
         Marathi: 'Sagleat aadhi target role kiwa skill sanga. Proof asel tar sanga: resume, certificate, project, sample work, kiwa experience.',
       });
     }
     if (goal.intent === 'training') {
       return localizedLine(profile, latestText, {
         English: 'Which skill or course do you want to learn first?',
-        Hinglish: 'Sabse pehle kaunsa skill ya course seekhna chahte hain?',
-        Hindi: 'सबसे पहले कौन-सा skill या course सीखना चाहते हैं?',
+        Hinglish: 'Sabse pehle kaunsa hunar ya training seekhna chahte hain?',
+        Hindi: 'सबसे पहले कौन-सा हुनर या प्रशिक्षण सीखना चाहते हैं?',
         Marathi: 'Sagleat aadhi konta skill kiwa course shikaycha aahe?',
       });
     }
     return localizedLine(profile, latestText, {
       English: 'What is the one goal you want help with first: study, skill training, job, internship, or business?',
-      Hinglish: 'Sabse pehle ek goal batao: padhai, skill training, job, internship, ya business?',
-      Hindi: 'सबसे पहले एक goal बताइए: पढ़ाई, skill training, job, internship, या business?',
-      Marathi: 'Sagleat aadhi ek goal sanga: study, skill training, job, internship, ki business?',
+      Hinglish: 'Sabse pehle ek lakshya batao: padhai, kaam ka hunar seekhna, naukri, kaam seekhne ka avsar, ya vyapar?',
+      Hindi: 'सबसे पहले एक लक्ष्य बताइए: पढ़ाई, काम का हुनर सीखना, नौकरी, काम सीखने का मौका, या व्यापार?',
+      Marathi: 'सगळ्यात आधी एक लक्ष्य सांगा: अभ्यास, कामाचे कौशल्य, नोकरी, काम शिकण्याची संधी, की व्यवसाय?',
     });
   }
   if (field === 'time_available') return lowEducationProfile(profile, latestText) ? lowEducationLine(profile, latestText, 'time') : phrase(profile, latestText, 'missing_time', {});
@@ -640,7 +676,7 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     return localizedLine(profile, latestText, {
       English: 'How far can you safely travel from home each day?',
       Hinglish: 'Ghar se roz kitni door tak safe travel kar sakte hain?',
-      Hindi: 'घर से रोज़ कितनी दूर तक safe travel कर सकते हैं?',
+      Hindi: 'घर से रोज़ कितनी दूर तक सुरक्षित आ-जा सकते हैं?',
       Marathi: 'Gharapasun roj kiti door safe travel karu shakta?',
     });
   }
@@ -648,8 +684,8 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     if (lowEducationProfile(profile, latestText)) return lowEducationLine(profile, latestText, 'proof');
     return localizedLine(profile, latestText, {
       English: 'Do you already have any proof: resume, certificate, project, sample work, score, or work experience?',
-      Hinglish: 'Koi proof hai kya: resume, certificate, project, sample kaam, score, ya work experience?',
-      Hindi: 'कोई proof है क्या: resume, certificate, project, sample काम, score, या work experience?',
+      Hinglish: 'Koi saboot hai kya: certificate, sample kaam, photo, awaaz note, score, ya kaam ka anubhav?',
+      Hindi: 'कोई सबूत है क्या: प्रमाणपत्र, काम का नमूना, फोटो, आवाज़ नोट, अंक, या काम का अनुभव?',
       Marathi: 'Proof aahe ka: resume, certificate, project, sample work, score, kiwa experience?',
     });
   }
@@ -667,8 +703,8 @@ function directAnswerForLatest(profile = {}, latestText = '') {
     if (lowEducationProfile(profile, latestText)) {
       return localizedLine(profile, latestText, {
         English: 'Yes, Meera can prepare outreach later, but only after your work proof, location, and consent are clear.',
-        Hinglish: 'Haan, Meera baad mein outreach taiyar kar sakti hai, par pehle kaam ka proof, location, aur consent clear hona chahiye.',
-        Hindi: 'हाँ, Meera बाद में outreach तैयार कर सकती है, लेकिन पहले काम का proof, location और consent साफ होना चाहिए.',
+        Hinglish: 'Haan, Meera baad mein baat-cheet ka sandesh taiyar kar sakti hai, par pehle kaam ka saboot, jagah, aur aapki anumati clear honi chahiye.',
+        Hindi: 'हाँ, मीरा बाद में बात करने का संदेश तैयार कर सकती है, लेकिन पहले काम का सबूत, जगह और आपकी अनुमति साफ होनी चाहिए।',
         Tamil: 'ஆம், Meera பிறகு outreach தயார் செய்யலாம்; முதலில் வேலை proof, location, consent தெளிவாக வேண்டும்.',
       });
     }
@@ -676,9 +712,9 @@ function directAnswerForLatest(profile = {}, latestText = '') {
       English:
         'Yes, I can prepare hirer outreach, but only after your proof/resume, target role, location or relocation, and consent are clear.',
       Hinglish:
-        'Haan, Meera hirer outreach prepare kar sakti hai, lekin proof/resume, target role, location ya relocation, aur consent clear hone ke baad.',
+        'Haan, Meera kaam dene wale se baat karne ka sandesh bana sakti hai, lekin pehle saboot, kaam ka lakshya, jagah, aur aapki anumati clear honi chahiye.',
       Hindi:
-        'हाँ, मीरा hirer outreach prepare कर सकती है, लेकिन proof/resume, target role, location या relocation, और consent clear होने के बाद.',
+        'हाँ, मीरा काम देने वाले से बात करने का संदेश बना सकती है, लेकिन पहले सबूत, काम का लक्ष्य, जगह और आपकी अनुमति साफ होनी चाहिए।',
       Marathi:
         'Ho, mi hirer outreach tayar karu shakto, pan proof/resume, target role, location/relocation ani consent clear zalyavar.',
     });
@@ -688,9 +724,9 @@ function directAnswerForLatest(profile = {}, latestText = '') {
       English:
         'Yes, I can build a safe setup plan first: training, cost heads, buyer/supplier checks, scheme eligibility, and loan risk. I will not promise income.',
       Hinglish:
-        'Haan, pehle safe setup plan banega: training, cost heads, buyer/supplier check, scheme eligibility, aur loan risk. Meera income guarantee nahi degi.',
+        'Haan, pehle surakshit shuruat ka plan banega: seekhna, kharcha, kharidar/samaan dene wale ki jaanch, yojana ki eligibility, aur loan ka risk. Meera kamai ki guarantee nahi degi.',
       Hindi:
-        'हाँ, पहले safe setup plan बनेगा: training, cost heads, buyer/supplier check, scheme eligibility, और loan risk. मीरा income guarantee नहीं देगी.',
+        'हाँ, पहले सुरक्षित शुरुआत की योजना बनेगी: सीखना, खर्च, खरीदार/सामान देने वाले की जाँच, सरकारी योजना की पात्रता, और कर्ज़ का जोखिम। मीरा कमाई की गारंटी नहीं देगी।',
       Marathi:
         'Ho, aadhi safe setup plan banavto: training, cost heads, buyer/supplier check, scheme eligibility ani loan risk. Income guarantee denar nahi.',
     });
@@ -698,8 +734,8 @@ function directAnswerForLatest(profile = {}, latestText = '') {
   if (/job|naukri|placement|internship|career/i.test(text)) {
     return localizedLine(profile, latestText, {
       English: 'Yes, I can help with a job path.',
-      Hinglish: 'Haan, Meera job path mein help kar sakti hai.',
-      Hindi: 'हाँ, मीरा job path में help कर सकती है.',
+      Hinglish: 'Haan, Meera naukri ke raste mein madad kar sakti hai.',
+      Hindi: 'हाँ, मीरा नौकरी के रास्ते में मदद कर सकती है।',
       Marathi: 'Ho, job path madhe madat karu shakto.',
     });
   }
@@ -709,16 +745,16 @@ function directAnswerForLatest(profile = {}, latestText = '') {
   ) {
     return localizedLine(profile, latestText, {
       English: 'Yes, Meera can help you build a practical training route.',
-      Hinglish: 'Haan, Meera practical training route banane mein help karegi.',
-      Hindi: 'हाँ, मीरा practical training route बनाने में help करेगी.',
+      Hinglish: 'Haan, Meera kaam seekhne ka vyavaharik rasta banane mein madad karegi.',
+      Hindi: 'हाँ, मीरा काम सीखने का व्यावहारिक रास्ता बनाने में मदद करेगी।',
       Marathi: 'Ho, Meera practical training route banavnyat madat karel.',
     });
   }
   if (profile.learner_goal?.intent === 'study' && /jee|neet|cuet|exam|board|marks|score|class|padh|study|homework|subject/i.test(text)) {
     return localizedLine(profile, latestText, {
       English: 'Yes, I can help with study planning.',
-      Hinglish: 'Haan, Meera study planning mein help kar sakti hai.',
-      Hindi: 'हाँ, मीरा study planning में help कर सकती है.',
+      Hinglish: 'Haan, Meera padhai ki yojana mein madad kar sakti hai.',
+      Hindi: 'हाँ, मीरा पढ़ाई की योजना में मदद कर सकती है।',
       Marathi: 'Ho, study planning madhe madat karu shakto.',
     });
   }
@@ -740,7 +776,8 @@ function buildStepwiseReply({
   const ack = updates.length ? updateLine(updates, profile, latestText) : '';
   if (!profileReady) {
     const nextField = nextBestIntakeField(missing, profile);
-    const nextQuestion = oneThingQuestion(nextField, profile, latestText);
+    const nextQuestion = nameConfirmationQuestion(previousProfile, profile, latestText, updates, previousAssistant) ||
+      oneThingQuestion(nextField, profile, latestText);
     const candidate = cleanCounselorReply(avoidRepeat(
       joinParts([ack, directAnswer, nextQuestion]),
       previousAssistant,
@@ -765,6 +802,28 @@ function buildStepwiseReply({
   if (replyMatchesLanguage(candidate, profile, latestText)) return candidate;
   const localizedReady = lowEducationProfile(profile, latestText) ? lowEducationLine(profile, latestText, 'ready') : readyReply(profile, latestText);
   return cleanCounselorReply(avoidRepeat(localizedReady, previousAssistant, profile, latestText));
+}
+
+function nameConfirmationQuestion(previousProfile = {}, profile = {}, latestText = '', updates = [], previousAssistant = '') {
+  const name = String(profile.name || '').trim();
+  const meaningfulOtherUpdates = updates.filter((item) => item !== 'name' && item !== 'goal');
+  const shortAnswerLooksLikeName = Boolean(shortNameCandidate(latestText));
+  const askedNameThenShortAnswer = previousAskedName(previousAssistant) && shortAnswerLooksLikeName;
+  if (
+    !name ||
+    previousProfile.name ||
+    (!askedNameThenShortAnswer && meaningfulOtherUpdates.length) ||
+    (!updates.includes('name') && !askedNameThenShortAnswer)
+  ) return '';
+  return localizedLine(profile, latestText, {
+    English: `I heard your name as ${name}. Is that correct?`,
+    Hinglish: `Meera ne aapka naam ${name} suna. Kya ye sahi hai?`,
+    Hindi: `मीरा ने आपका नाम ${name} सुना। क्या यह सही है?`,
+    Marathi: `Meera ne tumcha nav ${name} aikla. Barobar aahe ka?`,
+    Tamil: `Meera உங்கள் பெயரை ${name} என்று கேட்டது. இது சரியா?`,
+    Telugu: `Meera మీ పేరు ${name} అని విన్నది. ఇది సరేనా?`,
+    Odia: `Meera ଆପଣଙ୍କ ନାମ ${name} ବୋଲି ଶୁଣିଲା. ଏହା ଠିକ୍ କି?`,
+  });
 }
 
 function changedProfileFields(previous = {}, next = {}) {
@@ -798,8 +857,8 @@ function updateLine(updates = [], profile = {}, latestText = '') {
   }
   return localizedLine(profile, latestText, {
     English: 'Got it, I saved that.',
-    Hinglish: 'Theek hai, save kar liya.',
-    Hindi: 'ठीक है, सेव कर लिया।',
+    Hinglish: 'Theek hai, jankari rakh li.',
+    Hindi: 'ठीक है, सहेज लिया।',
     Marathi: 'Theek aahe, save kele.',
   });
 }
@@ -902,31 +961,31 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
   if (intent === 'study') {
     return localizedLine(profile, latestText, {
       English: 'Good, I have enough to make a study plan now. I will keep it focused on weak topics and daily practice.',
-      Hinglish: 'Theek hai, ab study plan ban sakta hai. Meera weak topics aur daily practice par focus rakhegi.',
-      Hindi: 'ठीक है, अब study plan बन सकता है. मीरा weak topics और daily practice पर focus रखेगी.',
+      Hinglish: 'Theek hai, ab padhai ki yojana ban sakti hai. Meera kamzor topics aur roz ki practice par dhyan rakhegi.',
+      Hindi: 'ठीक है, अब पढ़ाई की योजना बन सकती है। मीरा कमजोर हिस्सों और रोज़ के अभ्यास पर ध्यान रखेगी।',
       Marathi: 'Theek aahe, ata study plan banu shakto. Weak topics ani daily practice var focus thevu.',
     });
   }
   if (intent === 'job' || intent === 'college') {
     return localizedLine(profile, latestText, {
       English: 'Good, I have enough to build the pathway. I will show only matching jobs after proof and consent.',
-      Hinglish: 'Theek hai, pathway banane ke liye profile enough hai. Jobs sirf fit, proof aur consent ke baad dikhengi.',
-      Hindi: 'ठीक है, pathway बनाने के लिए profile enough है. Jobs सिर्फ fit, proof और consent के बाद दिखेंगी.',
+      Hinglish: 'Theek hai, rasta banane ke liye jankari kafi hai. Mauke sirf fit, saboot aur aapki anumati ke baad dikhengi.',
+      Hindi: 'ठीक है, रास्ता बनाने के लिए जानकारी काफी है। मौके सिर्फ मेल, सबूत और आपकी अनुमति के बाद दिखेंगे।',
       Marathi: 'Theek aahe, pathway sathi profile enough aahe. Jobs fit, proof ani consent nantarach disatil.',
     });
   }
   if (intent === 'training') {
     return localizedLine(profile, latestText, {
       English: 'Good, I can build the training route now. I will check safe travel, fees, proof, and placement risk.',
-      Hinglish: 'Theek hai, training route ban sakta hai. Meera safe travel, fees, proof aur placement risk check karegi.',
-      Hindi: 'ठीक है, training route बन सकता है. मीरा safe travel, fees, proof और placement risk check करेगी.',
+      Hinglish: 'Theek hai, seekhne ka rasta ban sakta hai. Meera surakshit aana-jaana, fees, saboot, aur kaam milne ka risk check karegi.',
+      Hindi: 'ठीक है, सीखने का रास्ता बन सकता है। मीरा सुरक्षित आना-जाना, फीस, सबूत और काम मिलने का जोखिम जाँचेगी।',
       Marathi: 'Theek aahe, training route banu shakto. Safe travel, fees, proof ani placement risk check karu.',
     });
   }
   return localizedLine(profile, latestText, {
     English: 'Good, I have enough for the next step. I will keep the pathway simple and tied to this profile.',
-    Hinglish: 'Theek hai, next step ke liye profile enough hai. Pathway simple aur isi profile se linked rahega.',
-    Hindi: 'ठीक है, next step के लिए profile enough है. Pathway simple और इसी profile से linked रहेगा.',
+    Hinglish: 'Theek hai, agle kadam ke liye jankari kafi hai. Rasta isi jankari se juda rahega.',
+    Hindi: 'ठीक है, अगले कदम के लिए जानकारी काफी है। रास्ता इसी जानकारी से जुड़ा रहेगा।',
     Marathi: 'Theek aahe, next step sathi profile enough aahe. Pathway simple ani ya profile shi linked rahil.',
   });
 }
@@ -1140,8 +1199,8 @@ export default async function handler(req, res) {
     const generated = await callClaudeJson({
       fallback,
       maxTokens: 420,
-      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. When asking about education, use learner words in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to click Generate Pathway and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
-      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If asking education, say it simply in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If enough information is available, say the next step briefly and tell the learner to click Generate Pathway. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
+      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. When asking about education, use learner words in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to press the pathway/rasta button and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
+      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If asking education, say it simply in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If enough information is available, say the next step briefly and tell the learner to press the pathway/rasta button. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
     });
 
     const mergedGeneratedProfile = mergeProfile(profile, generated.data.profile || {});
@@ -1152,10 +1211,15 @@ export default async function handler(req, res) {
     nextProfile = applySchoolStudyIntent(nextProfile, latestText);
     nextProfile = applyGeneralGoal(nextProfile, latestText);
     nextProfile = applyLowEducationSignal(nextProfile, latestText);
+    nextProfile = preserveSelectedLanguage(profile, nextProfile);
     nextProfile = withLanguageMetadata(nextProfile, latestText);
     nextProfile = scrubForeignScriptFields(nextProfile, latestText);
     if (suspiciousName(nextProfile.name)) {
       nextProfile.name = suspiciousName(profile.name) ? '' : profile.name || '';
+    }
+    if (previousAskedName(previousAssistant)) {
+      const heardName = shortNameCandidate(latestText);
+      if (heardName) nextProfile.name = heardName;
     }
     if (refusesLocation(latestText)) {
       nextProfile.location = '';

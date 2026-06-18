@@ -316,29 +316,29 @@ Object.assign(en.journey, {
   createDraftPassport: 'Create draft Skill Passport',
 });
 
-Object.assign(hinglish.btn, { generatePathway: 'Pathway banao' });
+Object.assign(hinglish.btn, { generatePathway: 'Rasta banao' });
 hinglish.profile = {
-  ready: 'Profile ready',
-  building: 'Profile ban raha hai',
-  sub: 'Meera chat ke saath profile bharti hai - long form nahi.',
+  ready: 'Jankari taiyar',
+  building: 'Jankari ban rahi hai',
+  sub: 'Meera baat-cheet se jankari banati hai - lamba form nahi.',
   name: 'Naam',
   education: 'Padhai',
   language: 'Bhasha',
   location: 'Jagah',
-  goal: 'Goal',
-  time: 'Time',
+  goal: 'Lakshya',
+  time: 'Samay',
   earningNeed: 'Kamai ki zaroorat',
   tapToAdd: 'add karein',
   discovering: 'samajh rahe hain...',
   pending: 'Baaki',
-  high: 'High',
-  readyLabel: 'Ready',
+  high: 'Zyada',
+  readyLabel: 'Taiyar',
   nextQuestion: 'Agla sawal',
-  completeEnough: 'Pathway ke liye profile enough hai.',
+  completeEnough: 'Raste ke liye jankari kafi hai.',
   stillNeeds: 'Meera ko abhi chahiye: {need}.',
-  privateNote: 'Learner permission ke bina kuch bhi share nahi hota.',
-  profileComplete: 'Recommendation ke liye profile enough hai.',
-  counselorNeeds: 'Counselor ko abhi kuch details chahiye.',
+  privateNote: 'Aapki anumati ke bina kuch bhi share nahi hota.',
+  profileComplete: 'Salah ke liye jankari kafi hai.',
+  counselorNeeds: 'Meera ko abhi kuch aur baat chahiye.',
 };
 Object.assign(hinglish.pathway, {
   empty: 'Counselor profile ready hone ke baad recommendations generate karein.',
@@ -425,11 +425,11 @@ Object.assign(hinglish.journey, {
   createDraftPassport: 'Draft Hunar Passport banayein',
 });
 
-Object.assign(hi.btn, { generatePathway: 'Pathway बनाएं' });
+Object.assign(hi.btn, { generatePathway: 'रास्ता बनाएं' });
 hi.profile = {
-  ready: 'प्रोफाइल तैयार',
-  building: 'प्रोफाइल बन रही है',
-  sub: 'मीरा chat के साथ profile भरती है - long form नहीं.',
+  ready: 'जानकारी तैयार',
+  building: 'जानकारी बन रही है',
+  sub: 'मीरा बात-चीत से जानकारी बनाती है - लंबा फॉर्म नहीं.',
   name: 'नाम',
   education: 'पढ़ाई',
   language: 'भाषा',
@@ -443,11 +443,11 @@ hi.profile = {
   high: 'ज्यादा',
   readyLabel: 'तैयार',
   nextQuestion: 'अगला सवाल',
-  completeEnough: 'Pathway के लिए profile पर्याप्त है.',
+  completeEnough: 'रास्ते के लिए जानकारी पर्याप्त है.',
   stillNeeds: 'मीरा को अभी चाहिए: {need}.',
-  privateNote: 'Learner की permission के बिना कुछ भी share नहीं होता.',
-  profileComplete: 'Recommendation के लिए profile पर्याप्त है.',
-  counselorNeeds: 'Counselor को अभी कुछ details चाहिए.',
+  privateNote: 'आपकी अनुमति के बिना कुछ भी साझा नहीं होता.',
+  profileComplete: 'सुझाव के लिए जानकारी पर्याप्त है.',
+  counselorNeeds: 'मीरा को अभी कुछ और बात चाहिए.',
 };
 Object.assign(hi.pathway, {
   empty: 'Counselor profile ready होने के बाद recommendations generate करें.',

@@ -3,19 +3,19 @@ const LANGUAGE_STYLES = {
     name: 'English',
     script: 'Latin',
     stt_language_code: 'en-IN',
-    instruction: 'Reply in clear simple English with warm counselor wording, not generic AI wording.',
+    instruction: 'Reply in clear simple English with warm counselor wording, not generic AI wording. Keep it audio-friendly and short.',
   },
   Hinglish: {
     name: 'Hinglish',
     script: 'Latin',
     stt_language_code: 'hi-IN',
-    instruction: 'Reply in simple Hinglish using Roman script, matching the user style. Use Meera as a female counselor or neutral wording; avoid male first-person forms like karunga, banaunga, dunga.',
+    instruction: 'Reply in simple Hinglish using Roman script, matching the user style. Prefer rural-friendly Hindi words in Latin script: jankari, hunar, naukri, vyapar, saboot, rasta, madad. Avoid English career words like profile, skill, job, internship, business, resume, proof, pathway unless the learner used them. Use Meera as a female counselor or neutral wording; avoid male first-person forms like karunga, banaunga, dunga.',
   },
   Hindi: {
     name: 'Hindi',
     script: 'Devanagari',
     stt_language_code: 'hi-IN',
-    instruction: 'Reply in simple Hindi using Devanagari script. Use Meera as a female counselor or neutral wording; avoid male first-person forms.',
+    instruction: 'Reply in simple Hindi using Devanagari script. Prefer rural-friendly words: जानकारी, हुनर, नौकरी, व्यापार, सबूत, रास्ता, मदद. Avoid English career words like profile, skill, job, internship, business, resume, proof, pathway unless the learner used them. Use Meera as a female counselor or neutral wording; avoid male first-person forms.',
   },
   Odia: {
     name: 'Odia',
@@ -142,7 +142,7 @@ export function detectLanguageStyle(text = '', profile = {}) {
 
 export function languageInstruction(profile = {}, latestText = '') {
   const detected = detectLanguageStyle(latestText, profile);
-  return `${detected.instruction} The latest learner message decides the reply language and script; if it differs from the saved profile language, follow the latest message. Keep the answer in ${detected.name} unless the learner explicitly switches language. Do not say you are an AI/model. Do not use markdown, stars, bullets, headings, or long profile recaps. Meera is female; use female or neutral wording for Meera, and do not assume the learner's gender.`;
+  return `${detected.instruction} The latest learner message decides the reply language and script; if it differs from the saved profile language, follow the latest message. Keep the answer in ${detected.name} unless the learner explicitly switches language. Speak like a field counselor on a voice call: one simple idea at a time, no formal product words, no generic AI phrasing. Do not say you are an AI/model. Do not use markdown, stars, bullets, headings, or long profile recaps. Meera is female; use female or neutral wording for Meera, and do not assume the learner's gender.`;
 }
 
 export function languageVoiceProfile(profile = {}, latestText = '') {

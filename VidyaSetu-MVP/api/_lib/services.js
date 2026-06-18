@@ -1422,8 +1422,8 @@ function needsGoalClarificationBeforePathway(profile = {}, question = '') {
 
 function goalClarificationMessage(profile = {}, question = '') {
   const kind = simpleLanguageKind(profile);
-  if (kind === 'hi') return 'पहले एक बात बताइए: मदद पढ़ाई में चाहिए, कोई काम का skill सीखना है, नौकरी चाहिए, internship चाहिए, या छोटा business शुरू करना है?';
-  if (kind === 'hinglish') return 'Pehle ek baat batao: help padhai mein chahiye, kaam ka skill seekhna hai, job chahiye, internship chahiye, ya chhota business start karna hai?';
+  if (kind === 'hi') return 'पहले एक बात बताइए: मदद पढ़ाई में चाहिए, कोई काम का हुनर सीखना है, नौकरी चाहिए, काम सीखने का मौका चाहिए, या छोटा व्यापार शुरू करना है?';
+  if (kind === 'hinglish') return 'Pehle ek baat batao: padhai mein madad chahiye, kaam ka hunar seekhna hai, naukri chahiye, kaam seekhne ka avsar chahiye, ya chhota vyapar shuru karna hai?';
   return 'First tell Meera one thing: do you want help with study, learning a work skill, finding a job, internship, or starting a small business?';
 }
 
