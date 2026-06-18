@@ -939,7 +939,7 @@ function App() {
     }
   }
 
-  async function speakReply(text, nextProfile = profile, messageIndex = null) {
+  async function speakReply(text, nextProfile = profile, messageIndex = null, options = {}) {
     if (!text || typeof window === 'undefined') {
       setVoiceStatus('Voice playback is not supported on this browser.');
       return;
@@ -963,7 +963,7 @@ function App() {
     setSpeakingIndex(messageIndex);
     setVoiceStatus(`Preparing ${option.label} voice...`);
 
-    const preferServerVoice = option.name !== 'English';
+    const preferServerVoice = Boolean(options.forceServerVoice) || option.name !== 'English';
     if (preferServerVoice) {
       const serverSpokeFirst = await playServerVoice(cleanText, nextProfile, messageIndex, requestId, option);
       if (serverSpokeFirst) return;
@@ -1680,10 +1680,14 @@ function App() {
           {activeTab === 'pathways' && (
             <PathwaysTab
               pathway={pathway}
+              profile={profile}
               selectedRoute={selectedRoute}
               setSelectedRoute={setSelectedRoute}
               generatePathway={generatePathway}
               createJourney={createJourney}
+              speakReply={speakReply}
+              speakingIndex={speakingIndex}
+              stopSpeaking={stopSpeaking}
               t={t}
             />
           )}
@@ -2278,6 +2282,62 @@ function pathwaySourceItems(route = {}) {
     .slice(0, 4);
 }
 
+function voiceSegment(value = '', fallback = '') {
+  return uiText(value, fallback)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sentence(value = '') {
+  const clean = voiceSegment(value);
+  if (!clean) return '';
+  return /[.!?।]$/.test(clean) ? clean : `${clean}.`;
+}
+
+function limitedVoiceScript(parts = [], maxLength = 860) {
+  const output = [];
+  let used = 0;
+  parts
+    .map(sentence)
+    .filter(Boolean)
+    .forEach((part) => {
+      if (used + part.length + 1 > maxLength) return;
+      output.push(part);
+      used += part.length + 1;
+    });
+  return output.join(' ').trim();
+}
+
+function pathwayVoiceScript({
+  activeRoute,
+  firstSource,
+  promiseText,
+  routeSummary,
+  routeTitle,
+  simpleCheck,
+  simpleRole,
+  simpleStep,
+  simpleWhy,
+  t = getTranslations('English'),
+}) {
+  if (!activeRoute) return '';
+  const copy = t.pathway || {};
+  const resourceTitle = firstSource?.title ? voiceSegment(firstSource.title) : '';
+  return limitedVoiceScript([
+    copy.voiceIntro || 'Meera is explaining this pathway.',
+    routeTitle,
+    routeSummary,
+    `${copy.pathwayLabel || 'Pathway'}: ${simpleRole}. ${simpleStep}`,
+    `${copy.whyThisRoute || 'Why this route'}: ${simpleWhy}`,
+    `${copy.checkBefore || 'Check before acting'}: ${simpleCheck}. ${promiseText}`,
+    resourceTitle
+      ? `${copy.firstResource || 'First resource'}: ${resourceTitle}. ${copy.resourceVoiceHint || 'Open it, use the first useful page or lesson, and save one note or voice proof.'}`
+      : '',
+  ]);
+}
+
 function TracePanel({ trace, nextAction }) {
   const facts = Array.isArray(trace?.matched_facts) ? trace.matched_facts : [];
   const blockers = Array.isArray(trace?.blockers) ? trace.blockers : [];
@@ -2305,9 +2365,21 @@ function TracePanel({ trace, nextAction }) {
   );
 }
 
-function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway, createJourney, t = getTranslations('English') }) {
+function PathwaysTab({
+  pathway,
+  profile = {},
+  selectedRoute,
+  setSelectedRoute,
+  generatePathway,
+  createJourney,
+  speakReply,
+  speakingIndex,
+  stopSpeaking,
+  t = getTranslations('English'),
+}) {
   const routes = Array.isArray(pathway?.routes) && pathway.routes.length ? pathway.routes : Array.isArray(pathway?.cards) ? pathway.cards : [];
   const activeRoute = selectedRoute || routes[0] || null;
+  const autoVoiceKeyRef = useRef('');
   const academicMode = routes.some((route) => (
     uiText(route.id).startsWith('class12') ||
     uiText(route.id).startsWith('school') ||
@@ -2348,6 +2420,46 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
     uiText(activeRoute?.first_step, uiText(activeRoute?.next_action, 'Build the learner journey and start the first proof task.')),
   );
   const promiseText = uiText(pathwayDetail.not_a_promise, 'This is not a guarantee. Sources, contacts, fees, and consent must be checked before action.');
+  const voiceKey = activeRoute ? `pathway:${uiText(activeRoute.id, selectedIndex >= 0 ? `route-${selectedIndex}` : routeTitle)}` : '';
+  const isPathwaySpeaking = Boolean(voiceKey && speakingIndex === voiceKey);
+  const narrationText = useMemo(
+    () =>
+      pathwayVoiceScript({
+        activeRoute,
+        firstSource,
+        promiseText,
+        routeSummary,
+        routeTitle,
+        simpleCheck,
+        simpleRole,
+        simpleStep,
+        simpleWhy,
+        t,
+      }),
+    [activeRoute, firstSource, promiseText, routeSummary, routeTitle, simpleCheck, simpleRole, simpleStep, simpleWhy, t],
+  );
+  const narrationProfile = {
+    ...profile,
+    preferred_language: profile.preferred_language || profile.language || 'Hinglish',
+  };
+  const playPathwayVoice = () => {
+    if (!narrationText || typeof speakReply !== 'function') return;
+    if (isPathwaySpeaking) {
+      stopSpeaking?.();
+      return;
+    }
+    speakReply(narrationText, narrationProfile, voiceKey, { forceServerVoice: true, source: 'pathway' });
+  };
+  useEffect(() => {
+    if (!narrationText || !voiceKey || typeof speakReply !== 'function') return undefined;
+    const key = `${voiceKey}:${narrationText.slice(0, 80)}`;
+    if (autoVoiceKeyRef.current === key) return undefined;
+    autoVoiceKeyRef.current = key;
+    const timer = window.setTimeout(() => {
+      speakReply(narrationText, narrationProfile, voiceKey, { forceServerVoice: true, source: 'pathway_auto' });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [narrationText, narrationProfile.preferred_language, speakReply, voiceKey]);
   const routeChoiceStrip = routes.length > 1 && (
     <div className="reslinks route-choice-strip route-choice-strip-top">
       {routes.map((route, index) => {
@@ -2377,6 +2489,16 @@ function PathwaysTab({ pathway, selectedRoute, setSelectedRoute, generatePathway
             <span>{optionLabel(selectedIndex >= 0 ? selectedIndex : 0)}</span>
             <strong>{routeTitle}</strong>
             <small>{routeSummary}</small>
+          </div>
+          <div className="pathway-voice-guide">
+            <div>
+              <b>{t.pathway.listenTitle || 'Hear this pathway'}</b>
+              <p>{t.pathway.listenHint || 'Meera will explain the route, first step, safety checks, and resource to open first.'}</p>
+            </div>
+            <button className="voice-replay-button pathway-listen-button" onClick={playPathwayVoice} type="button">
+              {isPathwaySpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              {isPathwaySpeaking ? (t.counselor?.speaking || 'Speaking') : (t.counselor?.listen || 'Listen')}
+            </button>
           </div>
           <div className="simple-pathway-sections">
             <section>

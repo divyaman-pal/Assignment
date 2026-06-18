@@ -2156,6 +2156,37 @@ button:disabled {
   line-height: 1.45;
 }
 
+.pathway-voice-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  border: 1px solid rgba(39, 94, 254, 0.16);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #f7f9ff;
+}
+
+.pathway-voice-guide b {
+  display: block;
+  color: #101828;
+  font-size: 0.88rem;
+}
+
+.pathway-voice-guide p {
+  margin: 3px 0 0;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.38;
+}
+
+.pathway-listen-button {
+  flex: 0 0 auto;
+  margin-top: 0;
+  background: #fff;
+}
+
 .simple-pathway-sections {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2298,6 +2329,15 @@ button:disabled {
 
   .simple-pathway-head small {
     grid-column: 1;
+  }
+
+  .pathway-voice-guide {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pathway-listen-button {
+    width: 100%;
   }
 }
 
