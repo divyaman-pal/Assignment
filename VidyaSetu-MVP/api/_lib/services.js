@@ -377,10 +377,10 @@ export function fallbackProfileFromTranscript(transcript = '') {
   const academicPrep = isAcademicPrepText(lower);
   const schoolStudy = isSchoolStudyText(lower);
   const nameMatch =
-    transcript.match(/(?:मेरा नाम|मेरे नाम|नाम|माझे नाव|माझं नाव|मो नाम|ମୋ ନାମ|ମୋର ନାମ|আমার নাম|আমি|என் பெயர்|எனது பெயர்)\s+([\p{L} .]{2,40}?)(?:\s+(?:है|आहे|ଅଟେ|আছে|হয়|ஆகும்)|।|\.|,|$)/iu) ||
-    transcript.match(/(?:mera naam|mora naam|my name is|name\s*[-:]?|naam\s*[-:]?)\s+([\p{L} .]{2,40}?)(?:\s+hai|\.|,|$)/iu) ||
+    transcript.match(/(?:मेरा नाम|मेरे नाम|नाम|माझे नाव|माझं नाव|मो नाम|ମୋ ନାମ|ମୋର ନାମ|আমার নাম|আমি|என் பெயர்|எனது பெயர்)\s+([\p{L}\p{M} .]{2,40}?)(?:\s+(?:है|आहे|ଅଟେ|আছে|হয়|ஆகும்)|।|\.|,|$)/iu) ||
+    transcript.match(/(?:mera naam|mora naam|my name is|name\s*[-:]?|naam\s*[-:]?)\s+([\p{L}\p{M} .]{2,40}?)(?:\s+hai|\.|,|$)/iu) ||
     transcript.match(/(?:main|mai|i am)\s+([\p{L}]{2,30})\s+[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)?\s+(?:se|से)\b/iu) ||
-    transcript.match(/(?:main|mai|i am)\s+([\p{L} ]{2,30}?)(?:\s+hoon|\s+hu|\s+hun|,|\.|$)/iu);
+    transcript.match(/(?:main|mai|i am)\s+([\p{L}\p{M} ]{2,30}?)(?:\s+hoon|\s+hu|\s+hun|,|\.|$)/iu);
   const detectedName = cleanName(nameMatch?.[1] || '');
   const classMatch = transcript.match(/(?:class|क्लास|कक्षा|କ୍ଲାସ|ক্লাস|வகுப்பு)\s*(\d{1,2})|(\d{1,2})(?:st|nd|rd|th|vi|pass)/i);
   const collegeStageMatch = transcript.match(/\b((?:btech|b\.tech|mtech|m\.tech|bca|mca|bcom|b\.com|b\.?a\b|bsc|b\.sc|diploma|iti|polytechnic|engineering)[A-Za-z .]*(?:first|second|third|fourth|1st|2nd|3rd|4th|final)?\s*(?:year)?)\b/i);
@@ -574,17 +574,17 @@ export function inferLearnerGoal(text = '', hints = {}) {
     };
   }
   const explicitEnterprise =
-    /self.?employment|business|enterprise|startup setup|start.*own|apna kaam|ghar se kaam|home unit|open.*shop|apni.*shop|shop.*start|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|farming enterprise|loan|mudra|pmegp|pmfme|kvk|district industries|dic/i.test(text);
+    /self.?employment|business|enterprise|startup setup|start.*own|apna kaam|ghar se kaam|home unit|open.*shop|apni.*shop|shop.*start|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|farming enterprise|loan|mudra|pmegp|pmfme|kvk|district industries|dic|खुद का|अपना काम|अपना.*व्यापार|अपना.*व्यवसाय|छोटा व्यापार|छोटा व्यवसाय|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|कारोबार|धंधा|मशरूम|खेती|मुर्गी|पोल्ट्री|बकरी|डेयरी|खाद्य प्रसंस्करण|लोन|कर्ज|सरकारी योजना/i.test(text);
   const explicitProofOrEmployment =
     /local job|job chahiye|naukri|rpl|certificate|proof|sample|workshop mein|workshop experience|seekha hai|apprentice|apprenticeship/i.test(text);
-  if (explicitEnterprise && (!explicitProofOrEmployment || /loan|mudra|pmegp|business|enterprise|start.*own|apna kaam|ghar se kaam|home unit|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery/i.test(text))) {
+  if (explicitEnterprise && (!explicitProofOrEmployment || /loan|mudra|pmegp|business|enterprise|start.*own|apna kaam|ghar se kaam|home unit|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|खुद का|अपना.*व्यापार|अपना.*व्यवसाय|छोटा व्यापार|छोटा व्यवसाय|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|कारोबार|धंधा|मशरूम|खेती|मुर्गी|पोल्ट्री|बकरी|डेयरी|लोन|कर्ज|सरकारी योजना/i.test(text))) {
     return {
       type: 'self_employment_enterprise',
       label: /poultry|chicken|broiler|layer/i.test(text)
         ? 'Poultry enterprise setup'
-        : /mushroom/i.test(text)
+        : /mushroom|मशरूम/i.test(text)
           ? 'Mushroom enterprise setup'
-          : /food processing|pickle|papad|bakery|masala/i.test(text)
+          : /food processing|pickle|papad|bakery|masala|खाद्य प्रसंस्करण|अचार|पापड़|बेकरी|मसाला/i.test(text)
             ? 'Food processing micro-enterprise'
             : 'Self-employment enterprise setup',
       intent: 'self_employment',
@@ -833,10 +833,10 @@ function detectAspirations(text = '') {
     /tailor|silai|stitch|sewing|garment/.test(text) ? 'tailoring' : null,
     /cooking|hotel|cook|chef|kitchen|hospitality/.test(text) ? 'hospitality cooking' : null,
     /agriculture|farming|kheti|farm/.test(text) ? 'agriculture skills' : null,
-    /poultry|chicken|broiler|layer/.test(text) ? 'poultry farming enterprise' : null,
-    /mushroom/.test(text) ? 'mushroom farming enterprise' : null,
-    /food processing|pickle|papad|bakery|masala/.test(text) ? 'food processing micro-enterprise' : null,
-    /goat/.test(text) ? 'goat farming enterprise' : null,
+    /poultry|chicken|broiler|layer|मुर्गी|पोल्ट्री/.test(text) ? 'poultry farming enterprise' : null,
+    /mushroom|मशरूम/.test(text) ? 'mushroom farming enterprise' : null,
+    /food processing|pickle|papad|bakery|masala|खाद्य प्रसंस्करण|अचार|पापड़|बेकरी|मसाला/.test(text) ? 'food processing micro-enterprise' : null,
+    /goat|बकरी/.test(text) ? 'goat farming enterprise' : null,
     /drone/.test(text) ? 'drone operations' : null,
     /customer|call center|customer service/.test(text) ? 'customer service' : null,
     /video|videos|creator|content creation|digital content/.test(text) ? 'video creation' : null,
@@ -873,6 +873,7 @@ function detectRelocationPreference(text = '') {
 
 function cleanName(value = '') {
   return value
+    .replace(/^(?:मेरा नाम|मेरे नाम|नाम|mera naam|my name is|naam)\s+/iu, '')
     .replace(/\b(hai|hu|hun|hoon)$/i, '')
     .replace(/\s+(है|हूँ|हूं|आहे|ଅଟେ|ହେଉଛି|আছে|হয়|ஆகும்)$/iu, '')
     .trim();

@@ -76,6 +76,7 @@ function applyLatestSignals(profile = {}, latestText = '') {
 }
 
 function applyAcademicIntent(profile = {}, latestText = '') {
+  if (educationBackgroundOnly(latestText) && profile.learner_goal?.intent && profile.learner_goal.intent !== 'study') return profile;
   if (!isAcademicPrepText(latestText)) return profile;
   const extracted = fallbackProfileFromTranscript(latestText);
   return {
@@ -98,6 +99,7 @@ function applyAcademicIntent(profile = {}, latestText = '') {
 }
 
 function applyEntranceExamIntent(profile = {}, latestText = '') {
+  if (educationBackgroundOnly(latestText) && profile.learner_goal?.intent && profile.learner_goal.intent !== 'study') return profile;
   if (!isEntranceExamPrepText(latestText)) return profile;
   const extracted = fallbackProfileFromTranscript(latestText);
   const exam = extracted.academic_goal?.exam || 'entrance exam';
@@ -132,6 +134,7 @@ function applyEntranceExamIntent(profile = {}, latestText = '') {
 }
 
 function applySchoolStudyIntent(profile = {}, latestText = '') {
+  if (educationBackgroundOnly(latestText) && profile.learner_goal?.intent && profile.learner_goal.intent !== 'study') return profile;
   if (!isSchoolStudyText(latestText) || isAcademicPrepText(latestText) || isEntranceExamPrepText(latestText)) return profile;
   const extracted = fallbackProfileFromTranscript(latestText);
   return {
@@ -181,14 +184,15 @@ function applyGeneralGoal(profile = {}, latestText = '') {
       latestText,
     );
   const shouldUseLatest =
-    !existingGoal ||
+    !(educationBackgroundOnly(latestText) && existingGoal?.intent && existingGoal.intent !== 'study') &&
+    (!existingGoal ||
     (['open_counseling', 'goal_clarification_needed'].includes(existingGoal.type) && hasMeaningfulExtractedGoal) ||
     extractedGoal?.type === 'informal_skill_validation' ||
     extractedGoal?.type === 'entrance_exam_prep' ||
     extractedGoal?.intent === 'study' ||
     latestChangesLane ||
     (latestExplicitChange && hasMeaningfulExtractedGoal) ||
-    (existingGoal.intent === 'unknown' && hasMeaningfulExtractedGoal);
+    (existingGoal.intent === 'unknown' && hasMeaningfulExtractedGoal));
   const goal = shouldUseLatest ? extractedGoal : existingGoal;
   const next = {
     ...profile,
@@ -221,6 +225,17 @@ function refusesLocation(text = '') {
 
 function refusesName(text = '') {
   return /naam.*nahi|name.*nahi|naam.*private|name.*private|abhi.*naam.*nahi|don't want.*name|do not want.*name/i.test(text);
+}
+
+function educationBackgroundOnly(text = '') {
+  const value = String(text || '').toLowerCase();
+  const mentionsEducationLevel =
+    /class\s*\d{1,2}|\d{1,2}(?:st|nd|rd|th)\s*(?:tak|तक)|क्लास\s*\d{1,2}|कक्षा\s*\d{1,2}|पांचवी|पाँचवी|5वीं|5वी/i.test(value);
+  const saysLimitedStudy =
+    /zyada\s+padhai\s+nahi|padhai\s+(?:nahi|nahin|nhi)|sirf.*padh|bas.*padh|tak\s+hi\s+pad|school.*chhod|ज़्यादा\s+पढ़ाई\s+नहीं|ज्यादा\s+पढ़ाई\s+नहीं|पढ़ाई\s+नहीं|तक\s+ही\s+पढ़|तक\s+पढ़|स्कूल.*छोड़/i.test(value);
+  const asksAcademicHelp =
+    /help.*subject|subject.*help|exam|marks|score|board|homework|chapter|ncert|cbse|jee|neet|परीक्षा|नंबर|अंक|होमवर्क|अध्याय|विषय.*मदद|सब्जेक्ट.*मदद/i.test(value);
+  return (mentionsEducationLevel || saysLimitedStudy) && !asksAcademicHelp;
 }
 
 function lowEducationText(text = '') {
@@ -431,9 +446,16 @@ function previousAskedName(previousAssistant = '') {
 }
 
 function shortNameCandidate(latestText = '') {
-  const text = String(latestText || '')
+  const raw = String(latestText || '')
     .replace(/[।.!?]+$/g, '')
     .replace(/\s+/g, ' ')
+    .trim();
+  const spokenName =
+    raw.match(/(?:मेरा नाम|मेरे नाम|नाम|mera naam|my name is|naam)\s+([\p{L}\p{M} .]{2,40}?)(?:\s+(?:है|हूँ|हूं|hai|hoon|hun)|$)/iu)?.[1]?.trim() ||
+    raw.match(/(?:मैं|main|mai|i am)\s+([\p{L}\p{M} .]{2,40}?)(?:\s+(?:हूँ|हूं|hu|hun|hoon)|$)/iu)?.[1]?.trim();
+  const text = (spokenName || raw)
+    .replace(/^(?:मेरा नाम|मेरे नाम|नाम|mera naam|my name is|naam)\s+/iu, '')
+    .replace(/\s+(है|हूँ|हूं|hai|hoon|hun)$/iu, '')
     .trim();
   if (!text || text.length < 2 || text.length > 40) return '';
   if (/^(yes|haan|han|ha|ji|sahi|correct|no|nahi|nahin|नहीं|हाँ|हां|जी|सही|ठीक)$/i.test(text)) return '';
@@ -554,6 +576,9 @@ function requiredFieldsForProfile(profile = {}) {
   }
   if (['informal_skill_validation', 'vocational_training', 'skill_pathway_exploration'].includes(goalType)) {
     return ['location', 'skill_signal', 'time_available', 'mobility_signal'];
+  }
+  if (goalType === 'self_employment_enterprise' || profile.learner_goal?.intent === 'self_employment') {
+    return ['location', 'skill_signal', 'time_available', 'mobility_signal', 'phone_access'];
   }
   if (lowEducation) {
     return ['skill_signal', 'location', 'time_available', 'mobility_signal'];
@@ -719,7 +744,7 @@ function directAnswerForLatest(profile = {}, latestText = '') {
         'Ho, mi hirer outreach tayar karu shakto, pan proof/resume, target role, location/relocation ani consent clear zalyavar.',
     });
   }
-  if (/scheme|loan|business|startup|self.employ|mushroom|poultry|goat|bakri|enterprise/i.test(text)) {
+  if (/scheme|loan|business|startup|self.employ|mushroom|poultry|goat|bakri|enterprise|मशरूम|खेती|व्यापार|व्यवसाय|बिजनेस|बिज़नेस|कारोबार|धंधा|लोन|कर्ज|योजना|पोल्ट्री|बकरी/i.test(text)) {
     return localizedLine(profile, latestText, {
       English:
         'Yes, I can build a safe setup plan first: training, cost heads, buyer/supplier checks, scheme eligibility, and loan risk. I will not promise income.',
