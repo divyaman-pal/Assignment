@@ -57,10 +57,17 @@ function mergeLearnerGoal(baseGoal = {}, nextGoal = {}, latestText = '') {
   if (!hasValue(nextGoal)) return baseGoal;
   if (!baseGoal || isGenericGoal(baseGoal)) return nextGoal;
   if (isGenericGoal(nextGoal)) return baseGoal;
+  if (baseGoal.intent === 'job' && nextGoal.type === 'skill_pathway_exploration' && !latestExplicitGoalSwitch(latestText)) return baseGoal;
   if (baseGoal.intent === 'job' && nextGoal.intent === 'college' && latestIsBackgroundContext(latestText)) return baseGoal;
   if (baseGoal.intent === 'job' && nextGoal.intent === 'career' && latestIsBackgroundContext(latestText)) return baseGoal;
   if (goalSpecificity(baseGoal) > goalSpecificity(nextGoal) && latestIsBackgroundContext(latestText)) return baseGoal;
   return goalSpecificity(nextGoal) >= goalSpecificity(baseGoal) ? nextGoal : baseGoal;
+}
+
+function latestExplicitGoalSwitch(latestText = '') {
+  return /\b(?:change|switch|instead|not that|actually now|ab\s+(?:mujhe|sirf|bas)|sirf|bas|only)\b|अब\s+(?:मुझे|सिर्फ|बस)|सिर्फ|बस/i.test(
+    String(latestText || ''),
+  );
 }
 
 function mergeProfile(base = {}, update = {}, { latestText = '' } = {}) {
@@ -107,6 +114,7 @@ function applyLatestSignals(profile = {}, latestText = '') {
     if (key === 'learner_goal') return;
     if (Array.isArray(value)) {
       if (key === 'aspirations' || key === 'skills' || key === 'content_preferences' || key === 'support_needs') {
+        if ((key === 'aspirations' || key === 'skills') && asksAboutProofUse(latestText)) return;
         const nextValues = meaningfulArraySignals(value);
         if (nextValues.length) {
           const previousValues = Array.isArray(next[key]) ? next[key] : [];
@@ -264,6 +272,78 @@ function applyGeneralGoal(profile = {}, latestText = '') {
   return next;
 }
 
+function exactGoalFromProfileSignals(profile = {}, latestText = '') {
+  const signalText = [
+    latestText,
+    profile.learner_goal?.label,
+    profile.learner_goal?.type,
+    ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
+    ...(Array.isArray(profile.skills) ? profile.skills : []),
+  ]
+    .join(' ')
+    .toLowerCase();
+  const directGoal = inferLearnerGoal(signalText, {
+    aspirations: [...(profile.aspirations || []), ...(profile.skills || [])],
+  });
+  const officeJobSignal =
+    /computer basics|typing|data entry|computer operator|front desk|reception|billing|office assistant|office job|local office|bpo|call center|customer service|retail billing/i.test(
+      signalText,
+    ) &&
+    /job|naukri|naukari|nokri|placement|role|work|kaam|day shift|turant|immediate/i.test(signalText);
+  if (officeJobSignal) {
+    return {
+      type: 'local_office_job',
+      label: /customer service/i.test(signalText)
+        ? 'Computer typing customer service job search'
+        : /data entry|computer operator/i.test(signalText)
+          ? 'Computer typing data-entry job search'
+          : 'Local office computer job search',
+      intent: 'job',
+      needs_location_for_offline: true,
+      recommended_next_step:
+        'Build simple typing/customer-service proof, shortlist nearby day-shift office roles, then apply only with learner consent.',
+    };
+  }
+  if (directGoal?.intent && directGoal.intent !== 'unknown' && directGoal.type !== 'skill_pathway_exploration') {
+    return directGoal;
+  }
+  return null;
+}
+
+function preserveExactGoalFromSignals(profile = {}, latestText = '', previousProfile = {}) {
+  const exactGoal = exactGoalFromProfileSignals(profile, latestText);
+  const currentGoal = profile.learner_goal || {};
+  const previousGoal = previousProfile.learner_goal || {};
+  const shouldUseExact =
+    exactGoal &&
+    (isGenericGoal(currentGoal) ||
+      currentGoal.type === 'skill_pathway_exploration' ||
+      goalSpecificity(exactGoal) >= goalSpecificity(currentGoal) ||
+      (currentGoal.intent === exactGoal.intent && !latestExplicitGoalSwitch(latestText)));
+  const shouldRestorePrevious =
+    previousGoal?.intent &&
+    previousGoal.intent !== 'unknown' &&
+    (isGenericGoal(currentGoal) || currentGoal.type === 'skill_pathway_exploration') &&
+    !latestExplicitGoalSwitch(latestText);
+  const learnerGoal = shouldUseExact ? exactGoal : shouldRestorePrevious ? previousGoal : currentGoal;
+  const aspirations = [...(profile.aspirations || [])];
+  if (learnerGoal?.type === 'local_office_job') {
+    ['computer basics', 'typing', 'customer service'].forEach((item) => {
+      if (new RegExp(item.replace(/\s+/g, '\\s+'), 'i').test(
+        `${latestText} ${(profile.aspirations || []).join(' ')} ${(profile.skills || []).join(' ')}`,
+      ) && !aspirations.some((existing) => existing.toLowerCase() === item)) {
+        aspirations.push(item);
+      }
+    });
+  }
+  return {
+    ...profile,
+    learner_goal: learnerGoal,
+    aspirations: aspirations.length ? aspirations : profile.aspirations,
+    academic_goal: learnerGoal?.intent && learnerGoal.intent !== 'study' ? null : profile.academic_goal,
+  };
+}
+
 function refusesLocation(text = '') {
   return /city.*nahi|location.*nahi|jagah.*nahi|abhi nahi batana|city abhi nahi batana|location abhi nahi/i.test(text);
 }
@@ -416,6 +496,15 @@ const LOW_EDUCATION_COPY = {
 
 function lowEducationLine(profile = {}, latestText = '', key = 'goal') {
   const language = languageVoiceProfile(profile, latestText).preferred_language;
+  if (key === 'ready') {
+    const readyOverride = {
+      Marathi: 'ठीक आहे, रस्ता बनवण्यासाठी माहिती पुरेशी आहे. आता Rasta बटण दाबा; अजून प्रश्न असेल तर Meera ला इथे विचारा.',
+      Odia: 'ଠିକ ଅଛି, ରାସ୍ତା ବନାଇବା ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। ଏବେ Rasta button ଦବାନ୍ତୁ; ଅନ୍ୟ ପ୍ରଶ୍ନ ଥିଲେ Meera କୁ ଏଠି ପଚାରନ୍ତୁ।',
+      Bengali: 'ঠিক আছে, রাস্তা বানানোর জন্য তথ্য যথেষ্ট। এখন Rasta button চাপুন; আর প্রশ্ন থাকলে এখানেই Meera কে জিজ্ঞেস করুন।',
+      Tamil: 'சரி, பாதை உருவாக்க தகவல் போதும். இப்போது Rasta button அழுத்துங்கள்; வேறு கேள்வி இருந்தால் Meera-வை இங்கே கேளுங்கள்.',
+    };
+    if (readyOverride[language]) return readyOverride[language];
+  }
   const copy = LOW_EDUCATION_COPY[language] || LOW_EDUCATION_COPY.Hinglish;
   return copy[key] || LOW_EDUCATION_COPY.Hinglish[key] || LOW_EDUCATION_COPY.English[key] || '';
 }
@@ -629,7 +718,7 @@ function requiredFieldsForProfile(profile = {}) {
   if (['college_career', 'college_internship_project'].includes(goalType)) {
     return ['class_level', 'college_goal', ...(profile.learner_goal?.needs_location_for_offline ? ['location'] : [])];
   }
-  if (['job_search_only', 'formal_skill_job_search', 'college_job_search'].includes(goalType)) {
+  if (['job_search_only', 'formal_skill_job_search', 'college_job_search', 'local_office_job'].includes(goalType)) {
     return ['skill_signal', ...(profile.relocation_preference ? [] : ['location']), 'mobility_signal'];
   }
   if (['informal_skill_validation', 'vocational_training', 'skill_pathway_exploration'].includes(goalType)) {
@@ -654,7 +743,7 @@ function nextQuestionForMissing(missing = [], profile = {}, latestText = '') {
   if (missing.includes('college_goal')) return phrase(profile, latestText, 'missing_college_goal', {});
   if (missing.includes('location')) return phrase(profile, latestText, 'need_location', {});
   if (missing.includes('skill_signal')) {
-    if (['job_search_only', 'formal_skill_job_search'].includes(goalType)) {
+    if (['job_search_only', 'formal_skill_job_search', 'local_office_job'].includes(goalType)) {
       return phrase(profile, latestText, 'need_skill', {});
     }
     return phrase(profile, latestText, 'need_skill', {});
@@ -740,7 +829,7 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
         Marathi: 'या छोट्या business साठी तुमच्याकडे आत्ता काय आहे: जागा, छोटा budget, buyer, supplier, की अजून काही नाही?',
       });
     }
-    if (goal.intent === 'job' || goal.type === 'job_search_only' || goal.type === 'formal_skill_job_search') {
+    if (goal.intent === 'job' || ['job_search_only', 'formal_skill_job_search', 'local_office_job'].includes(goal.type)) {
       return localizedLine(profile, latestText, {
         English: 'Which target role or skill should I prepare you for first? Also mention any proof you already have: resume, certificate, project, sample work, or experience.',
         Hinglish: 'Sabse pehle batao, kis kaam ya hunar ke liye taiyari karni hai. Agar koi saboot ho, jaise certificate, sample kaam, ya kaam ka anubhav, to batao.',
@@ -792,6 +881,10 @@ function directAnswerForLatest(profile = {}, latestText = '') {
     latestText,
   );
   if (!hasQuestion) return '';
+
+  if (asksAboutProofUse(latestText)) {
+    return proofUseReply(profile, latestText, { profileReady: false });
+  }
 
   if (/connect|hirer|hiring|founder|employer|mail|email|outreach|contact/i.test(text)) {
     if (lowEducationProfile(profile, latestText)) {
@@ -903,6 +996,10 @@ function nameConfirmationQuestion(previousProfile = {}, profile = {}, latestText
   const meaningfulOtherUpdates = updates.filter((item) => item !== 'name' && item !== 'goal');
   const shortAnswerLooksLikeName = Boolean(shortNameCandidate(latestText));
   const askedNameThenShortAnswer = previousAskedName(previousAssistant) && shortAnswerLooksLikeName;
+  const latestHasFullProfileContext =
+    String(latestText || '').trim().split(/\s+/).length >= 10 &&
+    (hasClearLearnerGoal(profile) || profile.location || profile.class_level || profile.education_status);
+  if (latestHasFullProfileContext && updates.includes('name')) return '';
   if (
     !name ||
     previousProfile.name ||
@@ -1002,6 +1099,36 @@ function cleanCounselorReply(reply = '') {
     .trim();
 }
 
+function asksAboutProofUse(text = '') {
+  const lower = String(text || '').toLowerCase();
+  const proofWord = /video|photo|pic|sample|typing sample|screen|record|recording|proof|saboot|sabot|certificate|marksheet|voice note|awaaz|आवाज|वीडियो|फोटो|सबूत|प्रमाण/.test(
+    lower,
+  );
+  const questionWord = /\b(?:kya|kyu|kyon|kaise|karna|krna|karu|what|why|how|use|share|send|bhejna|dikhana)\b|karna h|krna h|क्यों|क्या|कैसे|करना|भेजना|दिखाना/.test(
+    lower,
+  );
+  return proofWord && questionWord;
+}
+
+function proofUseReply(profile = {}, latestText = '', { profileReady = false } = {}) {
+  const target =
+    profile.learner_goal?.label ||
+    (profile.aspirations || []).filter((item) => !/video creation|voice note|photo proof/i.test(item)).slice(0, 2).join(', ') ||
+    'kaam';
+  const readyNext = profileReady
+    ? 'Ab Rasta button dabao, Meera isi saboot aur profile se safe options banayegi.'
+    : 'Agle step ke liye bas apni jagah, safe travel, aur time clear karna hai.';
+  return localizedLine(profile, latestText, {
+    English: `The video is only simple proof for ${target}: for typing, record 20-30 seconds showing a few lines typed clearly. It is shared only after your consent. ${profileReady ? 'Press the Pathway button now.' : 'I will ask one more small question if needed.'}`,
+    Hinglish: `Video sirf ${target} ka chhota saboot hai: typing ke liye 20-30 second mein screen/keyboard par 4-5 line type karte hue dikhao. Ye sirf aapki anumati ke baad share hoga. ${readyNext}`,
+    Hindi: `वीडियो सिर्फ ${target} का छोटा सबूत है: typing के लिए 20-30 सेकंड में screen/keyboard पर 4-5 लाइन type करते हुए दिखाइए। यह सिर्फ आपकी अनुमति के बाद share होगा।`,
+    Marathi: `Video ha fakta ${target} cha chhota proof aahe: typing sathi 20-30 second screen/keyboard var 4-5 line type kartana dakhva. He fakt tumchya permission nantar share hoil.`,
+    Odia: `Video କେବଳ ${target} ର ଛୋଟ proof: typing ପାଇଁ 20-30 second screen/keyboard ରେ 4-5 line type କରୁଥିବା ଦେଖାନ୍ତୁ. ଆପଣଙ୍କ permission ପରେ ମାତ୍ର share ହେବ.`,
+    Bengali: `Video শুধু ${target}-এর ছোট proof: typing হলে 20-30 second screen/keyboard-এ 4-5 line type করা দেখান. আপনার permission ছাড়া share হবে না.`,
+    Tamil: `Video என்பது ${target} க்கு சிறிய proof மட்டும்: typing என்றால் 20-30 second screen/keyboard-ல் 4-5 line type செய்வதை காட்டுங்கள். உங்கள் permission இல்லாமல் share ஆகாது.`,
+  });
+}
+
 function normalizeComparable(value) {
   if (Array.isArray(value)) return value.map(normalizeComparable).filter(Boolean).join('|');
   return String(value ?? '').trim().toLowerCase();
@@ -1047,10 +1174,6 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
   if (lowEducationProfile(profile, latestText)) {
     return lowEducationLine(profile, latestText, 'ready');
   }
-  const directModelReply = String(modelReply || '').trim();
-  if (directModelReply && directModelReply.length <= 180 && !/[\n*]/.test(directModelReply)) {
-    return directModelReply;
-  }
   const intent = profile.learner_goal?.intent || '';
   if (intent === 'study') {
     return localizedLine(profile, latestText, {
@@ -1065,7 +1188,21 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
       English: 'Good, I have enough to build the pathway. I will show only matching jobs after proof and consent.',
       Hinglish: 'Theek hai, rasta banane ke liye jankari kafi hai. Mauke sirf fit, saboot aur aapki anumati ke baad dikhengi.',
       Hindi: 'ठीक है, रास्ता बनाने के लिए जानकारी काफी है। मौके सिर्फ मेल, सबूत और आपकी अनुमति के बाद दिखेंगे।',
-      Marathi: 'Theek aahe, pathway sathi profile enough aahe. Jobs fit, proof ani consent nantarach disatil.',
+      Marathi: 'ठीक आहे, रस्ता बनवण्यासाठी माहिती पुरेशी आहे. कामाचे पर्याय fit, proof आणि तुमच्या permission नंतरच दिसतील.',
+      Odia: 'ଠିକ ଅଛି, ରାସ୍ତା ବନାଇବା ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। fit, proof ଓ ଆପଣଙ୍କ permission ପରେ ମାତ୍ର ମୌକା ଦେଖାଯିବ।',
+      Bengali: 'ঠিক আছে, রাস্তা বানানোর জন্য তথ্য যথেষ্ট। fit, proof আর আপনার permission-এর পরে তবেই সুযোগ দেখানো হবে।',
+      Tamil: 'சரி, பாதை உருவாக்க தகவல் போதும். fit, proof, உங்கள் permission பிறகே வாய்ப்புகள் காட்டப்படும்.',
+    });
+  }
+  if (intent === 'self_employment') {
+    return localizedLine(profile, latestText, {
+      English: 'Good, I have enough to build the small-business pathway. I will check training, cost, buyer, supplier, scheme, and loan risk before any next step.',
+      Hinglish: 'Theek hai, chhote vyapar ka rasta banane ke liye jankari kafi hai. Meera training, kharcha, buyer, supplier, scheme aur loan risk pehle check karegi.',
+      Hindi: 'ठीक है, छोटे व्यापार का रास्ता बनाने के लिए जानकारी काफी है। मीरा पहले training, खर्च, buyer, supplier, योजना और loan risk check करेगी।',
+      Marathi: 'ठीक आहे, छोट्या व्यवसायाचा मार्ग बनवण्यासाठी माहिती पुरेशी आहे. Meera आधी training, खर्च, buyer, supplier, scheme आणि loan risk तपासेल.',
+      Odia: 'ଠିକ ଅଛି, ଛୋଟ business ରାସ୍ତା ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। Meera ପ୍ରଥମେ training, ଖର୍ଚ୍ଚ, buyer, supplier, scheme ଓ loan risk check କରିବ।',
+      Bengali: 'ঠিক আছে, ছোট business-এর রাস্তা বানানোর জন্য তথ্য যথেষ্ট। Meera আগে training, খরচ, buyer, supplier, scheme আর loan risk check করবে।',
+      Tamil: 'சரி, சிறு business பாதைக்கு தகவல் போதும். Meera முதலில் training, செலவு, buyer, supplier, scheme, loan risk சரிபார்க்கும்.',
     });
   }
   if (intent === 'training') {
@@ -1073,14 +1210,20 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
       English: 'Good, I can build the training route now. I will check safe travel, fees, proof, and placement risk.',
       Hinglish: 'Theek hai, seekhne ka rasta ban sakta hai. Meera surakshit aana-jaana, fees, saboot, aur kaam milne ka risk check karegi.',
       Hindi: 'ठीक है, सीखने का रास्ता बन सकता है। मीरा सुरक्षित आना-जाना, फीस, सबूत और काम मिलने का जोखिम जाँचेगी।',
-      Marathi: 'Theek aahe, training route banu shakto. Safe travel, fees, proof ani placement risk check karu.',
+      Marathi: 'ठीक आहे, training चा रस्ता बनू शकतो. Meera safe travel, fees, proof आणि काम मिळण्याचा risk तपासेल.',
+      Odia: 'ଠିକ ଅଛି, training ରାସ୍ତା ବନିପାରିବ। Meera safe travel, fees, proof ଓ କାମ ମିଳିବା risk check କରିବ।',
+      Bengali: 'ঠিক আছে, training-এর রাস্তা বানানো যাবে। Meera safe travel, fees, proof আর কাজ পাওয়ার risk check করবে।',
+      Tamil: 'சரி, training பாதை உருவாக்கலாம். Meera safe travel, fees, proof, வேலை கிடைக்கும் risk எல்லாம் சரிபார்க்கும்.',
     });
   }
   return localizedLine(profile, latestText, {
     English: 'Good, I have enough for the next step. I will keep the pathway simple and tied to this profile.',
     Hinglish: 'Theek hai, agle kadam ke liye jankari kafi hai. Rasta isi jankari se juda rahega.',
     Hindi: 'ठीक है, अगले कदम के लिए जानकारी काफी है। रास्ता इसी जानकारी से जुड़ा रहेगा।',
-    Marathi: 'Theek aahe, next step sathi profile enough aahe. Pathway simple ani ya profile shi linked rahil.',
+    Marathi: 'ठीक आहे, पुढच्या पावलासाठी माहिती पुरेशी आहे. रस्ता या profile शी जोडलेला राहील.',
+    Odia: 'ଠିକ ଅଛି, ପରବର୍ତ୍ତୀ କଦମ ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। ରାସ୍ତା ଏହି profile ସହିତ ଜୁଡ଼ି ରହିବ।',
+    Bengali: 'ঠিক আছে, পরের ধাপের জন্য তথ্য যথেষ্ট। রাস্তা এই profile-এর সঙ্গে যুক্ত থাকবে।',
+    Tamil: 'சரி, அடுத்த படிக்கு தகவல் போதும். பாதை இந்த profile-க்கு இணைந்திருக்கும்.',
   });
 }
 
@@ -1207,6 +1350,9 @@ function directLatestReply(profile = {}, latestText = '', previousProfile = {}) 
     /school|study|exam|marks|board|jee|neet/i.test(`${(previousProfile.aspirations || []).join(' ')} ${previousProfile.class_level || ''}`);
   if (explicitSwitch || (previousWasStudy && additiveCareerAsk)) {
     return phrase(profile, latestText, 'career_switch', {});
+  }
+  if (asksAboutProofUse(latestText)) {
+    return proofUseReply(profile, latestText, { profileReady: Boolean(profile.profile_complete) });
   }
   if (
     (goal.needs_location_for_offline || ['job', 'training', 'proof_to_work', 'career'].includes(goal.intent)) &&
@@ -1354,6 +1500,7 @@ export default async function handler(req, res) {
     nextProfile = applyAcademicIntent(nextProfile, latestText);
     nextProfile = applySchoolStudyIntent(nextProfile, latestText);
     nextProfile = applyGeneralGoal(nextProfile, latestText);
+    nextProfile = preserveExactGoalFromSignals(nextProfile, latestText, profile);
     nextProfile = applyLowEducationSignal(nextProfile, latestText);
     nextProfile = preserveSelectedLanguage(profile, nextProfile);
     nextProfile = withLanguageMetadata(nextProfile, latestText);

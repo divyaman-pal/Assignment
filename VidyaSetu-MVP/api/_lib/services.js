@@ -567,7 +567,7 @@ export function fallbackProfileFromTranscript(transcript = '') {
     : /android|whatsapp|phone|mobile/i.test(transcript)
       ? 'mobile phone with WhatsApp'
       : '';
-  const earningUrgency = /turant|jaldi|quick|immediate|abhi|income|kamai|earn|job|naukri|placement|नौकरी|रोजगार/i.test(transcript)
+  const earningUrgency = /turant|jaldi|quick|immediate|abhi|income|kamai|earn|job|naukri|naukari|nokri|placement|नौकरी|रोजगार/i.test(transcript)
     ? 'immediate'
     : /training|course|seekh/i.test(transcript)
       ? 'after training'
@@ -594,7 +594,7 @@ export function fallbackProfileFromTranscript(transcript = '') {
     commute_km: commuteMatch ? Number(commuteMatch[1]) : null,
     commute_constraint: /safe|women|ladki|girl|day shift/i.test(transcript) ? 'safe commute preferred' : '',
     aspirations,
-    income_pressure: /earn|income|paisa|kamai|rojgar|earning|job|naukri|नौकरी|रोजगार|कमाई/i.test(transcript),
+    income_pressure: /earn|income|paisa|kamai|rojgar|earning|job|naukri|naukari|nokri|नौकरी|रोजगार|कमाई/i.test(transcript),
     language: detectSpokenLanguages(transcript, preferredLanguage),
     preferred_language: preferredLanguage,
     device: /android/i.test(transcript) ? 'Android phone' : phoneAccess || 'mobile phone',
@@ -685,7 +685,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
     ? 'Machine learning job pathway'
     : 'Data science job pathway';
   const hasJobAsk =
-    /job|naukri|placement|hire|hirer|hiring|vacancy|employment|full.?time|role|नौकरी|रोजगार|प्लेसमेंट/i.test(
+    /job|naukri|naukari|nokri|placement|hire|hirer|hiring|vacancy|employment|full.?time|role|नौकरी|रोजगार|प्लेसमेंट/i.test(
       text,
     );
   const hasTrainingAsk =
@@ -804,14 +804,18 @@ export function inferLearnerGoal(text = '', hints = {}) {
   }
   if (exactVocationalGoal) return exactVocationalGoal;
   if (
-    /job|naukri|placement|work|role|hiring|vacancy|employment/i.test(text) &&
+    /job|naukri|naukari|nokri|placement|work|role|hiring|vacancy|employment/i.test(text) &&
     /computer basics|typing|data entry|computer operator|front desk|reception|billing|office assistant|office job|local office|bpo|call center|customer service|retail billing/i.test(
       combined,
     )
   ) {
     return {
       type: 'local_office_job',
-      label: 'Local office job search',
+      label: /customer service/i.test(combined)
+        ? 'Computer typing customer service job search'
+        : /data entry|computer operator/i.test(combined)
+          ? 'Computer typing data-entry job search'
+          : 'Local office computer job search',
       intent: 'job',
       needs_location_for_offline: true,
       recommended_next_step: 'Build resume/typing proof, shortlist nearby day-shift office roles, then apply only with learner consent.',
@@ -826,7 +830,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
       recommended_next_step: 'Validate skill proof, create Skill Passport, then match local training/jobs.',
     };
   }
-  if (/job only|only job|sirf job|bas job|job search|find job|job opportunity|job opportunities|hiring|vacancy|naukri|नौकरी|रोजगार|job chahiye|work from home|remote work|remote job|wfh|freelance/i.test(text)) {
+  if (/job only|only job|sirf job|bas job|job search|find job|job opportunity|job opportunities|hiring|vacancy|naukri|naukari|nokri|नौकरी|रोजगार|job chahiye|work from home|remote work|remote job|wfh|freelance/i.test(text)) {
     const hasFormalSignal = /certified|certificate|diploma|degree|iti|experience|graduate|bcom|b\.com|tally|gst|license|driving/i.test(text);
     return {
       type: hasDataMlTarget ? 'college_job_search' : hasFormalSignal ? 'formal_skill_job_search' : 'job_search_only',
