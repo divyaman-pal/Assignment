@@ -32,6 +32,7 @@
   "homepage": "https://github.com/divyaman-pal/Github-FirstPR#readme",
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.2",
+    "jsonrepair": "^3.14.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

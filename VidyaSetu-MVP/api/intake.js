@@ -88,38 +88,57 @@ export default async function handler(req, res) {
 async function sendSarvamVoice(res, body = {}) {
   const key = process.env.SARVAM_API_KEY;
   if (!key) {
-    return sendJson(res, 503, { ok: false, error: 'Sarvam voice is not configured.' });
+    return sendJson(res, 200, {
+      ok: false,
+      provider: 'browser_speech_fallback',
+      fallback: true,
+      error: 'Sarvam voice is not configured. Use browser speech fallback.',
+    });
   }
 
   const text = sanitizeVoiceText(body.text);
   if (!text) return sendJson(res, 400, { ok: false, error: 'Text is required for voice playback.' });
 
   const languageCode = inferTtsLanguageCode(body.profile, body.language);
-  const response = await fetch('https://api.sarvam.ai/text-to-speech', {
-    method: 'POST',
-    headers: {
-      'api-subscription-key': key,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      text,
-      target_language_code: languageCode,
-      model: process.env.SARVAM_TTS_MODEL || 'bulbul:v3',
-      speaker: process.env.SARVAM_TTS_SPEAKER || 'neha',
-      pace: 0.9,
-      speech_sample_rate: 24000,
-      output_audio_codec: 'wav',
-      temperature: 0.45,
-    }),
-    signal: AbortSignal.timeout(Number(process.env.SARVAM_TTS_TIMEOUT_MS || 12000)),
-  });
+  let response;
+  try {
+    response = await fetch('https://api.sarvam.ai/text-to-speech', {
+      method: 'POST',
+      headers: {
+        'api-subscription-key': key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        target_language_code: languageCode,
+        model: process.env.SARVAM_TTS_MODEL || 'bulbul:v3',
+        speaker: process.env.SARVAM_TTS_SPEAKER || 'neha',
+        pace: 0.9,
+        speech_sample_rate: 24000,
+        output_audio_codec: 'wav',
+        temperature: 0.45,
+      }),
+      signal: AbortSignal.timeout(Number(process.env.SARVAM_TTS_TIMEOUT_MS || 12000)),
+    });
+  } catch {
+    return sendJson(res, 200, {
+      ok: false,
+      provider: 'browser_speech_fallback',
+      fallback: true,
+      language_code: languageCode,
+      error: 'Sarvam voice could not be reached. Use browser speech fallback.',
+    });
+  }
 
   const payload = await response.json().catch(() => ({}));
   const audio = payload.audios?.[0];
   if (!response.ok || !audio) {
-    return sendJson(res, response.ok ? 502 : response.status, {
+    return sendJson(res, 200, {
       ok: false,
-      error: payload.error?.message || payload.message || 'Sarvam voice could not generate audio.',
+      provider: 'browser_speech_fallback',
+      fallback: true,
+      language_code: languageCode,
+      error: 'Sarvam voice could not generate audio. Use browser speech fallback.',
     });
   }
 

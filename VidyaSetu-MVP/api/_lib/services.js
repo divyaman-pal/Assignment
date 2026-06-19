@@ -9,6 +9,7 @@ import {
 } from './mvp.js';
 import { detectLanguageStyle, languageInstruction, phrase } from './language.js';
 import { plannerResourceHints, tier3PlannerGuide } from './tier3-roadmaps.js';
+import { jsonrepair } from 'jsonrepair';
 
 function timeoutSignal(ms) {
   const controller = new AbortController();
@@ -26,11 +27,21 @@ function parseModelJson(text = '', fallback) {
     const start = cleaned.indexOf('{');
     const end = cleaned.lastIndexOf('}');
     if (start >= 0 && end > start) {
+      const candidate = cleaned.slice(start, end + 1);
       try {
-        return { data: JSON.parse(cleaned.slice(start, end + 1)), parsed: true };
+        return { data: JSON.parse(candidate), parsed: true };
       } catch {
-        return { data: fallback, parsed: false };
+        try {
+          return { data: JSON.parse(jsonrepair(candidate)), parsed: true };
+        } catch {
+          return { data: fallback, parsed: false };
+        }
       }
+    }
+    try {
+      return { data: JSON.parse(jsonrepair(cleaned)), parsed: true };
+    } catch {
+      return { data: fallback, parsed: false };
     }
   }
   return { data: fallback, parsed: false };
@@ -44,14 +55,147 @@ function uniqueModelList(values = []) {
   return [...new Set(values.map((item) => String(item || '').trim()).filter(Boolean))];
 }
 
-function extractOpenAIText(payload = {}) {
-  if (payload.output_text) return payload.output_text;
-  return (payload.output || [])
-    .flatMap((item) => item.content || [])
-    .map((content) => content.text || content.value || '')
+function normalizeAnthropicToolInput(input = {}, toolSchema = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return input;
+  const required = Array.isArray(toolSchema?.required) ? toolSchema.required : [];
+  if (!required.length || required.every((key) => input[key] !== undefined && input[key] !== null)) return input;
+
+  const objectCandidates = [input];
+  for (const value of Object.values(input)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) objectCandidates.push(value);
+  }
+
+  for (const candidate of objectCandidates) {
+    if (required.every((key) => candidate[key] !== undefined && candidate[key] !== null)) {
+      return { ...input, ...candidate };
+    }
+  }
+
+  if (required.includes('routes')) {
+    for (const candidate of objectCandidates) {
+      for (const key of ['routes', 'pathways', 'cards', 'options', 'route_options', 'pathway_cards', 'pathway_options', 'recommendations', 'route_cards']) {
+        if (Array.isArray(candidate[key]) && candidate[key].length) {
+          return { ...input, ...candidate, routes: candidate[key] };
+        }
+      }
+      for (const value of Object.values(candidate)) {
+        if (typeof value !== 'string' || !value.includes('{')) continue;
+        const parsed = parseModelJson(value, {});
+        const routes = Array.isArray(parsed.data?.routes)
+          ? parsed.data.routes
+          : Array.isArray(parsed.data?.pathways)
+            ? parsed.data.pathways
+            : Array.isArray(parsed.data?.cards)
+              ? parsed.data.cards
+              : [];
+        if (routes.length) return { ...input, ...candidate, ...parsed.data, routes };
+      }
+      const routeObjects = Object.values(candidate)
+        .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+        .filter((value) => value.name || value.title || value.card_kind || value.pathway_detail || value.first_step);
+      if (routeObjects.length >= 3) {
+        return { ...input, ...candidate, routes: routeObjects };
+      }
+    }
+  }
+
+  if (required.includes('modules')) {
+    for (const candidate of objectCandidates) {
+      for (const value of Object.values(candidate)) {
+        if (typeof value !== 'string' || !value.includes('{')) continue;
+        const parsed = parseModelJson(value, {});
+        const modules = Array.isArray(parsed.data?.modules)
+          ? parsed.data.modules
+          : Array.isArray(parsed.data?.weeks)
+            ? parsed.data.weeks
+            : Array.isArray(parsed.data?.weekly_modules)
+              ? parsed.data.weekly_modules
+              : [];
+        if (modules.length) {
+          return {
+            ...input,
+            ...candidate,
+            ...parsed.data,
+            title: parsed.data.title || candidate.title || input.title || 'Personalized learning journey',
+            duration: parsed.data.duration || candidate.duration || input.duration || { mvp: `${modules.length}-week journey`, full: `${modules.length}-week journey` },
+            modules,
+          };
+        }
+      }
+      const modules = Array.isArray(candidate.modules)
+        ? candidate.modules
+        : Array.isArray(candidate.weekly_modules)
+          ? candidate.weekly_modules
+          : Array.isArray(candidate.week_modules)
+            ? candidate.week_modules
+            : Array.isArray(candidate.learning_modules)
+              ? candidate.learning_modules
+              : Array.isArray(candidate.journey_modules)
+                ? candidate.journey_modules
+        : Array.isArray(candidate.weeks)
+          ? candidate.weeks
+          : Array.isArray(candidate.weekly_plan)
+            ? candidate.weekly_plan
+            : Array.isArray(candidate.plan)
+              ? candidate.plan
+              : [];
+      if (modules.length) {
+        return {
+          ...input,
+          ...candidate,
+          title: candidate.title || input.title || 'Personalized learning journey',
+          duration: candidate.duration || input.duration || { mvp: `${modules.length}-week journey`, full: `${modules.length}-week journey` },
+          modules,
+        };
+      }
+      const weekObjects = Object.values(candidate)
+        .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+        .filter((value) => value.week || value.title || value.goal || Array.isArray(value.daily_micro_tasks));
+      if (weekObjects.length >= 4) {
+        return {
+          ...input,
+          ...candidate,
+          title: candidate.title || input.title || 'Personalized learning journey',
+          duration: candidate.duration || input.duration || { mvp: `${weekObjects.length}-week journey`, full: `${weekObjects.length}-week journey` },
+          modules: weekObjects,
+        };
+      }
+    }
+  }
+
+  return input;
+}
+
+function extractAnthropicText(payload = {}) {
+  return (payload.content || [])
+    .map((item) => item.text || '')
     .filter(Boolean)
     .join('\n')
     .trim();
+}
+
+function extractClaudeSearchResults(payload = {}) {
+  const results = [];
+  const visit = (value) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value !== 'object') return;
+    if (value.type === 'web_search_result' && (value.url || value.title)) {
+      results.push({
+        title: value.title || value.url || 'Claude web search result',
+        url: value.url || '',
+        description: value.page_age ? `Updated: ${value.page_age}` : '',
+        source_type: 'claude_web_search',
+      });
+    }
+    if (value.type === 'web_search_tool_result_error') return;
+    for (const item of Object.values(value)) visit(item);
+  };
+  visit(payload.content || []);
+  return results;
 }
 
 export async function callAnthropicJson({
@@ -62,6 +206,7 @@ export async function callAnthropicJson({
   timeoutMs = null,
   models: modelCandidates = null,
   toolSchema = null,
+  useTool = true,
 }) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return { data: fallback, ok: false, provider: 'anthropic', error: 'ANTHROPIC_API_KEY missing' };
@@ -82,6 +227,27 @@ export async function callAnthropicJson({
     const timeout = timeoutSignal(Number(timeoutMs || process.env.MODEL_JSON_TIMEOUT_MS || 12_000));
     try {
       const toolName = 'emit_json';
+      const requestBody = {
+        model,
+        max_tokens: Math.max(maxTokens, 1200),
+        temperature: 0.1,
+        system: `${system}\nReturn valid JSON only. Do not include markdown.`,
+        messages: [{ role: 'user', content: prompt }],
+      };
+      if (useTool) {
+        requestBody.tools = [
+          {
+            name: toolName,
+            description: 'Emit the requested JSON object exactly.',
+            input_schema: toolSchema || {
+              type: 'object',
+              properties: {},
+              additionalProperties: true,
+            },
+          },
+        ];
+        requestBody.tool_choice = { type: 'tool', name: toolName };
+      }
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         signal: timeout.signal,
@@ -90,25 +256,7 @@ export async function callAnthropicJson({
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model,
-          max_tokens: Math.max(maxTokens, 1200),
-          temperature: 0.1,
-          system: `${system}\nReturn valid JSON only. Do not include markdown.`,
-          tools: [
-            {
-              name: toolName,
-              description: 'Emit the requested JSON object exactly.',
-              input_schema: toolSchema || {
-                type: 'object',
-                properties: {},
-                additionalProperties: true,
-              },
-            },
-          ],
-          tool_choice: { type: 'tool', name: toolName },
-          messages: [{ role: 'user', content: prompt }],
-        }),
+        body: JSON.stringify(requestBody),
       });
       timeout.clear();
       const payload = await response.json().catch(() => ({}));
@@ -116,16 +264,17 @@ export async function callAnthropicJson({
         errors.push(`${model}: ${payload?.error?.message || response.statusText}`);
         continue;
       }
-      const toolUse = (payload.content || []).find((item) => item?.type === 'tool_use' && item.name === toolName);
-      if (toolUse?.input && typeof toolUse.input === 'object' && !Array.isArray(toolUse.input)) {
+      const toolUse = useTool ? (payload.content || []).find((item) => item?.type === 'tool_use' && item.name === toolName) : null;
+      if (useTool && toolUse?.input && typeof toolUse.input === 'object' && !Array.isArray(toolUse.input)) {
+        const normalizedInput = normalizeAnthropicToolInput(toolUse.input, toolSchema);
         const missingRequired = Array.isArray(toolSchema?.required)
-          ? toolSchema.required.filter((key) => toolUse.input[key] === undefined || toolUse.input[key] === null)
+          ? toolSchema.required.filter((key) => normalizedInput[key] === undefined || normalizedInput[key] === null)
           : [];
         if (missingRequired.length) {
           errors.push(`${model}: tool output missing ${missingRequired.join(', ')}`);
           continue;
         }
-        return { data: toolUse.input, ok: true, provider: 'anthropic', model, error: null };
+        return { data: normalizedInput, ok: true, provider: 'anthropic', model, error: null };
       }
       const text = (payload.content || [])
         .map((item) => item.text || '')
@@ -134,7 +283,7 @@ export async function callAnthropicJson({
         .trim();
       const parsed = parseModelJson(text, fallback);
       if (!parsed.parsed) {
-        errors.push(`${model}: model did not return valid JSON`);
+        errors.push(`${model}: model did not return valid JSON (${text.slice(0, 220).replace(/\s+/g, ' ')})`);
         continue;
       }
       return { data: parsed.data, ok: true, provider: 'anthropic', model, error: null };
@@ -245,75 +394,69 @@ export async function transcribeSarvamAudio({ audioBase64, fileName = 'learner-d
   }
 }
 
-export async function discoverWithFirecrawl(query, fallback = [], options = {}) {
-  const key = process.env.FIRECRAWL_API_KEY;
+export async function discoverWithClaudeWeb(query, fallback = [], options = {}) {
+  const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
-    return { data: fallback, ok: false, provider: 'fallback', error: 'FIRECRAWL_API_KEY missing' };
-  }
-
-  const limit = Math.max(1, Math.min(Number(options.limit || process.env.FIRECRAWL_SEARCH_LIMIT || 2), 3));
-  const scrape = Boolean(options.scrape);
-  const timeout = timeoutSignal(Number(process.env.FIRECRAWL_TIMEOUT_MS || 8_000));
-  try {
-    const body = { query, limit };
-    if (scrape) body.scrapeOptions = { formats: ['markdown'] };
-    const response = await fetch('https://api.firecrawl.dev/v1/search', {
-      method: 'POST',
-      signal: timeout.signal,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    timeout.clear();
-    const payload = await response.json();
-    if (!response.ok) {
-      return {
-        data: fallback,
-        ok: false,
-        provider: 'firecrawl',
-        error: payload?.error || payload?.message || response.statusText,
-      };
-    }
-
-    const data = payload.data || payload.results || [];
-    return { data, ok: true, provider: scrape ? 'firecrawl_scrape' : 'firecrawl_light', error: null, limit, scrape };
-  } catch (error) {
-    timeout.clear();
-    return { data: fallback, ok: false, provider: 'firecrawl', error: error.message };
-  }
-}
-
-export async function discoverWithOpenAIWeb(query, fallback = []) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) {
-    return { data: fallback, ok: false, provider: 'openai_web_search', error: 'OPENAI_API_KEY missing' };
+    return { data: fallback, ok: false, provider: 'claude_web_search', error: 'ANTHROPIC_API_KEY missing' };
   }
 
   const models = uniqueModelList([
-    process.env.OPENAI_SEARCH_MODEL,
-    'gpt-4.1-mini',
-    'gpt-4o-mini',
+    process.env.ANTHROPIC_WEB_SEARCH_MODEL,
+    process.env.ANTHROPIC_PLANNER_MODEL,
+    process.env.ANTHROPIC_MODEL,
+    'claude-sonnet-4-6',
+    'claude-sonnet-4-5',
+    'claude-3-5-haiku-latest',
   ]);
   const errors = [];
 
   for (const model of models) {
-    const timeout = timeoutSignal(Number(process.env.OPENAI_SEARCH_TIMEOUT_MS || 10_000));
+    const timeout = timeoutSignal(Number(options.timeoutMs || process.env.CLAUDE_WEB_SEARCH_TIMEOUT_MS || 25_000));
     try {
-      const response = await fetch('https://api.openai.com/v1/responses', {
+      const maxUses = Math.max(1, Math.min(Number(options.maxUses || process.env.CLAUDE_WEB_SEARCH_MAX_USES || 3), 5));
+      const tool = {
+        type: process.env.ANTHROPIC_WEB_SEARCH_TOOL || 'web_search_20250305',
+        name: 'web_search',
+        max_uses: maxUses,
+      };
+      const blockedDomains = String(process.env.CLAUDE_WEB_SEARCH_BLOCKED_DOMAINS || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (blockedDomains.length) tool.blocked_domains = blockedDomains;
+      const city = options.city || options.location || '';
+      if (city) {
+        tool.user_location = {
+          type: 'approximate',
+          city: String(city).slice(0, 80),
+          country: 'IN',
+          timezone: 'Asia/Kolkata',
+        };
+      }
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         signal: timeout.signal,
         headers: {
-          Authorization: `Bearer ${key}`,
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model,
-          max_output_tokens: 1200,
-          tools: [{ type: 'web_search', search_context_size: 'low' }],
-          tool_choice: 'required',
-          input: `Search the live web for VidyaSetu evidence, opportunities, official resources, employer pages, or contact/source pages.\nQuery: ${query}\nReturn strict JSON only: {"results":[{"title":string,"url":string,"description":string,"source_type":string}]}. Include official/government/source pages when available. Do not invent URLs or email addresses.`,
+          max_tokens: Number(options.maxTokens || process.env.CLAUDE_WEB_SEARCH_MAX_TOKENS || 1400),
+          temperature: 0.1,
+          system:
+            'You are VidyaSetu source discovery for rural India. Use web search when useful. Prefer official, free, public, goal-specific, India-relevant sources. Do not invent URLs, jobs, contacts, wages, centres, eligibility, or scheme approvals. Return valid JSON only.',
+          tools: [tool],
+          messages: [
+            {
+              role: 'user',
+              content:
+                `Search the live web for this exact learner need:\n${query}\n\n` +
+                'Return strict JSON only: {"results":[{"title":string,"url":string,"description":string,"source_type":string}]}.\n' +
+                'Keep 3-5 results. Include official/government/source pages first, then specific free video/search resources if official resources are not enough. No generic resources unless the exact goal cannot be found.',
+            },
+          ],
         }),
       });
       timeout.clear();
@@ -322,52 +465,53 @@ export async function discoverWithOpenAIWeb(query, fallback = []) {
         errors.push(`${model}: ${payload?.error?.message || response.statusText}`);
         continue;
       }
-      const text = extractOpenAIText(payload);
+      const text = extractAnthropicText(payload);
       const parsed = parseModelJson(text, { results: [] });
-      const results = (parsed.data?.results || [])
+      const parsedResults = (parsed.data?.results || [])
         .map((item) => ({
           title: item.title || item.url || 'Web evidence',
           url: item.url || '',
           description: item.description || '',
-          source_type: item.source_type || 'openai_web_search',
+          source_type: item.source_type || 'claude_web_search',
         }))
         .filter((item) => item.url || item.title);
-      if (!parsed.parsed || !results.length) {
+      const toolResults = extractClaudeSearchResults(payload);
+      const results = [...parsedResults, ...toolResults]
+        .filter((item, index, array) => item.url || item.title)
+        .filter((item, index, array) => array.findIndex((next) => (next.url || next.title) === (item.url || item.title)) === index)
+        .slice(0, 5);
+      if (!results.length) {
         errors.push(`${model}: no structured search results`);
         continue;
       }
-      return { data: results, ok: true, provider: 'openai_web_search', model, error: null };
+      return {
+        data: results,
+        ok: true,
+        provider: 'claude_web_search',
+        model,
+        error: null,
+        usage: payload.usage || null,
+      };
     } catch (error) {
       timeout.clear();
       errors.push(`${model}: ${error.message}`);
     }
   }
 
-  return { data: fallback, ok: false, provider: 'openai_web_search', error: errors.join(' | ') || 'OpenAI web search unavailable' };
+  return { data: fallback, ok: false, provider: 'claude_web_search', error: errors.join(' | ') || 'Claude web search unavailable' };
 }
 
 export async function discoverPathwayEvidence(query, fallback = []) {
-  const openaiSearch = await discoverWithOpenAIWeb(query, []);
-  if (openaiSearch.ok && openaiSearch.data?.length) {
-    return openaiSearch;
+  const claudeSearch = await discoverWithClaudeWeb(query, [], { maxUses: Number(process.env.CLAUDE_PATHWAY_WEB_SEARCH_MAX_USES || 2) });
+  if (claudeSearch.ok && claudeSearch.data?.length) {
+    return claudeSearch;
   }
-  if (process.env.ENABLE_FIRECRAWL_PATHWAY_FALLBACK !== 'true') {
-    return {
-      data: fallback,
-      ok: false,
-      provider: 'fallback_kb_after_openai_web',
-      error: openaiSearch.error || 'OpenAI web search unavailable; Firecrawl pathway fallback disabled to save credits',
-    };
-  }
-  const firecrawl = await discoverWithFirecrawl(query, fallback);
-  if (firecrawl.ok) {
-    return {
-      ...firecrawl,
-      provider: openaiSearch.error ? `firecrawl_after_openai` : firecrawl.provider,
-      upstream_error: openaiSearch.error || null,
-    };
-  }
-  return openaiSearch.ok ? openaiSearch : firecrawl;
+  return {
+    data: fallback,
+    ok: false,
+    provider: 'fallback_kb_after_claude_web',
+    error: claudeSearch.error || 'Claude web search unavailable; using built-in verified resource fallback',
+  };
 }
 
 export function fallbackProfileFromTranscript(transcript = '') {
@@ -494,6 +638,45 @@ export function inferLearnerGoal(text = '', hints = {}) {
   const lower = String(text).toLowerCase();
   const aspirations = (hints.aspirations || []).join(' ').toLowerCase();
   const combined = `${lower} ${aspirations}`;
+  const exactVocationalGoal = (() => {
+    if (/plumb|pipe fitter|sanitary|water fitting|bathroom fitting/i.test(combined)) {
+      return {
+        type: 'vocational_training',
+        label: 'Plumbing helper training',
+        intent: 'training',
+        needs_location_for_offline: true,
+        recommended_next_step: 'Learn plumbing safety and pipe-fitting basics, save simple proof, then check a supervised local helper route.',
+      };
+    }
+    if (/mobile repair|phone repair|smartphone repair|repair technician/i.test(combined)) {
+      return {
+        type: 'vocational_training',
+        label: 'Mobile repair helper training',
+        intent: 'training',
+        needs_location_for_offline: true,
+        recommended_next_step: 'Learn phone-parts safety, save repair-practice proof, then check a supervised local shop helper route.',
+      };
+    }
+    if (/tailor|silai|stitch|sewing|garment/i.test(combined)) {
+      return {
+        type: 'vocational_training',
+        label: 'Tailoring work training',
+        intent: 'training',
+        needs_location_for_offline: true,
+        recommended_next_step: 'Learn stitching basics, save sample proof, then check local order or training routes.',
+      };
+    }
+    if (/electrician|electrical|wireman/i.test(combined)) {
+      return {
+        type: 'vocational_training',
+        label: 'Electrician helper training',
+        intent: 'training',
+        needs_location_for_offline: true,
+        recommended_next_step: 'Start with electrical safety, supervised practice, proof, then verified training/helper route.',
+      };
+    }
+    return null;
+  })();
   const hasDataMlTarget =
     /data science|data analyst|analytics|machine learning|ml engineer|python|sql|\bai\b|artificial intelligence|डेटा\s*साइंस|मशीन\s*लर्निंग|पायथन/i.test(
       combined,
@@ -599,15 +782,18 @@ export function inferLearnerGoal(text = '', hints = {}) {
   }
   const explicitEnterprise =
     /self.?employment|business|enterprise|startup setup|start.*own|apna kaam|ghar se kaam|home unit|open.*shop|apni.*shop|shop.*start|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|farming enterprise|loan|mudra|pmegp|pmfme|kvk|district industries|dic|खुद का|अपना काम|अपना.*व्यापार|अपना.*व्यवसाय|छोटा व्यापार|छोटा व्यवसाय|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|कारोबार|धंधा|मशरूम|खेती|मुर्गी|पोल्ट्री|बकरी|डेयरी|खाद्य प्रसंस्करण|लोन|कर्ज|सरकारी योजना/i.test(text);
+  const explicitHomeFoodBusiness = /tiffin|home food|food business|food service|snack business/i.test(text);
   const explicitProofOrEmployment =
     /local job|job chahiye|naukri|rpl|certificate|proof|sample|workshop mein|workshop experience|seekha hai|apprentice|apprenticeship/i.test(text);
-  if (explicitEnterprise && (!explicitProofOrEmployment || /loan|mudra|pmegp|business|enterprise|start.*own|apna kaam|ghar se kaam|home unit|poultry|mushroom|goat|dairy|food processing|pickle|papad|bakery|खुद का|अपना.*व्यापार|अपना.*व्यवसाय|छोटा व्यापार|छोटा व्यवसाय|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|कारोबार|धंधा|मशरूम|खेती|मुर्गी|पोल्ट्री|बकरी|डेयरी|लोन|कर्ज|सरकारी योजना/i.test(text))) {
+  if ((explicitEnterprise || explicitHomeFoodBusiness) && (!explicitProofOrEmployment || /loan|mudra|pmegp|business|enterprise|start.*own|apna kaam|ghar se kaam|home unit|poultry|mushroom|goat|dairy|tiffin|home food|food business|food service|snack business|food processing|pickle|papad|bakery|खुद का|अपना.*व्यापार|अपना.*व्यवसाय|छोटा व्यापार|छोटा व्यवसाय|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|कारोबार|धंधा|मशरूम|खेती|मुर्गी|पोल्ट्री|बकरी|डेयरी|लोन|कर्ज|सरकारी योजना/i.test(text))) {
     return {
       type: 'self_employment_enterprise',
       label: /poultry|chicken|broiler|layer/i.test(text)
         ? 'Poultry enterprise setup'
         : /mushroom|मशरूम/i.test(text)
           ? 'Mushroom enterprise setup'
+          : explicitHomeFoodBusiness
+            ? 'Home tiffin business setup'
           : /food processing|pickle|papad|bakery|masala|खाद्य प्रसंस्करण|अचार|पापड़|बेकरी|मसाला/i.test(text)
             ? 'Food processing micro-enterprise'
             : 'Self-employment enterprise setup',
@@ -616,6 +802,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
       recommended_next_step: 'Build setup roadmap, verify training/scheme/local support, check cost heads, buyers, suppliers, and risks before any loan or investment.',
     };
   }
+  if (exactVocationalGoal) return exactVocationalGoal;
   if (
     /job|naukri|placement|work|role|hiring|vacancy|employment/i.test(text) &&
     /computer basics|typing|data entry|computer operator|front desk|reception|billing|office assistant|office job|local office|bpo|call center|customer service|retail billing/i.test(
@@ -691,6 +878,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
     };
   }
   if (/repair|mobile|tailor|silai|cooking|hotel|beauty|salon|computer|typing|data entry|plumb|pipe fitter|sanitary|water fitting|bathroom fitting|electrician|electrical|wireman|data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql|agri|drone|retail|sales|customer|video|design/.test(combined)) {
+    if (exactVocationalGoal) return exactVocationalGoal;
     return {
       type: 'skill_pathway_exploration',
       label: /data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql/i.test(combined) ? 'Data science pathway exploration' : 'Skill pathway exploration',
@@ -715,10 +903,15 @@ export function isSchoolStudyText(text = '') {
     /training|course|vocational|job|naukri|career|income|earning|internship|placement|nursing|anm|gnm|agriculture|drone|mobile repair|tailor|silai|plumb|pipe fitter|sanitary|water fitting|bathroom fitting|electrician|electrical|wireman|beauty|driver|driving|accountant|tally|gst/i.test(
       lower,
     );
+  const enterpriseOrLivelihoodIntent =
+    /business|enterprise|self.?employment|start.*own|small business|shop|farming|farm|mushroom|poultry|goat|dairy|food processing|loan|scheme|buyer|supplier|kvk|mudra|pmegp|pmfme|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|कारोबार|धंधा|छोटा\s*(?:business|व्यापार|व्यवसाय)|मशरूम|खेती|मुर्गी|पोल्ट्री|बकरी|डेयरी|लोन|कर्ज|योजना/i.test(
+      lower,
+    );
   const explicitAcademicNeed =
     /homework|marks|exam|board|math|maths|science|english|sst|social science|chapter|ncert|cbse|sample paper|padhai|study help|coding.*help|help.*coding/i.test(
       lower,
     );
+  if (enterpriseOrLivelihoodIntent && !explicitAcademicNeed) return false;
   if (vocationalOrCareerIntent && !explicitAcademicNeed) return false;
   const hasStudyIntent =
     /study|student|school|homework|learn|help|math|maths|science|english|hindi|sst|social science|marks|exam|chapter|padh|padhna|resources|practice/.test(
@@ -1124,11 +1317,34 @@ function buildClaudePathwayPrompt(profile = {}, goal = {}, question = '', family
 Family=${family}
 Roadmap guide=${guide.guide}
 
-Use the emit_json tool. Its top-level input must contain "routes": an array of exactly 3 concise pathway cards in the learner language/script.
-Rules: concrete route names tied to the learner condition; route name must be 3-8 words and must not copy transcript/prose; never use abstract comparison cards; if the learner has a specific target like machine learning, mushroom, plumbing, or electrician, every route must keep that target visible; if no exact skill is known, create starter proof/source routes and clearly name the missing fact; mention location/commute only where useful; no fake jobs, wages, contacts, centres, or guaranteed scheme eligibility; source/proof/consent before outreach; loan/business only with cost-buyer-supplier-risk caution. Keep each field short: one simple sentence, not a paragraph.
+Return one JSON object only. It must contain "routes": an array of exactly 3 concise pathway cards in the learner language/script.
+Rules for VidyaSetu audience:
+- The learner may be rural, first-generation, low-income, phone-first, and more comfortable listening than reading. Use simple spoken language, not policy/consulting words.
+- Route names must feel like actions a learner understands, 4-8 words, e.g. "YouTube se chhota mushroom trial", "GitHub project se ML proof", "NCS par safe typing job check". Do not use abstract words like explore, pathway, route, proof-first, verified-source, strategy, enterprise setup, or compare.
+- Do not put week counts, long timelines, salaries, or guarantees in route names. The week-by-week plan belongs only in the learner journey.
+- Keep the exact target visible in every route name and field: mushroom stays mushroom farming/business, machine learning stays machine learning, tailoring stays silai/tailoring, etc.
+- If the exact goal is unclear, do not invent; ask for the missing fact through callback_flag instead of making generic career cards.
+- Suggest only what is feasible in the learner condition: small proof, free/official resource, low-data video/search, local verification, family/safety/commute check.
+- For business/schemes, show cost-buyer-supplier-risk and official eligibility check before any loan/spending. Never promise income, job, scheme, loan, centre, wage, employer, contact, or placement.
+- Each field must be one short spoken sentence. No raw transcript dumps. No mixed raw English unless it is a source/product name.
+- Include at least one free/official or goal-specific free video/search source per route. The source_title/search must be specific to the learner goal, not generic.
 
 Tool input shape:
 {"routes":[{"id":"","name":"","card_kind":"earn_fast|build_bigger|explore","archetype":"","source_url":"https://...","source_title":"","sources":["https://..."],"tradeoff":"","time":"","distance":"","income":"","confidence":0.8,"first_income_in":"","income_path":"","what_it_asks":"","why_this_fits_you":"","first_step":"","locked_until":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","why_realistic":"","learner_conditions":"","what_to_check":"","journey_preview":["","","",""],"not_a_promise":""}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
+}
+
+function buildCompactClaudePathwayPrompt(profile = {}, goal = {}, question = '', family = 'generic') {
+  return `Return one valid JSON object with a top-level "routes" array. Do not include markdown.
+Profile=${JSON.stringify(conciseProfileForPlanner(profile, question))}
+Family=${family}
+Exact goal=${safeRouteText(goal.label || (profile.aspirations || [])[0] || question || 'learner goal')}
+
+Return exactly 3 route cards. Keep each learner-facing field in the learner language/script. Do not put week counts, salaries, guarantees, fake contacts, or abstract words like pathway/proof-first/verified-source in route names.
+Each route must be a small real action: one free/official/source check, one practice/proof action, or one buyer/employer/source verification action.
+For business: cost, buyer, supplier, risk, scheme/loan eligibility before spending. For training/job: skill proof, safety/commute, source verification, consent.
+
+JSON shape:
+{"routes":[{"id":"route-1","name":"","card_kind":"earn_fast","source_url":"https://www.youtube.com/results?search_query=","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}},{"id":"route-2","name":"","card_kind":"build_bigger","source_url":"https://www.skillindiadigital.gov.in","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}},{"id":"route-3","name":"","card_kind":"explore","source_url":"https://kvk.icar.gov.in","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
 }
 
 const PATHWAY_TOOL_SCHEMA = {
@@ -1186,6 +1402,7 @@ const PATHWAY_TOOL_SCHEMA = {
 };
 
 function coerceGeneratedRoutes(data = {}) {
+  if (Array.isArray(data)) return data;
   const direct = data?.routes;
   if (Array.isArray(direct)) return direct;
   if (typeof direct === 'string') {
@@ -1193,7 +1410,7 @@ function coerceGeneratedRoutes(data = {}) {
     if (Array.isArray(parsed.data)) return parsed.data;
     if (Array.isArray(parsed.data?.routes)) return parsed.data.routes;
   }
-  for (const key of ['pathways', 'cards', 'options', 'route_options', 'pathway_cards']) {
+  for (const key of ['pathways', 'cards', 'options', 'route_options', 'pathway_cards', 'pathway_options', 'recommendations', 'route_cards']) {
     if (Array.isArray(data?.[key])) return data[key];
     if (data?.[key] && typeof data[key] === 'object') {
       const values = Object.values(data[key]).filter((value) => value && typeof value === 'object');
@@ -1204,6 +1421,10 @@ function coerceGeneratedRoutes(data = {}) {
     const values = Object.values(direct).filter((value) => value && typeof value === 'object');
     if (values.length) return values;
   }
+  const routeObjects = Object.values(data || {})
+    .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+    .filter((value) => value.name || value.title || value.card_kind || value.pathway_detail || value.first_step);
+  if (routeObjects.length >= 3) return routeObjects;
   return [];
 }
 
@@ -1376,21 +1597,55 @@ export async function generatePathways(profile, question = '') {
   const plannerFallback = useClaudeProfilePlanner
     ? { ...fallback, routes: plannerFallbackRoutes(pathwayProfile, goal, question), evidence_provider: 'tier3_claude_profile_planner' }
     : fallback;
-  const generated = useClaudeProfilePlanner
+  let generated = useClaudeProfilePlanner
     ? await callAnthropicJson({
       fallback: plannerFallback,
-      maxTokens: 2600,
+      maxTokens: Number(process.env.PATHWAY_CLAUDE_MAX_TOKENS || 6_500),
       timeoutMs: Number(process.env.PATHWAY_CLAUDE_TIMEOUT_MS || 30_000),
-      models: [process.env.ANTHROPIC_PLANNER_MODEL || process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001'],
+      useTool: false,
+      models: [
+        process.env.ANTHROPIC_FAST_MODEL,
+        'claude-haiku-4-5-20251001',
+        process.env.ANTHROPIC_PLANNER_MODEL,
+        process.env.ANTHROPIC_MODEL,
+        'claude-sonnet-4-5',
+      ],
       toolSchema: PATHWAY_TOOL_SCHEMA,
-      system: `${outputLanguage} You are VidyaSetu's Tier-3 India livelihood pathway planner. You are not a search engine. You reason from the learner condition and the supplied roadmap guide. Return only concise structured JSON.`,
-      prompt: buildClaudePathwayPrompt(pathwayProfile, goal, question || 'Generate a personalized pathway map.', family),
+      system: `${outputLanguage} You are VidyaSetu's Tier-3 India livelihood pathway planner. Return only concise structured JSON with a top-level routes array. No markdown.`,
+      prompt: buildCompactClaudePathwayPrompt(pathwayProfile, goal, question || 'Generate a personalized pathway map.', family),
     })
     : await callClaudeJson({
         fallback,
         system: `${outputLanguage} ${pathwaySystem}`,
         prompt: `Learner profile:\n${JSON.stringify(profile)}\n\nEvidence:\n${JSON.stringify(evidence)}\n\nQuestion: ${question || 'Generate a personalized pathway map.'}`,
       });
+  if (process.env.PATHWAY_CLAUDE_SECOND_ATTEMPT === 'true' && useClaudeProfilePlanner && (!generated.ok || coerceGeneratedRoutes(generated.data).length < 3)) {
+    const compactRetry = await callAnthropicJson({
+      fallback: plannerFallback,
+      maxTokens: Number(process.env.PATHWAY_CLAUDE_RETRY_MAX_TOKENS || 6_500),
+      timeoutMs: Number(process.env.PATHWAY_CLAUDE_TIMEOUT_MS || 30_000),
+      useTool: false,
+      models: [
+        process.env.ANTHROPIC_PLANNER_MODEL,
+        process.env.ANTHROPIC_MODEL,
+        process.env.ANTHROPIC_FAST_MODEL,
+        'claude-sonnet-4-5',
+        'claude-haiku-4-5-20251001',
+      ],
+      toolSchema: PATHWAY_TOOL_SCHEMA,
+      system: `${outputLanguage} You create three concise VidyaSetu pathway cards for rural India. Use the emit_json tool with a top-level routes array. No markdown.`,
+      prompt: buildCompactClaudePathwayPrompt(pathwayProfile, goal, question || 'Generate a personalized pathway map.', family),
+    });
+    generated = compactRetry.ok && coerceGeneratedRoutes(compactRetry.data).length >= 3
+      ? compactRetry
+      : {
+          ...generated,
+          error: [
+            generated.error,
+            `compact retry: ${compactRetry.error || `ok=${compactRetry.ok}; keys=${Object.keys(compactRetry.data || {}).join(',')}; preview=${JSON.stringify(compactRetry.data || {}).slice(0, 260)}`}`,
+          ].filter(Boolean).join(' | '),
+        };
+  }
   const deterministicRoutes = useClaudeProfilePlanner ? plannerFallback.routes : sourceLimitedPathways(pathwayProfile);
   const generatedRoutes = coerceGeneratedRoutes(generated.data);
   const validation = validatePathwayRoutes(pathwayProfile, generatedRoutes, {
@@ -1705,7 +1960,7 @@ function normalizeRoute(route = {}, index = 0, context = {}) {
   return {
     ...normalized,
     id: safeRouteText(normalized.id) || `route-${index + 1}`,
-    name: routeName,
+    name: stripRouteNameWeekPromise(routeName),
     source_url: primarySourceUrl,
     sources: sourceUrls.length ? sourceUrls : primarySourceUrl ? [primarySourceUrl] : [],
     source_title: safeRouteText(normalized.source_title || normalized.source || normalized.provider, 'verified evidence'),
@@ -1852,6 +2107,29 @@ function simpleLanguageKind(profile = {}) {
   if (/hinglish|hindi\s*\+\s*english|hindi\+english/.test(raw)) return 'hinglish';
   if (/hindi|हिंदी|हिन्दी/.test(raw)) return 'hi';
   return 'en';
+}
+
+function scriptPatternForProfile(profile = {}) {
+  const raw = String(profile.preferred_language || profile.language || '').toLowerCase();
+  if (/hindi|marathi/.test(raw)) return /[\u0900-\u097F]/;
+  if (/odia|oriya/.test(raw)) return /[\u0B00-\u0B7F]/;
+  if (/bengali|bangla/.test(raw)) return /[\u0980-\u09FF]/;
+  if (/tamil/.test(raw)) return /[\u0B80-\u0BFF]/;
+  if (/telugu/.test(raw)) return /[\u0C00-\u0C7F]/;
+  if (/gujarati/.test(raw)) return /[\u0A80-\u0AFF]/;
+  if (/kannada/.test(raw)) return /[\u0C80-\u0CFF]/;
+  if (/malayalam/.test(raw)) return /[\u0D00-\u0D7F]/;
+  if (/punjabi/.test(raw)) return /[\u0A00-\u0A7F]/;
+  return null;
+}
+
+function shouldKeepLocalizedRouteText(value = '', profile = {}) {
+  const text = safeRouteText(value);
+  if (!text || routeNameLooksNoisy(text)) return false;
+  const kind = simpleLanguageKind(profile);
+  if (kind === 'hinglish' || kind === 'hi') return false;
+  const scriptPattern = scriptPatternForProfile(profile);
+  return Boolean(scriptPattern && scriptPattern.test(text));
 }
 
 function realisticRoleForRoute(route = {}, profile = {}, family = '') {
@@ -2005,6 +2283,13 @@ function pathwayDetailForRoute(route = {}, profile = {}, matchedFacts = [], bloc
   };
 }
 
+function stripRouteNameWeekPromise(name = '') {
+  return safeRouteText(name)
+    .replace(/\s*[0-9०-९০-৯]\s*(?:week|weeks|सप्ताह|हफ्ते|हफ़्ते|आठवडे|आठवड्यांत|ସପ୍ତାହ|ସପ୍ତାହରେ|সপ্তাহ|সপ্তাহে|வாரம்)\s*/giu, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function firstStepForRoute(route = {}, context = {}) {
   return safeRouteText(
     route.first_step || route.next_action || route.action || route.next_action_summary || context.nextAction,
@@ -2062,6 +2347,55 @@ function learnerTargetForRoute(profile = {}, route = {}, family = '') {
   return safeRouteText(profile.learner_goal?.label || route.realistic_role || route.entry_role, 'Career pathway');
 }
 
+function localizedCompactRouteName(profile = {}, target = '', kind = 'earn_fast', text = '') {
+  const raw = String(profile.preferred_language || profile.language || '').toLowerCase();
+  const all = `${target} ${text}`.toLowerCase();
+  const pick = (earnFast, buildBigger, explore) =>
+    kind === 'earn_fast' ? earnFast : kind === 'build_bigger' ? buildBigger : explore;
+  if (/hindi/.test(raw)) {
+    if (/mushroom/.test(all)) return pick('YouTube से पहला mushroom trial', 'KVK/Skill से mushroom सीखें', 'Mushroom buyer-खर्च पहले पूछें');
+    if (/tailor|silai|stitch/.test(all)) return pick('सिलाई sample proof बनाएं', 'रोज़ alteration practice करें', 'local customer/source check करें');
+    if (/computer|typing|data/.test(all)) return pick('Typing proof save करें', 'रोज़ computer practice करें', 'NCS पर safe job check करें');
+  }
+  if (/marathi/.test(raw)) {
+    if (/mobile|repair|phone/.test(all)) return pick('मोबाईल repair proof करा', 'रोज mobile repair practice करा', 'safe repair shop तपासा');
+    return pick(`${target} proof करा`, `${target} practice करा`, `${target} source तपासा`);
+  }
+  if (/odia|oriya/.test(raw)) {
+    if (/poultry|chicken/.test(all)) return pick('poultry ଛୋଟ trial କରନ୍ତୁ', 'poultry training ପ୍ରଥମେ check', 'buyer-kharcha ପ୍ରଥମେ ପଚାରନ୍ତୁ');
+    return pick(`${target} proof କରନ୍ତୁ`, `${target} practice କରନ୍ତୁ`, `${target} source check କରନ୍ତୁ`);
+  }
+  if (/bengali|bangla/.test(raw)) {
+    if (/tiffin|food|snack/.test(all)) return pick('টিফিন cost proof বানান', 'রোজ রান্না-practice করুন', 'customer আর cost আগে জিজ্ঞেস করুন');
+    return pick(`${target} proof বানান`, `${target} practice করুন`, `${target} source check করুন`);
+  }
+  if (/tamil/.test(raw)) {
+    if (/tailor|stitch|silai/.test(all)) return pick('தையல் sample proof சேமிக்கவும்', 'தினமும் தையல் practice செய்யவும்', 'local customer/source check செய்யவும்');
+    return pick(`${target} proof சேமிக்கவும்`, `${target} practice செய்யவும்`, `${target} source check செய்யவும்`);
+  }
+  if (/telugu/.test(raw)) {
+    if (/computer|typing|data/.test(all)) return pick('typing proof save చేయండి', 'రోజూ computer practice చేయండి', 'NCS లో safe job check చేయండి');
+    return pick(`${target} proof save చేయండి`, `${target} practice చేయండి`, `${target} source check చేయండి`);
+  }
+  if (/gujarati/.test(raw)) {
+    if (/shop|upi|whatsapp|catalogue/.test(all)) return pick('દુકાન WhatsApp proof બનાવો', 'રોજ digital order practice કરો', 'customer-cost પહેલાં પૂછો');
+    return pick(`${target} proof બનાવો`, `${target} practice કરો`, `${target} source check કરો`);
+  }
+  if (/kannada/.test(raw)) {
+    if (/electrician|wiring/.test(all)) return pick('wiring safety proof ಮಾಡಿ', 'ಪ್ರತಿ ದಿನ tool practice ಮಾಡಿ', 'safe electrician source check ಮಾಡಿ');
+    return pick(`${target} proof ಮಾಡಿ`, `${target} practice ಮಾಡಿ`, `${target} source check ಮಾಡಿ`);
+  }
+  if (/malayalam/.test(raw)) {
+    if (/beauty|salon|mehndi/.test(all)) return pick('beauty sample proof save ചെയ്യുക', 'ദിവസവും hygiene practice ചെയ്യുക', 'customer/source ആദ്യം check ചെയ്യുക');
+    return pick(`${target} proof save ചെയ്യുക`, `${target} practice ചെയ്യുക`, `${target} source check ചെയ്യുക`);
+  }
+  if (/punjabi/.test(raw)) {
+    if (/dairy|milk/.test(all)) return pick('dairy buyer-cost proof ਬਣਾਓ', 'ਰੋਜ਼ cattle-care practice ਕਰੋ', 'scheme ਤੇ buyer ਪਹਿਲਾਂ check ਕਰੋ');
+    return pick(`${target} proof ਬਣਾਓ`, `${target} practice ਕਰੋ`, `${target} source check ਕਰੋ`);
+  }
+  return '';
+}
+
 function compactRouteName(route = {}, index = 0, profile = {}, family = '', cardKind = '') {
   const target = learnerTargetForRoute(profile, route, family);
   const kind = cardKind || cardKindForRoute(route, index, profile);
@@ -2077,6 +2411,40 @@ function compactRouteName(route = {}, index = 0, profile = {}, family = '', card
     .map((value) => safeRouteText(value))
     .join(' ')
     .toLowerCase();
+  const localizedTitle = localizedCompactRouteName(profile, target, kind, text);
+  if (localizedTitle) return localizedTitle;
+  const english = lang === 'en' && !scriptPatternForProfile(profile);
+
+  if (english) {
+    if (profile.learner_goal?.intent === 'self_employment' || /enterprise/.test(family)) {
+      if (/mushroom/.test(text)) {
+        if (kind === 'earn_fast') return 'Try a tiny mushroom pilot';
+        if (kind === 'build_bigger') return 'Check mushroom training first';
+        return 'Ask mushroom buyers and costs';
+      }
+      if (kind === 'earn_fast') return `Try a tiny ${target} pilot`;
+      if (kind === 'build_bigger') return `Practise ${target} daily`;
+      return `Verify ${target} buyers and costs`;
+    }
+    if (/machine learning/i.test(target)) {
+      if (kind === 'earn_fast') return 'Build ML proof with GitHub';
+      if (kind === 'build_bigger') return 'Strengthen Python-SQL practice';
+      return 'Apply to verified ML roles';
+    }
+    if (/data science/i.test(target)) {
+      if (kind === 'earn_fast') return 'Build data project proof';
+      if (kind === 'build_bigger') return 'Strengthen Python-SQL practice';
+      return 'Apply to verified data roles';
+    }
+    if (/computer|office|typing|data-entry|data entry/i.test(target)) {
+      if (kind === 'earn_fast') return 'Save a typing proof';
+      if (kind === 'build_bigger') return 'Practise computer skills daily';
+      return 'Check safe NCS jobs';
+    }
+    if (kind === 'earn_fast') return `Save a small ${target} proof`;
+    if (kind === 'build_bigger') return `Practise ${target} daily`;
+    return `Verify the next ${target} step`;
+  }
 
   if (/school_study|board_exam|entrance_exam/.test(family) || profile.learner_goal?.intent === 'study') {
     if (kind === 'earn_fast') return lang === 'hi' ? 'कमज़ोर chapter पकड़कर practice शुरू करो' : 'Weak chapter pakdo aur practice shuru karo';
@@ -2096,6 +2464,11 @@ function compactRouteName(route = {}, index = 0, profile = {}, family = '', card
         : lang === 'hi'
           ? 'छोटे business'
           : 'chhote business';
+    if (/mushroom|à¤®à¤¶à¤°à¥‚à¤®/.test(text)) {
+      if (kind === 'earn_fast') return lang === 'hi' ? 'YouTube à¤¸à¥‡ à¤ªà¤¹à¤²à¤¾ mushroom trial' : 'YouTube se pehla mushroom trial';
+      if (kind === 'build_bigger') return lang === 'hi' ? 'KVK/Skill à¤¸à¥‡ mushroom à¤¸à¥€à¤–à¥‹' : 'KVK/Skill se mushroom seekho';
+      return lang === 'hi' ? 'Mushroom buyer-kharcha à¤ªà¤¹à¤²à¥‡ à¤ªà¥‚à¤›à¥‹' : 'Mushroom buyer-kharcha pehle puchho';
+    }
     if (kind === 'earn_fast') {
       return lang === 'hi'
         ? `${business} का छोटा trial घर पर करो`
@@ -2127,6 +2500,12 @@ function compactRouteName(route = {}, index = 0, profile = {}, family = '', card
     if (kind === 'earn_fast') return 'Phone repair ka pehla proof banao';
     if (kind === 'build_bigger') return 'Free video se daily repair practice karo';
     return 'Safe repair shop/centre verify karo';
+  }
+
+  if (/computer|office|typing|data-entry|data entry/i.test(target)) {
+    if (kind === 'earn_fast') return 'Typing ka chhota proof banao';
+    if (kind === 'build_bigger') return 'Roz computer practice karo';
+    return 'NCS par safe job check karo';
   }
 
   if (/tailoring/i.test(target)) {
@@ -2226,9 +2605,13 @@ function applyPathwayCardContract(route = {}, index = 0, profile = {}, context =
   const cardKind = cardKindForRoute(route, index, profile);
   const sources = normalizeSourceList(route.sources || route.source_urls || route.source_url);
   const firstStep = firstStepForRoute(route, context);
-  const title = compactRouteName(route, index, profile, family, cardKind);
-  const learnerSummary = compactRouteSummary(route, index, profile, family, cardKind);
-  const learnerNextStep = compactNextStep(route, index, profile, family, cardKind);
+  const generatedTitle = safeRouteText(route.name || route.title || route.route_name);
+  const keepGeneratedTitle = shouldKeepLocalizedRouteText(generatedTitle, profile);
+  const title = keepGeneratedTitle ? generatedTitle : compactRouteName(route, index, profile, family, cardKind);
+  const generatedSummary = safeRouteText(route.learner_summary || route.tradeoff || route.why_this_fits_you);
+  const generatedStep = safeRouteText(route.learner_next_step || route.first_step || route.next_action);
+  const learnerSummary = keepGeneratedTitle && generatedSummary ? generatedSummary : compactRouteSummary(route, index, profile, family, cardKind);
+  const learnerNextStep = keepGeneratedTitle && generatedStep ? generatedStep : compactNextStep(route, index, profile, family, cardKind);
   return {
     ...route,
     card_kind: cardKind,

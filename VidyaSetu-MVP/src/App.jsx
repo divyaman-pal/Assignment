@@ -1090,7 +1090,8 @@ function App() {
   }
 
   async function generatePathway() {
-    await run('Searching verified sources and building pathways...', async () => {
+    setActiveTab('pathways');
+    await run(generationWaitCopy(profile.preferred_language || selectedLanguage || uiLanguage, 'pathway').loading, async () => {
       const latestUserQuestion = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
       const data = await api('/api/pathway', { profile, question: latestUserQuestion });
       setPathway(data);
@@ -1101,13 +1102,13 @@ function App() {
       setProofNotes({});
       setProofArtifacts({});
       setProgressState({});
-      setActiveTab('pathways');
     });
   }
 
   async function createJourney(route = selectedRoute || pathway?.routes?.[0]) {
     if (!route) return;
-    await run('Creating personalized learning journey...', async () => {
+    setActiveTab('journey');
+    await run(generationWaitCopy(profile.preferred_language || selectedLanguage || uiLanguage, 'journey').loading, async () => {
       const data = await api('/api/journey', { profile, route });
       setSelectedRoute(route);
       setJourney(data.journey);
@@ -1116,7 +1117,6 @@ function App() {
       setProofArtifacts({});
       setProgressState(data.journey?.progress || {});
       setLastProof(data.proof || null);
-      setActiveTab('journey');
       persistProgress({}, 'journey_created', {}, {}, data.journey).catch(() => {});
     });
   }
@@ -1685,6 +1685,7 @@ function App() {
               setSelectedRoute={setSelectedRoute}
               generatePathway={generatePathway}
               createJourney={createJourney}
+              loading={loading}
               speakReply={speakReply}
               speakingIndex={speakingIndex}
               stopSpeaking={stopSpeaking}
@@ -1693,6 +1694,7 @@ function App() {
           )}
           {activeTab === 'journey' && (
             <JourneyTab
+              profile={profile}
               journey={journey}
               selectedRoute={selectedRoute}
               createJourney={createJourney}
@@ -1705,6 +1707,7 @@ function App() {
               updateProofArtifact={updateProofArtifact}
               saveJourneyProgress={saveJourneyProgress}
               progressState={progressState}
+              loading={loading}
               t={t}
             />
           )}
@@ -2310,6 +2313,111 @@ function limitedVoiceScript(parts = [], maxLength = 860) {
   return output.join(' ').trim();
 }
 
+function shortVoiceLine(value = '', maxLength = 150) {
+  const clean = voiceSegment(value)
+    .replace(/\b(Meera\s+ne\s+yeh\s+rasta|Meera chose this|Why this route|Yeh rasta kyun)\b[:\s-]*/gi, '')
+    .replace(/\bGoal:|Education:|Location:|Mobility:|Learner conditions used\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (clean.length <= maxLength) return clean;
+  const clipped = clean.slice(0, maxLength);
+  return clipped.slice(0, Math.max(30, clipped.lastIndexOf(' '))).trim();
+}
+
+function generationWaitCopy(language = 'English', type = 'pathway') {
+  const lang = String(language || '').toLowerCase();
+  const journey = type === 'journey';
+  if (/hindi|हिंदी/.test(lang)) {
+    return journey
+      ? {
+          title: 'आपकी सीखने की यात्रा बन रही है',
+          loading: 'मीरा आपका असली week-by-week plan बना रही है। कृपया थोड़ा इंतज़ार करें।',
+          hint: 'यह आपके लक्ष्य, जगह, समय और मुफ़्त resources के हिसाब से बनेगा।',
+        }
+      : {
+          title: 'आपका असली रास्ता बन रहा है',
+          loading: 'मीरा आपके goal, जगह और हालत देखकर रास्ता बना रही है। कृपया थोड़ा इंतज़ार करें।',
+          hint: 'यह generic जवाब नहीं है; Meera आपके profile से सही next step चुनेगी।',
+        };
+  }
+  if (/odia|oriya|ଓଡ/.test(lang)) {
+    return journey
+      ? {
+          title: 'ଆପଣଙ୍କ ଶିଖିବା ଯାତ୍ରା ତିଆରି ହେଉଛି',
+          loading: 'Meera ଆପଣଙ୍କ ପାଇଁ ସତିକ week-by-week plan ବନାଉଛି। ଦୟାକରି ଅଳ୍ପ ଅପେକ୍ଷା କରନ୍ତୁ।',
+          hint: 'ଏହା ଆପଣଙ୍କ goal, ଜାଗା, ସମୟ ଏବଂ free resources ଅନୁସାରେ ହେବ।',
+        }
+      : {
+          title: 'ଆପଣଙ୍କ ସତିକ ବାଟ ତିଆରି ହେଉଛି',
+          loading: 'Meera ଆପଣଙ୍କ goal, ଜାଗା ଓ ପରିସ୍ଥିତି ଦେଖି ବାଟ ବନାଉଛି। ଦୟାକରି ଅଳ୍ପ ଅପେକ୍ଷା କରନ୍ତୁ।',
+          hint: 'ଏହା generic ଉତ୍ତର ନୁହେଁ; profile ରୁ next step ବାଛାଯିବ।',
+        };
+  }
+  if (/tamil|தமிழ்/.test(lang)) {
+    return journey
+      ? {
+          title: 'உங்கள் கற்றல் பயணம் உருவாகிறது',
+          loading: 'Meera உங்களுக்கு உண்மையான week-by-week plan உருவாக்குகிறது. தயவு செய்து காத்திருக்கவும்.',
+          hint: 'இது உங்கள் goal, இடம், நேரம், free resources அடிப்படையில் வரும்.',
+        }
+      : {
+          title: 'உங்கள் உண்மையான பாதை உருவாகிறது',
+          loading: 'Meera உங்கள் goal, இடம், நிலை பார்த்து பாதை உருவாக்குகிறது. தயவு செய்து காத்திருக்கவும்.',
+          hint: 'இது generic பதில் இல்லை; உங்கள் profile-க்கு சரியான next step வரும்.',
+        };
+  }
+  if (/bengali|bangla|বাংলা/.test(lang)) {
+    return journey
+      ? {
+          title: 'আপনার শেখার যাত্রা তৈরি হচ্ছে',
+          loading: 'Meera আপনার জন্য সত্যিকারের week-by-week plan বানাচ্ছে। একটু অপেক্ষা করুন।',
+          hint: 'এটি আপনার goal, জায়গা, সময় এবং free resources অনুযায়ী হবে।',
+        }
+      : {
+          title: 'আপনার আসল পথ তৈরি হচ্ছে',
+          loading: 'Meera আপনার goal, জায়গা আর অবস্থার ওপর ভিত্তি করে পথ বানাচ্ছে। একটু অপেক্ষা করুন।',
+          hint: 'এটি generic উত্তর নয়; আপনার profile থেকে next step আসবে।',
+        };
+  }
+  if (/marathi|मराठी/.test(lang)) {
+    return journey
+      ? {
+          title: 'तुमचा शिकण्याचा प्रवास तयार होत आहे',
+          loading: 'Meera तुमच्यासाठी खरा week-by-week plan बनवत आहे. थोडा वेळ थांबा.',
+          hint: 'हा तुमच्या goal, ठिकाण, वेळ आणि free resources नुसार असेल.',
+        }
+      : {
+          title: 'तुमचा खरा मार्ग तयार होत आहे',
+          loading: 'Meera तुमचा goal, ठिकाण आणि परिस्थिती पाहून मार्ग बनवत आहे. थोडा वेळ थांबा.',
+          hint: 'हे generic उत्तर नाही; profile वरून next step निवडला जाईल.',
+        };
+  }
+  if (/hinglish/.test(lang)) {
+    return journey
+      ? {
+          title: 'Aapki learning journey ban rahi hai',
+          loading: 'Meera aapke liye real week-by-week plan bana rahi hai. Thoda wait karein.',
+          hint: 'Yeh aapke goal, location, time aur free resources ke hisaab se banega.',
+        }
+      : {
+          title: 'Aapka real rasta ban raha hai',
+          loading: 'Meera aapka goal, location aur condition dekhkar rasta bana rahi hai. Thoda wait karein.',
+          hint: 'Yeh generic jawab nahi hai; profile se sahi next step choose hoga.',
+        };
+  }
+  return journey
+    ? {
+        title: 'Creating your learning journey',
+        loading: 'Meera is creating a real week-by-week plan for you. Please wait a little.',
+        hint: 'It will use your goal, location, time, proof, and free resources.',
+      }
+    : {
+        title: 'Creating your real pathway',
+        loading: 'Meera is using your goal, location, proof, and safety limits. Please wait a little.',
+        hint: 'This is not a generic answer; the next step comes from your profile.',
+      };
+}
+
 function pathwayVoiceScript({
   activeRoute,
   firstSource,
@@ -2325,17 +2433,18 @@ function pathwayVoiceScript({
   if (!activeRoute) return '';
   const copy = t.pathway || {};
   const resourceTitle = firstSource?.title ? voiceSegment(firstSource.title) : '';
+  const recommendation = shortVoiceLine(routeTitle, 130);
+  const firstAction = shortVoiceLine(simpleStep, 160);
+  const check = shortVoiceLine(simpleCheck || promiseText, 170);
   return limitedVoiceScript([
     copy.voiceIntro || 'Meera is explaining this pathway.',
-    routeTitle,
-    routeSummary,
-    `${copy.pathwayLabel || 'Pathway'}: ${simpleRole}. ${simpleStep}`,
-    `${copy.whyThisRoute || 'Why this route'}: ${simpleWhy}`,
-    `${copy.checkBefore || 'Check before acting'}: ${simpleCheck}. ${promiseText}`,
+    recommendation ? `${copy.voiceRecommendation || copy.recommended || 'Meera ka sujhav'}: ${recommendation}` : '',
+    firstAction ? `${copy.voiceFirstAction || copy.firstStep || 'Pehla kaam'}: ${firstAction}` : shortVoiceLine(routeSummary, 150),
+    check ? `${copy.voiceCheck || copy.checkBefore || 'Dhyan rahe'}: ${check}` : '',
     resourceTitle
-      ? `${copy.firstResource || 'First resource'}: ${resourceTitle}. ${copy.resourceVoiceHint || 'Open it, use the first useful page or lesson, and save one note or voice proof.'}`
+      ? `${copy.firstResource || 'First resource'}: ${resourceTitle}. ${copy.resourceVoiceHint || 'Open one small useful part, then save one note or voice proof.'}`
       : '',
-  ]);
+  ], 560);
 }
 
 function TracePanel({ trace, nextAction }) {
@@ -2365,6 +2474,28 @@ function TracePanel({ trace, nextAction }) {
   );
 }
 
+function GenerationWaitCard({ type = 'pathway', loading = '', language = 'English', t = getTranslations('English') }) {
+  if (!loading) return null;
+  const copy = t.wait || getTranslations('English').wait || {};
+  const isJourney = type === 'journey';
+  const languageCopy = generationWaitCopy(language, type);
+  return (
+    <div className="generation-wait-card" role="status" aria-live="polite">
+      <span className="generation-spinner" aria-hidden="true" />
+      <div>
+        <strong>{languageCopy.title || (isJourney ? copy.journeyTitle || 'Creating your learning journey' : copy.pathwayTitle || 'Creating your pathway')}</strong>
+        <p>{loading}</p>
+        <small>
+          {languageCopy.hint ||
+            (isJourney
+              ? copy.journeyHint || 'Meera is using your profile and selected pathway to create week-by-week tasks and resources.'
+              : copy.pathwayHint || 'Meera is using your goal, location, time, proof, and safety limits. This can take a little time.')}
+        </small>
+      </div>
+    </div>
+  );
+}
+
 function PathwaysTab({
   pathway,
   profile = {},
@@ -2372,6 +2503,7 @@ function PathwaysTab({
   setSelectedRoute,
   generatePathway,
   createJourney,
+  loading = '',
   speakReply,
   speakingIndex,
   stopSpeaking,
@@ -2474,6 +2606,7 @@ function PathwaysTab({
   );
   return (
     <div className="prototype-screen pathway-screen">
+      <GenerationWaitCard language={profile.preferred_language || profile.language} loading={loading} t={t} type="pathway" />
       {!routes.length && <EmptyState text={t.pathway.empty} />}
       {routeChoiceStrip}
       <div className="card pathway-detail-card">
@@ -2572,6 +2705,7 @@ function weekDayPlan(module = {}, lessons = [], practiceTasks = [], proofTasks =
 }
 
 function JourneyTab({
+  profile = {},
   journey,
   selectedRoute,
   createJourney,
@@ -2584,6 +2718,7 @@ function JourneyTab({
   updateProofArtifact,
   saveJourneyProgress,
   progressState = {},
+  loading = '',
   t = getTranslations('English'),
 }) {
   const copy = t.journey || getTranslations('English').journey;
@@ -2630,6 +2765,7 @@ function JourneyTab({
     : copy.proofPlaceholderWork;
   return (
     <div className="workspace-card journey-workspace">
+      <GenerationWaitCard language={profile.preferred_language || profile.language} loading={loading} t={t} type="journey" />
       <div className="journey-page-head">
         <div>
           <p className="eyebrow">{copy.eyebrow}</p>

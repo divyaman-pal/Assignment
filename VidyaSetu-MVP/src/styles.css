@@ -2181,6 +2181,53 @@ button:disabled {
   line-height: 1.38;
 }
 
+.generation-wait-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px solid rgba(39, 94, 254, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  color: #344054;
+  background: #f6f9ff;
+}
+
+.generation-wait-card strong {
+  display: block;
+  color: #101828;
+  font-size: 1rem;
+}
+
+.generation-wait-card p {
+  margin: 4px 0;
+  color: #344054;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.generation-wait-card small {
+  display: block;
+  max-width: 740px;
+  color: #667085;
+  line-height: 1.45;
+}
+
+.generation-spinner {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border: 3px solid rgba(39, 94, 254, 0.18);
+  border-top-color: #275efe;
+  border-radius: 50%;
+  animation: generation-spin 0.85s linear infinite;
+}
+
+@keyframes generation-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .pathway-listen-button {
   flex: 0 0 auto;
   margin-top: 0;

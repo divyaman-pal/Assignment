@@ -264,6 +264,9 @@ Object.assign(en.pathway, {
   listenTitle: 'Hear this pathway',
   listenHint: 'Meera will explain the route, first step, safety checks, and resource to open first.',
   voiceIntro: 'Meera is explaining this pathway.',
+  voiceRecommendation: 'Meera suggests',
+  voiceFirstAction: 'First action',
+  voiceCheck: 'Remember',
   firstResource: 'First resource',
   resourceVoiceHint: 'Open it, use the first useful page or lesson, and save one note or voice proof.',
 });
@@ -363,6 +366,9 @@ Object.assign(hinglish.pathway, {
   listenTitle: 'Is raste ko sunein',
   listenHint: 'Meera route, pehla step, safety check, aur pehla resource samjhayegi.',
   voiceIntro: 'Meera ab yeh rasta samjha rahi hai.',
+  voiceRecommendation: 'Meera ka sujhav',
+  voiceFirstAction: 'Pehla kaam',
+  voiceCheck: 'Dhyan rahe',
   firstResource: 'Pehla resource',
   resourceVoiceHint: 'Isko kholiye, pehla useful page ya lesson dekhiye, aur ek note ya voice proof save kijiye.',
   cardKinds: { earn_fast: 'Jaldi kamai', build_bigger: 'Bada banao', explore: 'Explore' },
@@ -617,6 +623,93 @@ const gu = mergeDeep(en, {
   subtitle: { passport: 'પુરાવા સાથે તમારી કુશળતા - તમે પસંદ કરો ત્યારે જ શેર થશે.' },
   btn: { generatePathway: 'Pathway બનાવો', refreshRecommendations: 'Suggestions refresh કરો', startThisWeek: '4-week journey બનાવો', createJourney: 'Journey બનાવો / refresh કરો', open: 'ખોલો', notMe: 'આ હું નથી', addLearner: 'આ phone પર નવો learner add કરો', refreshStudyPlan: 'Study plan refresh કરો' },
   profile: { ready: 'Profile તૈયાર', building: 'Profile બની રહ્યું છે', sub: 'Meera chat દ્વારા profile ભરે છે - long form નથી.', name: 'નામ', education: 'ભણતર', language: 'ભાષા', location: 'સ્થળ', goal: 'Goal', time: 'સમય', earningNeed: 'કમાણીની જરૂર', tapToAdd: 'add કરો', discovering: 'સમજી રહ્યા છીએ...', pending: 'બાકી', high: 'વધારે', readyLabel: 'Ready', nextQuestion: 'આગલો પ્રશ્ન', completeEnough: 'Pathway માટે profile પૂરતું છે.', stillNeeds: 'Meeraને હજુ જોઈએ: {need}.', privateNote: 'Learner permission વગર કશું share થતું નથી.', profileComplete: 'Recommendation માટે profile પૂરતું છે.', counselorNeeds: 'Counselorને હજુ થોડી details જોઈએ.' },
+});
+
+const kn = mergeDeep(en, {
+  nav: { counselor: 'Meera', pathways: 'ನನ್ನ ದಾರಿ', journey: 'ಕಲಿಕೆಯ ಪ್ರಯಾಣ', passport: 'ಕೌಶಲ್ಯ ಪಾಸ್‌ಪೋರ್ಟ್', jobs: 'ಅವಕಾಶಗಳು' },
+  navShort: { counselor: 'Meera', pathways: 'ದಾರಿ', journey: 'ಪ್ರಯಾಣ', passport: 'ಪಾಸ್‌ಪೋರ್ಟ್', jobs: 'ಅವಕಾಶಗಳು' },
+  title: { counselor: 'Meera ಜೊತೆ ಮಾತನಾಡಿ', pathways: 'ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ದಾರಿ', journey: 'ಕಲಿಕೆಯ ಪ್ರಯಾಣ', passport: 'ಕೌಶಲ್ಯ ಪಾಸ್‌ಪೋರ್ಟ್', jobs: 'ಅವಕಾಶಗಳು' },
+  subtitle: {
+    counselor: 'ಸಾಮಾನ್ಯ ಮಾತುಕತೆಯಿಂದ Meera ನಿಮ್ಮ ಮಾಹಿತಿ ಕಟ್ಟುತ್ತಾಳೆ - ಉದ್ದ form ಅಲ್ಲ.',
+    pathways: 'ನಿಮ್ಮ ಗುರಿಗೆ ಸರಿಯಾದ ಚಿಕ್ಕ ನಂಬಿಕೆಯ ದಾರಿ ಮತ್ತು ಮುಂದಿನ ಹೆಜ್ಜೆ.',
+    journey: 'ಪ್ರತಿ ದಿನದ ಚಿಕ್ಕ ಕೆಲಸಗಳು. ಪ್ರತಿ ವಾರ proof task ಇರುತ್ತದೆ.',
+    passport: 'ಸಾಕ್ಷಿಯೊಂದಿಗೆ ನಿಮ್ಮ ಕೌಶಲ್ಯಗಳು - ನೀವು ಒಪ್ಪಿದಾಗ ಮಾತ್ರ share ಆಗುತ್ತದೆ.',
+    jobs: 'ಪರಿಶೀಲಿಸಿದ ಅವಕಾಶಗಳು ಮಾತ್ರ - ಯಾವುದನ್ನೂ ಕಲ್ಪನೆ ಮಾಡಿ ತೋರಿಸುವುದಿಲ್ಲ.',
+  },
+  btn: { generatePathway: 'ದಾರಿ ಮಾಡಿ', refreshRecommendations: 'ಸಲಹೆಗಳನ್ನು ಮತ್ತೆ ತರಿ', startThisWeek: '4-week journey ಮಾಡಿ', createJourney: 'Journey ಮಾಡಿ / refresh', open: 'ತೆರೆಯಿರಿ', notMe: 'ಇದು ನಾನು ಅಲ್ಲ', addLearner: 'ಈ phone ನಲ್ಲಿ ಹೊಸ learner ಸೇರಿಸಿ', refreshStudyPlan: 'Study plan refresh' },
+  pathway: {
+    selected: 'ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ',
+    recommended: 'ಸಲಹೆ',
+    option: 'ಆಯ್ಕೆ',
+    listenTitle: 'ಈ ದಾರಿಯನ್ನು ಕೇಳಿ',
+    listenHint: 'Meera ದಾರಿ, ಮೊದಲ ಕೆಲಸ, safety check, ಮತ್ತು ಮೊದಲ resource ಹೇಳುತ್ತಾಳೆ.',
+    voiceIntro: 'Meera ಈಗ ಈ ದಾರಿ ಹೇಳುತ್ತಿದ್ದಾಳೆ.',
+    pathwayLabel: 'ದಾರಿ',
+    firstResource: 'ಮೊದಲ resource',
+    resourceVoiceHint: 'ಒಂದು ಚಿಕ್ಕ ಭಾಗ ನೋಡಿ, ನಂತರ ಒಂದು note ಅಥವಾ voice proof save ಮಾಡಿ.',
+    firstStep: 'ಮೊದಲ ಕೆಲಸ',
+    checkBefore: 'ಮಾಡುವ ಮೊದಲು check',
+    whyThisRoute: 'ಈ ದಾರಿ ಯಾಕೆ',
+  },
+  journey: { eyebrow: 'ಕಲಿಕೆಯ ಪ್ರಯಾಣ', refresh: 'Journey refresh', fourWeeks: '4 ಸ್ಪಷ್ಟ ವಾರಗಳು. ಪ್ರತಿ ವಾರ day tabs ಮತ್ತು proof box ಇರುತ್ತದೆ.', resources: 'ಈ ವಾರದ resources', howToUse: 'ಹೇಗೆ ಬಳಸಬೇಕು', proofToSave: 'Save ಮಾಡಬೇಕಾದ proof', skillPassport: 'ಕೌಶಲ್ಯ ಪಾಸ್‌ಪೋರ್ಟ್', skillPassportNext: 'ಕೌಶಲ್ಯ ಪಾಸ್‌ಪೋರ್ಟ್ ಮತ್ತು ಮುಂದಿನ ಹೆಜ್ಜೆ' },
+});
+
+const ml = mergeDeep(en, {
+  nav: { counselor: 'Meera', pathways: 'എന്റെ വഴി', journey: 'പഠന യാത്ര', passport: 'നൈപുണ്യ പാസ്‌പോർട്ട്', jobs: 'അവസരങ്ങൾ' },
+  navShort: { counselor: 'Meera', pathways: 'വഴി', journey: 'യാത്ര', passport: 'പാസ്‌പോർട്ട്', jobs: 'അവസരങ്ങൾ' },
+  title: { counselor: 'Meeraയോട് സംസാരിക്കുക', pathways: 'നിങ്ങളുടെ വ്യക്തിഗത വഴി', journey: 'പഠന യാത്ര', passport: 'നൈപുണ്യ പാസ്‌പോർട്ട്', jobs: 'അവസരങ്ങൾ' },
+  subtitle: {
+    counselor: 'സാധാരണ സംഭാഷണത്തിൽ നിന്ന് Meera നിങ്ങളുടെ വിവരം ഉണ്ടാക്കും - നീണ്ട form അല്ല.',
+    pathways: 'നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്കുള്ള ചെറുതും വിശ്വസനീയവുമായ വഴി.',
+    journey: 'ദിവസേന ചെയ്യാനുള്ള ചെറിയ കാര്യങ്ങൾ. ഓരോ ആഴ്ചയും proof task.',
+    passport: 'തെളിവോടെയുള്ള നിങ്ങളുടെ നൈപുണ്യം - നിങ്ങൾ സമ്മതിച്ചാൽ മാത്രം share ചെയ്യും.',
+    jobs: 'പരിശോധിച്ച അവസരങ്ങൾ മാത്രം - വ്യാജമായി ഒന്നും കാണിക്കില്ല.',
+  },
+  btn: { generatePathway: 'വഴി ഉണ്ടാക്കുക', refreshRecommendations: 'സലഹകൾ വീണ്ടും കൊണ്ടുവരുക', startThisWeek: '4-week journey ഉണ്ടാക്കുക', createJourney: 'Journey ഉണ്ടാക്കുക / refresh', open: 'തുറക്കുക', notMe: 'ഇത് ഞാൻ അല്ല', addLearner: 'ഈ phoneൽ പുതിയ learner ചേർക്കുക', refreshStudyPlan: 'Study plan refresh' },
+  pathway: {
+    selected: 'തിരഞ്ഞെടുത്തു',
+    recommended: 'സലഹ',
+    option: 'ഓപ്ഷൻ',
+    listenTitle: 'ഈ വഴി കേൾക്കുക',
+    listenHint: 'Meera വഴി, ആദ്യ ജോലി, safety check, ആദ്യ resource പറയുന്നതാണ്.',
+    voiceIntro: 'Meera ഇപ്പോൾ ഈ വഴി പറയുന്നു.',
+    pathwayLabel: 'വഴി',
+    firstResource: 'ആദ്യ resource',
+    resourceVoiceHint: 'ഒരു ചെറിയ ഭാഗം നോക്കുക, പിന്നെ ഒരു note അല്ലെങ്കിൽ voice proof save ചെയ്യുക.',
+    firstStep: 'ആദ്യ ജോലി',
+    checkBefore: 'ചെയ്യുന്നതിന് മുമ്പ് check',
+    whyThisRoute: 'ഈ വഴി എന്തുകൊണ്ട്',
+  },
+  journey: { eyebrow: 'പഠന യാത്ര', refresh: 'Journey refresh', fourWeeks: '4 വ്യക്തമായ ആഴ്ചകൾ. ഓരോ ആഴ്ചയ്ക്കും day tabs, proof box ഉണ്ട്.', resources: 'ഈ ആഴ്ചയിലെ resources', howToUse: 'എങ്ങനെ ഉപയോഗിക്കണം', proofToSave: 'Save ചെയ്യേണ്ട proof', skillPassport: 'നൈപുണ്യ പാസ്‌പോർട്ട്', skillPassportNext: 'നൈപുണ്യ പാസ്‌പോർട്ട്, അടുത്ത പടി' },
+});
+
+const pa = mergeDeep(en, {
+  nav: { counselor: 'Meera', pathways: 'ਮੇਰਾ ਰਾਹ', journey: 'ਸਿੱਖਣ ਦੀ ਯਾਤਰਾ', passport: 'ਹੁਨਰ ਪਾਸਪੋਰਟ', jobs: 'ਮੌਕੇ' },
+  navShort: { counselor: 'Meera', pathways: 'ਰਾਹ', journey: 'ਯਾਤਰਾ', passport: 'ਪਾਸਪੋਰਟ', jobs: 'ਮੌਕੇ' },
+  title: { counselor: 'Meera ਨਾਲ ਗੱਲ ਕਰੋ', pathways: 'ਤੁਹਾਡਾ ਆਪਣਾ ਰਾਹ', journey: 'ਸਿੱਖਣ ਦੀ ਯਾਤਰਾ', passport: 'ਹੁਨਰ ਪਾਸਪੋਰਟ', jobs: 'ਮੌਕੇ' },
+  subtitle: {
+    counselor: 'Meera ਆਮ ਗੱਲਬਾਤ ਨਾਲ ਤੁਹਾਡੀ ਜਾਣਕਾਰੀ ਬਣਾਉਂਦੀ ਹੈ - ਲੰਮਾ form ਨਹੀਂ.',
+    pathways: 'ਤੁਹਾਡੇ goal ਤੱਕ ਛੋਟਾ ਤੇ ਭਰੋਸੇਯੋਗ ਰਾਹ.',
+    journey: 'ਰੋਜ਼ ਦੇ ਛੋਟੇ ਕੰਮ. ਹਰ ਹਫ਼ਤੇ proof task.',
+    passport: 'ਸਬੂਤ ਨਾਲ ਤੁਹਾਡੇ ਹੁਨਰ - ਤੁਹਾਡੀ ਮਨਜ਼ੂਰੀ ਨਾਲ ਹੀ share ਹੋਵੇਗਾ.',
+    jobs: 'ਸਿਰਫ਼ verify ਕੀਤੇ ਮੌਕੇ - fake cards ਨਹੀਂ.',
+  },
+  btn: { generatePathway: 'ਰਾਹ ਬਣਾਓ', refreshRecommendations: 'ਸਲਾਹ ਫਿਰ ਲਿਆਓ', startThisWeek: '4-week journey ਬਣਾਓ', createJourney: 'Journey ਬਣਾਓ / refresh', open: 'ਖੋਲ੍ਹੋ', notMe: 'ਇਹ ਮੈਂ ਨਹੀਂ', addLearner: 'ਇਸ phone ਤੇ ਨਵਾਂ learner ਜੋੜੋ', refreshStudyPlan: 'Study plan refresh' },
+  pathway: {
+    selected: 'ਚੁਣਿਆ',
+    recommended: 'ਸਲਾਹ',
+    option: 'ਚੋਣ',
+    listenTitle: 'ਇਹ ਰਾਹ ਸੁਣੋ',
+    listenHint: 'Meera ਰਾਹ, ਪਹਿਲਾ ਕੰਮ, safety check, ਤੇ ਪਹਿਲਾ resource ਦੱਸੇਗੀ.',
+    voiceIntro: 'Meera ਹੁਣ ਇਹ ਰਾਹ ਸਮਝਾ ਰਹੀ ਹੈ.',
+    pathwayLabel: 'ਰਾਹ',
+    firstResource: 'ਪਹਿਲਾ resource',
+    resourceVoiceHint: 'ਇੱਕ ਛੋਟਾ ਹਿੱਸਾ ਖੋਲ੍ਹੋ, ਫਿਰ note ਜਾਂ voice proof save ਕਰੋ.',
+    firstStep: 'ਪਹਿਲਾ ਕੰਮ',
+    checkBefore: 'ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ check',
+    whyThisRoute: 'ਇਹ ਰਾਹ ਕਿਉਂ',
+  },
+  journey: { eyebrow: 'ਸਿੱਖਣ ਦੀ ਯਾਤਰਾ', refresh: 'Journey refresh', fourWeeks: '4 ਸਾਫ਼ ਹਫ਼ਤੇ. ਹਰ ਹਫ਼ਤੇ day tabs ਤੇ proof box ਹੈ.', resources: 'ਇਸ ਹਫ਼ਤੇ ਦੇ resources', howToUse: 'ਕਿਵੇਂ ਵਰਤਣਾ', proofToSave: 'Save ਕਰਨ ਵਾਲਾ proof', skillPassport: 'ਹੁਨਰ ਪਾਸਪੋਰਟ', skillPassportNext: 'ਹੁਨਰ ਪਾਸਪੋਰਟ ਤੇ ਅਗਲਾ ਕਦਮ' },
 });
 
 applyPathwayCopy(or, {
@@ -1522,22 +1615,25 @@ const COUNSELOR_CHROME_COPY = {
 };
 
 Object.entries(COUNSELOR_CHROME_COPY).forEach(([code, copy]) => {
-  const dict = { en, hinglish, hi, or, mr, bn, ta, te, gu }[code];
-  dict.counselor = mergeDeep(dict.counselor || {}, copy);
+  const dict = { en, hinglish, hi, or, mr, bn, ta, te, gu, kn, ml, pa }[code];
+  if (dict) dict.counselor = mergeDeep(dict.counselor || {}, copy);
 });
 
-const DICTS = { en, hi, hinglish, or, mr, bn, ta, te, gu };
+const DICTS = { en, hi, hinglish, or, mr, bn, ta, te, gu, kn, ml, pa };
 
 export function uiLangCode(languageName = '') {
   const raw = String(languageName || '').toLowerCase();
   if (/hinglish|hindi \+ english|hindi\+english/.test(raw)) return 'hinglish';
-  if (/odia|oriya|ଓଡ଼ିଆ|ଓଡିଆ/.test(raw)) return 'or';
-  if (/marathi|मराठी/.test(raw)) return 'mr';
-  if (/bengali|bangla|বাংলা/.test(raw)) return 'bn';
-  if (/tamil|தமிழ்/.test(raw)) return 'ta';
-  if (/telugu|తెలుగు/.test(raw)) return 'te';
-  if (/gujarati|ગુજરાતી/.test(raw)) return 'gu';
-  if (/hindi|हिंदी|हिन्दी/.test(raw)) return 'hi';
+  if (/odia|oriya/.test(raw)) return 'or';
+  if (/marathi/.test(raw)) return 'mr';
+  if (/bengali|bangla/.test(raw)) return 'bn';
+  if (/tamil/.test(raw)) return 'ta';
+  if (/telugu/.test(raw)) return 'te';
+  if (/gujarati/.test(raw)) return 'gu';
+  if (/kannada/.test(raw)) return 'kn';
+  if (/malayalam/.test(raw)) return 'ml';
+  if (/punjabi/.test(raw)) return 'pa';
+  if (/hindi/.test(raw)) return 'hi';
   return 'en';
 }
 

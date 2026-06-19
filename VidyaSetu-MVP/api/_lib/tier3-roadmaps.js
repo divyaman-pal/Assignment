@@ -29,6 +29,22 @@ const ROADMAPS = [
       'Week 1 choose hero dish/costing, Week 2 packaging/photos/samples, Week 3 menu routine, Week 4 customers plus FSSAI check, Week 5 shelf-life add-on, Week 6 pricing/retention, Week 7 discovery, Week 8 stabilise.',
   },
   {
+    id: 'mushroom_micro_enterprise',
+    match: /mushroom|button mushroom|oyster mushroom|मशरूम|मसरूम|मशरुम/i,
+    title: 'Mushroom farming micro-business',
+    weeks: 8,
+    persona: 'Rural learner/family starting a tiny mushroom pilot before spending or borrowing',
+    resources: [
+      'KVK official support search - https://kvk.icar.gov.in',
+      'Skill India Digital - search mushroom cultivation / mushroom grower - https://www.skillindiadigital.gov.in',
+      'YouTube search: mushroom farming business setup beginner Hindi oyster mushroom low cost',
+      'PMFME official eligibility check - https://www.pmfme.mofpi.gov.in/',
+      'PMEGP official eligibility check - https://www.kviconline.gov.in/pmegpeportal/',
+    ],
+    flow:
+      'Week 1 mushroom type, clean room, climate and family support, Week 2 low-cost free video/KVK learning and proof, Week 3 spawn/substrate supplier check, Week 4 buyer demand and price check, Week 5 tiny pilot cost-risk note, Week 6 hygiene/disease/loss prevention, Week 7 scheme/loan eligibility caution without borrowing, Week 8 worker-reviewed go/no-go and next batch plan.',
+  },
+  {
     id: 'beauty_mehndi',
     match: /beauty|salon|mehndi|mehandi|threading|facial|waxing|makeup/i,
     title: 'Home beauty and mehndi',
@@ -257,6 +273,16 @@ const WEEK_DETAIL_BY_ROADMAP = {
     ['Pricing and retention', 'Track repeat customers, complaints, and what not to sell yet.', 'Repeat-customer register'],
     ['Discovery', 'Prepare WhatsApp status/catalogue and safe local referral script.', 'WhatsApp catalogue/status proof'],
     ['Stabilise', 'Review hygiene, profit, capacity, and whether to formalise.', 'Weekly sales-cost review'],
+  ],
+  mushroom_micro_enterprise: [
+    ['Mushroom type and room check', 'Choose oyster/button mushroom fit, clean room/space, water, shade, and family support before buying anything.', 'Room/space photo or notebook checklist'],
+    ['Free learning and KVK check', 'Use one free mushroom-specific video/search and try to identify the nearest KVK/training source.', 'KVK/source note + 3 video learning points'],
+    ['Spawn and substrate source check', 'Find possible spawn and straw/substrate sources; write price, travel, and quality doubts.', 'Spawn/substrate price and source note'],
+    ['Buyer demand check', 'Ask vegetable vendors, hotels, or weekly market buyers what quantity/price they actually buy.', '5 buyer conversation notes without private data'],
+    ['Tiny pilot cost-risk note', 'Make a very small pilot plan with cost heads, loss buffer, packaging, and transport.', 'Pilot cost-risk notebook photo'],
+    ['Hygiene and loss prevention', 'Learn hygiene, humidity, contamination, and disease warning signs before scaling.', 'Hygiene/loss-risk checklist'],
+    ['Scheme and loan caution', 'Check PMFME/PMEGP/MUDRA only from official sources; do not borrow before buyer and repayment review.', 'Scheme eligibility and repayment-risk note'],
+    ['Go/no-go review', 'Review cost, buyer, family support, training, and risk with Meera/worker, then decide pilot, wait, or stop.', 'Worker-reviewed go/no-go decision'],
   ],
   beauty_mehndi: [
     ['Hygiene and basics', 'Practise threading/mehndi strokes with clean tools and consent.', 'Practice hand/photo note'],

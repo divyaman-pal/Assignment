@@ -1,7 +1,7 @@
 import { methodNotAllowed, readJson, sendJson } from './_lib/http.js';
 import { insertRows, patchRows } from './_lib/supabase.js';
 import { scoreJobs } from './_lib/mvp.js';
-import { callClaudeJson, discoverWithFirecrawl, discoverWithOpenAIWeb } from './_lib/services.js';
+import { callClaudeJson, discoverWithClaudeWeb } from './_lib/services.js';
 import { phrase } from './_lib/language.js';
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
@@ -123,6 +123,7 @@ export default async function handler(req, res) {
             reasoning_provider: searchPlan.planner?.provider || 'deterministic_contract',
             error: null,
             live_results: 0,
+            claude_web_search_calls: 0,
             firecrawl_calls: 0,
             credit_mode: searchPlan.credit_mode,
           },
@@ -230,6 +231,7 @@ export default async function handler(req, res) {
           reasoning_provider: searchPlan.planner?.provider || 'deterministic_contract',
           error: discoveries.find((item) => item.error)?.error || null,
           live_results: webResults.length,
+          claude_web_search_calls: discoveries.filter((item) => String(item.provider || '').startsWith('claude_web_search')).length,
           firecrawl_calls: discoveries.filter((item) => String(item.provider || '').startsWith('firecrawl')).length,
           credit_mode: searchPlan.credit_mode,
         },
@@ -331,7 +333,8 @@ function buildModeContract({ profile = {}, segment = {}, resumeProfile = {}, sea
       lazy_discovery: true,
       search_before_scrape: true,
       max_fetches_per_call: 15,
-      firecrawl_policy: 'Use only for shortlisted contact-heavy pages or official verification when broad search is insufficient.',
+      live_search_provider: 'claude_web_search',
+      firecrawl_policy: 'Disabled in this flow; live discovery uses Claude web search only.',
     },
     consent_policy: {
       needed_to_view_results: false,
@@ -509,6 +512,7 @@ function buildBlockedOpportunitySummary({ segment = {}, searchPlan = {}, blockCa
     provider: 'blocked_by_opportunity_contract',
     reasoning_provider: searchPlan.planner?.provider || 'deterministic_contract',
     live_results: 0,
+    claude_web_search_calls: 0,
     firecrawl_calls: 0,
     credit_mode: searchPlan.credit_mode,
     contract_version: ENGINE_VERSION,
@@ -660,6 +664,7 @@ function buildOpportunitySummary({ matches = [], segment = {}, discoveries = [],
     provider,
     reasoning_provider: searchPlan.planner?.provider || 'deterministic_contract',
     live_results: webResults.length,
+    claude_web_search_calls: discoveries.filter((item) => String(item.provider || '').startsWith('claude_web_search')).length,
     firecrawl_calls: discoveries.filter((item) => String(item.provider || '').startsWith('firecrawl')).length,
     credit_mode: searchPlan.credit_mode,
     contract_version: searchPlan.engine_version || ENGINE_VERSION,
@@ -883,10 +888,6 @@ function buildSearchPlan({ profile, segment, resumeProfile, query }) {
   }
 
   const allQueries = [...base, ...queries].filter(Boolean);
-  const firecrawlQueries = segment.id.startsWith('startup_outreach')
-    ? allQueries.filter((item) => /founder|email|funding|startup/i.test(item)).slice(0, 1)
-    : [];
-
   const mode = segment.opportunity_mode || segment.id;
   const sourceCategories = sourceCategoriesForMode(mode);
   const verificationRules = verificationRulesForMode(mode);
@@ -896,11 +897,11 @@ function buildSearchPlan({ profile, segment, resumeProfile, query }) {
 
   return {
     engine_version: ENGINE_VERSION,
-    method: 'claude_primary_planner_openai_web_search_firecrawl_shortlist',
-    credit_mode: 'firecrawl_minimal',
+    method: 'claude_primary_planner_claude_web_search_shortlist',
+    credit_mode: 'claude_web_search_only',
     opportunity_mode: mode,
     queries: allQueries.slice(0, 2),
-    firecrawl_queries: firecrawlQueries,
+    claude_queries: allQueries.slice(0, 2),
     source_categories: sourceCategories,
     verification_rules: verificationRules,
     scoring_rules: scoringRules,
@@ -924,7 +925,7 @@ function buildSearchPlan({ profile, segment, resumeProfile, query }) {
       'Use location only for offline jobs/training.',
       'Require consent before sending learner details.',
       'For self-employment, show setup roadmap and verification tasks instead of job cards.',
-      'Use Firecrawl only for contact-heavy startup/employer discovery, not broad pathway search.',
+      'Use Claude web search only for live discovery; do not call OpenAI, Fireworks, or Firecrawl in this flow.',
     ],
   };
 }
@@ -1217,22 +1218,26 @@ function buildUnlockState({ profile = {}, segment = {}, resumeProfile = {}, pass
 }
 
 async function runCreditSafeDiscovery(searchPlan = {}, { segment, deepContactSearch = false } = {}) {
-  const openAiQueries = (searchPlan.queries || []).slice(0, Number(process.env.OPENAI_JOB_SEARCH_QUERY_LIMIT || 1));
-  const openAiDiscoveries = await Promise.all(openAiQueries.map((query) => discoverWithOpenAIWeb(query, [])));
-
-  const needsFirecrawl =
-    deepContactSearch ||
-    (segment.id.startsWith('startup_outreach') && process.env.ENABLE_FIRECRAWL_STARTUP_AUTO === 'true') ||
-    (segment.id.startsWith('formal_job_ready') && Boolean(process.env.ENABLE_FIRECRAWL_FORMAL_READY === 'true'));
-  const firecrawlQueries = needsFirecrawl ? (searchPlan.firecrawl_queries || []).slice(0, 1) : [];
-  const firecrawlDiscoveries = await Promise.all(
-    firecrawlQueries.map((query) => discoverWithFirecrawl(query, [], {
-      limit: Number(process.env.FIRECRAWL_JOB_SEARCH_LIMIT || 2),
-      scrape: Boolean(deepContactSearch && process.env.ENABLE_FIRECRAWL_SCRAPE === 'true'),
-    })),
+  if (process.env.DISABLE_PATHWAY_WEB_SEARCH === 'true') {
+    return [
+      {
+        data: [],
+        ok: true,
+        provider: 'claude_web_search_disabled_for_dev_test',
+        error: null,
+      },
+    ];
+  }
+  const claudeQueries = (searchPlan.queries || []).slice(0, Number(process.env.CLAUDE_JOB_SEARCH_QUERY_LIMIT || 1));
+  return Promise.all(
+    claudeQueries.map((query) =>
+      discoverWithClaudeWeb(query, [], {
+        maxUses: Number(process.env.CLAUDE_JOB_WEB_SEARCH_MAX_USES || (deepContactSearch ? 2 : 1)),
+        timeoutMs: Number(process.env.CLAUDE_JOB_WEB_SEARCH_TIMEOUT_MS || process.env.CLAUDE_WEB_SEARCH_TIMEOUT_MS || 18_000),
+        location: searchPlan.location || '',
+      }),
+    ),
   );
-
-  return [...openAiDiscoveries, ...firecrawlDiscoveries];
 }
 
 function resultToLead(item = {}, index = 0, { profile, segment, resumeProfile }) {

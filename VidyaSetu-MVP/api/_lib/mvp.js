@@ -1528,6 +1528,9 @@ function roadmapResourceCards(roadmap = {}, profile = {}, week = {}, index = 0, 
     const url = raw.match(/https?:\/\/\S+/)?.[0] || '';
     const title = raw.replace(/\s*-\s*https?:\/\/\S+.*$/, '').trim() || `Free resource ${resourceIndex + 1}`;
     const isVideo = /youtube|video/i.test(raw);
+    const explicitSearch =
+      raw.match(/(?:youtube search|video search|search)\s*:\s*(.+)$/i)?.[1]?.trim() ||
+      `${roadmap.title || skill} ${week.title || ''} beginner Hindi`;
     return {
       title,
       type: isVideo ? 'free_video_search' : 'official',
@@ -1535,9 +1538,9 @@ function roadmapResourceCards(roadmap = {}, profile = {}, week = {}, index = 0, 
         url ||
         externalSearchUrl(
           'https://www.youtube.com/results?search_query=',
-          `${roadmap.title || skill} ${week.title || ''} beginner Hindi`,
+          explicitSearch,
         ),
-      search_query: `${roadmap.title || skill} ${week.title || ''} ${profile.location || ''}`.trim(),
+      search_query: `${explicitSearch} ${profile.location || ''}`.trim(),
       how_to_use: isVideo
         ? 'Watch only the part matching this week. Pause, copy the steps in a notebook, then do the safe practice task. Skip paid-job promises.'
         : 'Open the official/free source only for this week task. Note language, fee if any, duration, and whether it matches your location and safety.',
@@ -3419,7 +3422,40 @@ function skillResourceTerms(skill = '', profile = {}, module = {}) {
   const language = coerceText(profile.preferred_language || profile.language, 'Hindi');
   const place = coerceText(profile.location || profile.district || profile.relocation_preference, 'near me');
   const skillProfile = SKILL_JOURNEY_PROFILES[skill] || {};
+  const exactText = [
+    skill,
+    profile.learner_goal?.label,
+    profile.learner_goal?.type,
+    ...(profile.aspirations || []),
+    ...(profile.skills || []),
+    coerceText(module.title),
+    coerceText(module.goal),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const exactEnterprise =
+    /mushroom/.test(exactText)
+      ? {
+          base: 'mushroom farming business setup beginner Hindi oyster mushroom low cost',
+          official: 'mushroom cultivation KVK Skill India PMFME official',
+          role: 'mushroom micro-business starter',
+        }
+      : /poultry|chicken|broiler|layer/.test(exactText)
+        ? {
+            base: 'poultry farming small business beginner Hindi low cost broiler layer',
+            official: 'poultry farming KVK Skill India livestock scheme official',
+            role: 'poultry micro-business starter',
+          }
+        : /food processing|pickle|papad|bakery|snack|tiffin/.test(exactText)
+          ? {
+              base: 'food processing small business beginner Hindi cost hygiene packaging',
+              official: 'PMFME food processing Skill India FSSAI official',
+              role: 'food-processing micro-business starter',
+            }
+          : null;
   const base =
+    exactEnterprise?.base ||
     skillProfile.search_terms ||
     {
       'mobile repair': 'mobile repair basics Hindi beginner',
@@ -3439,8 +3475,8 @@ function skillResourceTerms(skill = '', profile = {}, module = {}) {
     language,
     place,
     base,
-    official: skillProfile.official_terms || `${skill || 'career skill'} Skill India Digital`,
-    role: skillProfile.entry_role || `${skill || 'skill'} beginner role`,
+    official: exactEnterprise?.official || skillProfile.official_terms || `${skill || 'career skill'} Skill India Digital`,
+    role: exactEnterprise?.role || skillProfile.entry_role || `${skill || 'skill'} beginner role`,
     moduleTitle: coerceText(module.title, `${skill || 'skill'} week`),
   };
 }
@@ -3481,25 +3517,25 @@ function resourceCardsForModule(skill = '', profile = {}, module = {}, index = 0
   if (skill === 'enterprise setup') {
     return [
       {
-        title: 'KVK / local agriculture support check',
+        title: `${terms.role} KVK / local support check`,
         type: 'official_support_search',
         source_url: 'https://kvk.icar.gov.in/',
-        search_query: `${terms.place} KVK poultry mushroom enterprise training`,
+        search_query: `${terms.place} ${terms.official} training`.trim(),
         how_to_use:
-          'Find the nearest Krishi Vigyan Kendra or district support office. Note only the source name, phone/page if public, training topic, and whether the learner can reach it safely.',
+          `Find only a ${terms.role} matching KVK, Skill India, or district support source. Note source name, training topic, language, fee if any, and whether it is reachable.`,
         proof_to_save: `Verified local support note for Week ${week}`,
       },
       {
-        title: 'Scheme / loan eligibility caution',
+        title: `${terms.role} scheme / loan caution`,
         type: 'official_scheme_check',
         source_url: week >= 2 ? 'https://udyamregistration.gov.in/' : 'https://www.pmfme.mofpi.gov.in/',
-        search_query: `${terms.place} poultry enterprise scheme loan eligibility`,
+        search_query: `${terms.place} ${terms.role} scheme loan eligibility PMFME PMEGP MUDRA`.trim(),
         how_to_use:
-          'Check eligibility, documents, subsidy/loan conditions, and repayment risk. Do not tell the learner to borrow until a worker/family review confirms cost and buyer plan.',
+          'Check eligibility, documents, subsidy/loan conditions, and repayment risk from official sources. Do not borrow until worker/family review confirms cost and buyer plan.',
         proof_to_save: `Scheme eligibility and risk note for Week ${week}`,
       },
       {
-        title: 'Free setup basics video search',
+        title: `Free video search: ${terms.role}`,
         type: 'free_video_search',
         source_url: externalSearchUrl('https://www.youtube.com/results?search_query=', searchQuery),
         how_to_use:

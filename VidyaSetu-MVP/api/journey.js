@@ -6,12 +6,18 @@ import { callAnthropicJson, callClaudeJson } from './_lib/services.js';
 import { tier3PlannerGuide } from './_lib/tier3-roadmaps.js';
 
 const DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS = 90_000;
-const MAX_JOURNEY_CLAUDE_TIMEOUT_MS = 110_000;
+const MAX_JOURNEY_CLAUDE_TIMEOUT_MS = 150_000;
 
 function journeyClaudeTimeoutMs() {
   const configured = Number(process.env.JOURNEY_CLAUDE_TIMEOUT_MS || DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS);
   if (!Number.isFinite(configured) || configured <= 0) return DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS;
   return Math.min(configured, MAX_JOURNEY_CLAUDE_TIMEOUT_MS);
+}
+
+function journeyClaudeAttemptTimeoutMs() {
+  const configured = Number(process.env.JOURNEY_CLAUDE_ATTEMPT_TIMEOUT_MS || 120_000);
+  const attemptTimeout = Number.isFinite(configured) && configured > 0 ? configured : 120_000;
+  return Math.min(journeyClaudeTimeoutMs(), attemptTimeout);
 }
 
 function stabilizeJourneySchema(base = {}, localized = {}, options = {}) {
@@ -102,23 +108,32 @@ function stabilizeJourneySchema(base = {}, localized = {}, options = {}) {
     const nextPracticeTasks = Array.isArray(nextModule.practice_tasks) ? nextModule.practice_tasks : [];
     const baseProofTasks = Array.isArray(baseModule.proof_tasks) ? baseModule.proof_tasks : [];
     const nextProofTasks = Array.isArray(nextModule.proof_tasks) ? nextModule.proof_tasks : [];
+    const useGeneratedShape = Boolean(options.allowModuleCountChange);
     return {
       ...baseModule,
       ...nextModule,
       id: baseModule.id,
       week: baseModule.week,
-      lessons: baseLessons.map((baseLesson, lessonIndex) =>
-        typeof nextLessons[lessonIndex] === 'string' ? nextLessons[lessonIndex] : baseLesson,
-      ),
-      daily_micro_tasks: baseMicroTasks.map((baseTask, taskIndex) =>
-        typeof nextMicroTasks[taskIndex] === 'string' ? nextMicroTasks[taskIndex] : baseTask,
-      ),
-      practice_tasks: basePracticeTasks.map((baseTask, taskIndex) =>
-        typeof nextPracticeTasks[taskIndex] === 'string' ? nextPracticeTasks[taskIndex] : baseTask,
-      ),
-      proof_tasks: baseProofTasks.map((baseTask, taskIndex) =>
-        typeof nextProofTasks[taskIndex] === 'string' ? nextProofTasks[taskIndex] : baseTask,
-      ),
+      lessons: useGeneratedShape && nextLessons.length
+        ? nextLessons
+        : baseLessons.map((baseLesson, lessonIndex) =>
+            typeof nextLessons[lessonIndex] === 'string' ? nextLessons[lessonIndex] : baseLesson,
+          ),
+      daily_micro_tasks: useGeneratedShape && nextMicroTasks.length
+        ? nextMicroTasks
+        : baseMicroTasks.map((baseTask, taskIndex) =>
+            typeof nextMicroTasks[taskIndex] === 'string' ? nextMicroTasks[taskIndex] : baseTask,
+          ),
+      practice_tasks: useGeneratedShape && nextPracticeTasks.length
+        ? nextPracticeTasks
+        : basePracticeTasks.map((baseTask, taskIndex) =>
+            typeof nextPracticeTasks[taskIndex] === 'string' ? nextPracticeTasks[taskIndex] : baseTask,
+          ),
+      proof_tasks: useGeneratedShape && nextProofTasks.length
+        ? nextProofTasks
+        : baseProofTasks.map((baseTask, taskIndex) =>
+            typeof nextProofTasks[taskIndex] === 'string' ? nextProofTasks[taskIndex] : baseTask,
+          ),
       completion_criteria:
         typeof nextModule.completion_criteria === 'string' && nextModule.completion_criteria.trim()
           ? nextModule.completion_criteria
@@ -237,9 +252,32 @@ const JOURNEY_TOOL_SCHEMA = {
   },
 };
 
+const JOURNEY_GENERATOR_TOOL_SCHEMA = {
+  type: 'object',
+  required: ['modules'],
+  additionalProperties: true,
+  properties: {
+    id: { type: 'string' },
+    title: { type: 'string' },
+    mode: { type: 'string' },
+    route_id: { type: 'string' },
+    route_name: { type: 'string' },
+    readiness_score: { type: 'number' },
+    duration: { type: 'object', additionalProperties: true },
+    delivery: { type: 'object', additionalProperties: true },
+    learning_contract: { type: 'object', additionalProperties: true },
+    modules: {
+      type: 'array',
+      minItems: 4,
+      items: { type: 'object', additionalProperties: true },
+    },
+    progress: { type: 'object', additionalProperties: true },
+  },
+};
+
 function hasUsableGeneratedModules(journey = {}) {
-  const modules = Array.isArray(journey.modules) ? journey.modules : [];
-  if (!modules.length) return false;
+  const modules = coerceJourneyModules(journey);
+  if (modules.length < 4) return false;
   return modules.every(
     (module) =>
       typeof module?.title === 'string' &&
@@ -257,8 +295,127 @@ function hasUsableGeneratedModules(journey = {}) {
   );
 }
 
+function coerceJourneyModules(journey = {}) {
+  if (Array.isArray(journey)) return journey;
+  if (!journey || typeof journey !== 'object') return [];
+  const direct = Array.isArray(journey.modules)
+    ? journey.modules
+    : Array.isArray(journey.weeks)
+      ? journey.weeks
+      : Array.isArray(journey.weekly_modules)
+        ? journey.weekly_modules
+        : Array.isArray(journey.week_modules)
+          ? journey.week_modules
+          : Array.isArray(journey.learning_modules)
+            ? journey.learning_modules
+            : Array.isArray(journey.journey_modules)
+              ? journey.journey_modules
+              : Array.isArray(journey.weekly_plan)
+                ? journey.weekly_plan
+                : [];
+  if (direct.length) return direct;
+  const nested = Object.values(journey)
+    .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+    .flatMap((value) => coerceJourneyModules(value));
+  if (nested.length >= 4) return nested;
+  return Object.values(journey)
+    .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+    .filter((value) => value.week || value.title || value.goal || Array.isArray(value.daily_micro_tasks));
+}
+
+function completeGeneratedModules(journey = {}, profile = {}, route = {}, targetWeeks = 4) {
+  const modules = coerceJourneyModules(journey);
+  if (modules.length < 3 || modules.length >= targetWeeks) return { journey, padded: false };
+  const completed = [...modules];
+  while (completed.length < targetWeeks) {
+    completed.push(paddingJourneyModule(profile, route, completed.length + 1));
+  }
+  return {
+    journey: {
+      ...(journey || {}),
+      modules: completed,
+      duration: {
+        ...(journey.duration || {}),
+        mvp: journey.duration?.mvp || `${completed.length}-week journey`,
+      },
+    },
+    padded: true,
+  };
+}
+
+function paddingJourneyModule(profile = {}, route = {}, week = 4) {
+  const language = String(profile.preferred_language || profile.language || '').toLowerCase();
+  const goal = profile.learner_goal?.label || route.pathway_detail?.realistic_role || route.name || 'selected goal';
+  const search = encodeURIComponent(`${goal} beginner free learning local buyer supplier risk`);
+  const common = {
+    id: `week-${week}`,
+    week,
+    resources: [{
+      title: `${goal} review resource`,
+      type: 'free_video_search',
+      source_url: `https://www.youtube.com/results?search_query=${search}`,
+      search_query: `${goal} beginner free learning local buyer supplier risk`,
+      how_to_use: 'Use one small part only, pause, note three points, and save proof.',
+      proof_to_save: 'Progress note and next-step decision.',
+    }],
+  };
+  if (/odia/.test(language)) {
+    return {
+      ...common,
+      title: 'ପ୍ରଗତି review ଓ ପରବର୍ତ୍ତୀ ନିଷ୍ପତ୍ତି',
+      goal: `${goal} ପାଇଁ ଯାହା ଶିଖିଲେ ତାହା review କରି ଛୋଟ next step ବାଛନ୍ତୁ.`,
+      lessons: ['ଖର୍ଚ୍ଚ, buyer, supplier ଓ risk ତାଲିକା review କରନ୍ତୁ.', 'Loan କିମ୍ବା ଖର୍ଚ୍ଚ ପୂର୍ବରୁ worker/family ସହ ଯାଞ୍ଚ କରନ୍ତୁ.'],
+      daily_micro_tasks: ['Day 1: ସବୁ proof ଗୋଟେ ଜାଗାରେ ଲେଖନ୍ତୁ.', 'Day 2: buyer/supplier ତାଲିକା check କରନ୍ତୁ.', 'Day 3: start/stop/learn-more decision ଲେଖନ୍ତୁ.'],
+      practice_tasks: ['ଗୋଟେ page ରେ ଖର୍ଚ୍ଚ, risk, next step ଲେଖନ୍ତୁ.'],
+      proof: 'Review note + next-step decision',
+      proof_tasks: ['Review note ଓ next-step decision save କରନ୍ତୁ.'],
+      completion_criteria: 'Cost, buyer/supplier, risk, and next step are written.',
+      low_data_alternative: 'Video ନ ଚାଲିଲେ voice note ରେ 3 point record କରନ୍ତୁ.',
+      voice_whatsapp_version: 'ଏହି ସପ୍ତାହରେ ମୁଁ ମୋ proof ଦେଖି next step ବାଛିଲି.',
+      unlock_after_completion: 'Worker/source review ପରେ next local step.',
+    };
+  }
+  return {
+    ...common,
+    title: 'Review progress and choose next step',
+    goal: `Review proof for ${goal} and choose the safest next step.`,
+    lessons: ['Review cost, buyer/source, supplier, safety, and proof.', 'Do not spend or share details before source/worker review.'],
+    daily_micro_tasks: ['Day 1: Put all proof in one place.', 'Day 2: Check buyer/source and cost doubts.', 'Day 3: Write start/stop/learn-more decision.'],
+    practice_tasks: ['Write one page with cost, risk, proof, and next step.'],
+    proof: 'Progress review + next-step decision',
+    proof_tasks: ['Save review note and next-step decision.'],
+    completion_criteria: 'Cost, source, risk, proof, and next step are written.',
+    low_data_alternative: 'If video does not play, record a 1-minute voice note.',
+    voice_whatsapp_version: 'This week I reviewed my proof and chose the next safe step.',
+    unlock_after_completion: 'Worker/source review before the next local step.',
+  };
+}
+
+function journeyTargetWeeks(profile = {}, route = {}, fallbackJourney = {}) {
+  const text = [
+    profile.learner_goal?.label,
+    profile.learner_goal?.type,
+    route.name,
+    route.tradeoff,
+    route.pathway_detail?.realistic_role,
+    route.income_path,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const formalCertification =
+    /diploma|iti|board exam|government exam|exam readiness|licensed|licence|license|electrician|solar|nursing|paramedic/.test(
+      text,
+    );
+  if (formalCertification && Array.isArray(fallbackJourney.modules) && fallbackJourney.modules.length > 4) {
+    return Math.min(fallbackJourney.modules.length, 12);
+  }
+  return 4;
+}
+
 function buildClaudeJourneyPrompt(profile = {}, route = {}, fallbackJourney = {}) {
   const guide = tier3PlannerGuide(profile, route.name || route.tradeoff || '', route);
+  const targetWeeks = journeyTargetWeeks(profile, route, fallbackJourney);
   return `Profile=${JSON.stringify({
     language: profile.preferred_language || profile.language || 'learner language',
     education: profile.class_level || profile.education_status || '',
@@ -288,12 +445,46 @@ Base=${JSON.stringify({
     id: fallbackJourney.id,
     mode: fallbackJourney.mode,
     route_id: fallbackJourney.route_id,
+    target_weeks: targetWeeks,
   })}
 
-Use the emit_json tool. Its top-level input must contain "modules": the learner journey weeks in the learner language/script. Week count must match the role: 4 for a short proof sprint, 8/10/12 if the roadmap says so. Every week: title, goal, 2 lessons, 5 daily_micro_tasks, 1 practice task, proof/proof_tasks, 1-2 resources with how_to_use/proof_to_save, completion_criteria, low_data_alternative, voice_whatsapp_version, unlock_after_completion. No fake jobs, centres, fees, salaries, contacts, or guaranteed outcomes. Unsafe trade = safety/supervised practice.
+Return one JSON object only through the emit_json tool. It must contain exactly ${targetWeeks} "modules" for this MVP journey. Use more than 4 only when target_weeks above is more than 4. Every module/week must have: title, goal, 2 short lessons, 5 day-wise daily_micro_tasks, 1 practice task, proof, proof_tasks, exactly 1 resource with title/type/source_url/search_query/how_to_use/proof_to_save, completion_criteria, low_data_alternative, voice_whatsapp_version, unlock_after_completion. Keep every learner-facing sentence short enough to be spoken aloud. No fake jobs, centres, fees, salaries, contacts, or guaranteed outcomes. Unsafe trade = safety/supervised practice.
+
+Product quality rules:
+- Build for a rural, low-literacy, voice-first learner. Use short concrete verbs. Avoid abstract strategy words, resume jargon, and long paragraphs.
+- Use the learner's exact goal and selected route. If the goal is mushroom farming, every week/resource must be mushroom-specific. Do not substitute generic "enterprise setup", "Skill India course", or "career exploration" unless no better free/official source exists.
+- Each week should feel useful by itself: Day 1 understand, Day 2 watch/listen one small resource part, Day 3 do a safe tiny task, Day 4 ask/review, Day 5 save proof.
+- Resources must be free, official, or goal-specific video/search links. For YouTube resources, set source_url to a search URL and search_query to the exact local-language goal (example: "mushroom farming business setup beginner Hindi oyster mushroom low cost"). Explain how to consume: watch only one matching part, pause, write 3 points, do the tiny task, save proof.
+- For business/scheme users, include buyer/supplier/cost/risk and official scheme eligibility checks before loan/spending. For job users, include proof, commute/safety, source verification, and consent before outreach.
+- Keep learner-facing text in the selected language/script. Official names/URLs can remain unchanged.
 
 Tool input shape:
-{"id":"","title":"","mode":"${fallbackJourney.mode || 'career_pathway'}","route_id":"${fallbackJourney.route_id || route.id || 'selected_route'}","route_name":"","readiness_score":0,"duration":{"mvp":"8-week journey","full":""},"delivery":{"primary_channel":"voice + WhatsApp + low data","accessibility":"phone-first"},"learning_contract":{"week_shape":"","resource_policy":"","proof_gate":"","opportunity_unlock":""},"modules":[{"id":"week-1","week":1,"title":"","goal":"","lessons":["",""],"daily_micro_tasks":["Day 1:","Day 2:","Day 3:","Day 4:","Day 5:"],"practice_tasks":[""],"proof":"","proof_tasks":[""],"resources":[{"title":"","type":"official|free_video_search|practice","source_url":"https://...","search_query":"","how_to_use":"","proof_to_save":""}],"completion_criteria":"","low_data_alternative":"","voice_whatsapp_version":"","unlock_after_completion":""}],"progress":{"completion_percent":0,"completed_count":0,"proof_ready_count":0,"passport_eligible":false,"placement_unlocked":false,"next_action":"Week 1: start Day 1"}}`;
+{"id":"","title":"","mode":"${fallbackJourney.mode || 'career_pathway'}","route_id":"${fallbackJourney.route_id || route.id || 'selected_route'}","route_name":"","readiness_score":0,"duration":{"mvp":"${targetWeeks}-week journey","full":""},"delivery":{"primary_channel":"voice + WhatsApp + low data","accessibility":"phone-first"},"learning_contract":{"week_shape":"","resource_policy":"","proof_gate":"","opportunity_unlock":""},"modules":[{"id":"week-1","week":1,"title":"","goal":"","lessons":["",""],"daily_micro_tasks":["Day 1:","Day 2:","Day 3:","Day 4:","Day 5:"],"practice_tasks":[""],"proof":"","proof_tasks":[""],"resources":[{"title":"","type":"official|free_video_search|practice","source_url":"https://...","search_query":"","how_to_use":"","proof_to_save":""}],"completion_criteria":"","low_data_alternative":"","voice_whatsapp_version":"","unlock_after_completion":""}],"progress":{"completion_percent":0,"completed_count":0,"proof_ready_count":0,"passport_eligible":false,"placement_unlocked":false,"next_action":"Week 1: start Day 1"}}`;
+}
+
+function buildCompactClaudeJourneyPrompt(profile = {}, route = {}, fallbackJourney = {}) {
+  const targetWeeks = journeyTargetWeeks(profile, route, fallbackJourney);
+  return `Return one valid JSON object with a top-level "modules" array. Do not include markdown.
+Learner=${JSON.stringify({
+    language: profile.preferred_language || profile.language || 'learner language',
+    goal: profile.learner_goal?.label || (profile.aspirations || [])[0] || route.name || '',
+    location: profile.location || '',
+    time_available: profile.time_available || '',
+    phone_access: profile.phone_access || profile.device || '',
+    commute_km: profile.commute_km || '',
+  })}
+Selected route=${JSON.stringify({
+    name: route.name,
+    first_step: route.first_step,
+    realistic_role: route.pathway_detail?.realistic_role,
+    what_to_check: route.pathway_detail?.what_to_check,
+    source_url: route.source_url,
+  })}
+
+Return exactly ${targetWeeks} week modules in the learner language/script. Each week must be specific to the exact goal, not generic enterprise/career content. For each week use 2 short lessons, 3 day-wise daily_micro_tasks, 1 practice task, 1 proof, proof_tasks, and exactly 1 free/official/goal-specific resource. Use YouTube search URLs for specific free videos when official resources are not enough. Explain how to consume the resource: watch/listen one small part, pause, do the tiny task, save proof. No fake jobs, contacts, fees, income, loan approval, or centre claims.
+
+JSON shape:
+{"title":"","duration":{"mvp":"${targetWeeks}-week journey"},"modules":[{"id":"week-1","week":1,"title":"","goal":"","lessons":["",""],"daily_micro_tasks":["Day 1:","Day 2:","Day 3:"],"practice_tasks":[""],"proof":"","proof_tasks":[""],"resources":[{"title":"","type":"official|free_video_search|practice","source_url":"https://www.youtube.com/results?search_query=","search_query":"","how_to_use":"","proof_to_save":""}],"completion_criteria":"","low_data_alternative":"","voice_whatsapp_version":"","unlock_after_completion":""}],"progress":{"completion_percent":0,"completed_count":0,"proof_ready_count":0,"passport_eligible":false,"placement_unlocked":false,"next_action":"Week 1: start Day 1"}}`;
 }
 
 export default async function handler(req, res) {
@@ -307,15 +498,22 @@ export default async function handler(req, res) {
     const route = body.route || {};
     const fallbackJourney = buildLearningJourney(profile, route);
     const useClaudeJourney = body.disable_ai_journey !== true && process.env.DISABLE_AI_JOURNEY !== 'true';
-    const generated = useClaudeJourney
+    let generated = useClaudeJourney
       ? await callAnthropicJson({
           fallback: fallbackJourney,
-          maxTokens: Number(process.env.JOURNEY_CLAUDE_MAX_TOKENS || 6_000),
-          timeoutMs: journeyClaudeTimeoutMs(),
-          models: [process.env.ANTHROPIC_PLANNER_MODEL || process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001'],
-          toolSchema: JOURNEY_TOOL_SCHEMA,
+          maxTokens: Number(process.env.JOURNEY_CLAUDE_MAX_TOKENS || 9_000),
+          timeoutMs: journeyClaudeAttemptTimeoutMs(),
+          useTool: false,
+          models: [
+            process.env.ANTHROPIC_FAST_MODEL,
+            'claude-haiku-4-5-20251001',
+            process.env.ANTHROPIC_PLANNER_MODEL,
+            process.env.ANTHROPIC_MODEL,
+            'claude-sonnet-4-5',
+          ],
+          toolSchema: JOURNEY_GENERATOR_TOOL_SCHEMA,
           system: `You create VidyaSetu learner journeys for Tier-3 India. ${languageInstruction(profile, route.name || route.tradeoff || '')} Use the learner profile and selected pathway, not generic templates. Return valid JSON only.`,
-          prompt: buildClaudeJourneyPrompt(profile, route, fallbackJourney),
+          prompt: buildCompactClaudeJourneyPrompt(profile, route, fallbackJourney),
         })
       : process.env.ENABLE_AI_JOURNEY_LOCALIZATION === 'true' || body.ai_localize === true
         ? await callClaudeJson({
@@ -332,12 +530,54 @@ export default async function handler(req, res) {
             fallback_chain: [],
             error: null,
           };
+    if (process.env.JOURNEY_CLAUDE_SECOND_ATTEMPT === 'true' && useClaudeJourney && (!generated.ok || !hasUsableGeneratedModules(generated.data))) {
+      const compactRetry = await callAnthropicJson({
+        fallback: fallbackJourney,
+        maxTokens: Number(process.env.JOURNEY_CLAUDE_RETRY_MAX_TOKENS || 6_500),
+        timeoutMs: journeyClaudeAttemptTimeoutMs(),
+        useTool: true,
+        models: [
+          process.env.ANTHROPIC_PLANNER_MODEL,
+          process.env.ANTHROPIC_MODEL,
+          process.env.ANTHROPIC_FAST_MODEL,
+          'claude-sonnet-4-5',
+          'claude-haiku-4-5-20251001',
+        ],
+        toolSchema: JOURNEY_GENERATOR_TOOL_SCHEMA,
+        system: `You create concise VidyaSetu learner journeys for Tier-3 India. ${languageInstruction(profile, route.name || route.tradeoff || '')} Use the emit_json tool with a top-level modules array. No markdown.`,
+        prompt: buildCompactClaudeJourneyPrompt(profile, route, fallbackJourney),
+      });
+      generated = compactRetry.ok && hasUsableGeneratedModules(compactRetry.data)
+        ? compactRetry
+        : {
+            ...generated,
+            error: [generated.error, `compact retry: ${compactRetry.error}`].filter(Boolean).join(' | '),
+          };
+    }
+    const targetWeeks = journeyTargetWeeks(profile, route, fallbackJourney);
+    let paddedGeneratedModules = false;
+    if (useClaudeJourney && generated.ok && !Array.isArray(generated.data?.modules)) {
+      const coercedModules = coerceJourneyModules(generated.data);
+      if (coercedModules.length) generated.data = { ...(generated.data || {}), modules: coercedModules };
+    }
+    if (useClaudeJourney && generated.ok) {
+      const completed = completeGeneratedModules(generated.data, profile, route, targetWeeks);
+      generated.data = completed.journey;
+      paddedGeneratedModules = completed.padded;
+    }
     const usableGeneratedModules = useClaudeJourney && generated.ok && hasUsableGeneratedModules(generated.data);
+    const generationOk = useClaudeJourney ? usableGeneratedModules : generated.ok;
     const generatedData =
       useClaudeJourney && generated.ok && !usableGeneratedModules
         ? { ...generated.data, modules: fallbackJourney.modules, duration: fallbackJourney.duration }
         : generated.data;
     const journey = stabilizeJourneySchema(fallbackJourney, generatedData, { allowModuleCountChange: usableGeneratedModules });
+    if (usableGeneratedModules) {
+      journey.duration = {
+        ...(journey.duration || {}),
+        mvp: generated.data?.duration?.mvp || `${journey.modules.length}-week journey`,
+      };
+    }
 
     let persistence = await insertRows('learning_journeys', {
       learner_id: profile.learner_id || null,
@@ -374,11 +614,17 @@ export default async function handler(req, res) {
       journey,
       proof: {
         generation: {
-          ok: generated.ok,
+          ok: generationOk,
           provider: generated.provider,
           model: generated.model || null,
           fallback_chain: generated.fallback_chain || [],
-          error: generated.error,
+          used_generated_modules: usableGeneratedModules,
+          used_completion_padding: paddedGeneratedModules,
+          used_fallback_modules: useClaudeJourney && !usableGeneratedModules,
+          error: generationOk
+            ? null
+            : generated.error ||
+              `Claude journey parsed but did not produce usable modules (modules=${coerceJourneyModules(generated.data).length}; keys=${Object.keys(generated.data || {}).join(',')}; preview=${JSON.stringify(generated.data || {}).slice(0, 260)}); deterministic fallback used.`,
         },
         persistence: {
           ok: persistence.ok,
