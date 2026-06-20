@@ -39,6 +39,22 @@ const personas = [
     },
   },
   {
+    id: 'hinglish_mobile_repair_next_action_after_complete',
+    language: 'Hinglish',
+    turns: [
+      'Mera naam Divyaman hai. Main Class 10 mein hoon, Basti district se. Mujhe mobile repair aur short videos banana pasand hai. Mere paas Android phone with WhatsApp hai, roz 45 minutes learning kar sakta hoon, aur income jaldi chahiye. Main 30 km tak safe travel kar sakta hoon.',
+      'ab kya krna h ?',
+    ],
+    expect: {
+      goalType: 'vocational_training',
+      goalTerms: ['mobile repair'],
+      aspirationTerms: ['mobile repair'],
+      finalReplyTerms: ['Rasta', 'dabao'],
+      rejectReplyTerms: ['seekhne ka rasta ban sakta hai. Meera surakshit'],
+      rejectGoalTerms: ['office job', 'computer basics'],
+    },
+  },
+  {
     id: 'hi_mushroom_business_profile',
     language: 'Hindi',
     turns: [

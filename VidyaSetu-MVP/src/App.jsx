@@ -662,6 +662,7 @@ function App() {
   const speechRequestRef = useRef(0);
   const speechTimerRef = useRef(null);
   const speechAudioRef = useRef(null);
+  const previousActiveTabRef = useRef(activeTab);
 
   const selectedMatch = matches.find((match) => match.id === selectedMatchId) || matches[0];
   const completion = useMemo(() => {
@@ -695,10 +696,11 @@ function App() {
   }, [mode, activeTab]);
 
   useEffect(() => {
-    if (activeTab !== 'pathways' && String(speakingIndex || '').startsWith('pathway:')) {
+    if (previousActiveTabRef.current !== activeTab) {
+      previousActiveTabRef.current = activeTab;
       stopSpeaking();
     }
-  }, [activeTab, speakingIndex]);
+  }, [activeTab]);
 
   async function api(url, body) {
     const response = await fetch(url, {
