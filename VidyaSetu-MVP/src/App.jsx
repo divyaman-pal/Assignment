@@ -1759,7 +1759,19 @@ function App() {
               t={t}
             />
           )}
-          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} progressState={progressState} selectedRoute={selectedRoute} profile={profile} t={t} />}
+          {activeTab === 'passport' && (
+            <PassportTab
+              passport={passport}
+              savePassport={savePassport}
+              findJobs={findJobs}
+              journey={journey}
+              progressState={progressState}
+              selectedRoute={selectedRoute}
+              profile={profile}
+              setActiveTab={setActiveTab}
+              t={t}
+            />
+          )}
           {activeTab === 'jobs' && (
             <JobsTab
               matches={matches}
@@ -3024,7 +3036,17 @@ function JourneyTab({
   );
 }
 
-function PassportTab({ passport, savePassport, findJobs, journey, progressState = {}, selectedRoute, profile = {}, t = getTranslations('English') }) {
+function PassportTab({
+  passport,
+  savePassport,
+  findJobs,
+  journey,
+  progressState = {},
+  selectedRoute,
+  profile = {},
+  setActiveTab,
+  t = getTranslations('English'),
+}) {
   const copy = t.passport || getTranslations('English').passport;
   const readinessScore = Number(journey?.readiness_score ?? journey?.progress?.completion_percent ?? 0);
   const progress = {
@@ -3035,7 +3057,10 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
   const journeyStatus = journey
     ? formatCopy(copy.journeyAttached, { score: Number.isFinite(readinessScore) ? Math.round(readinessScore) : 0 })
     : copy.journeyPending;
-  const professionalRows = passportProfessionalRows({ passport, journey, selectedRoute, copy });
+  const safePassport = passport || {};
+  const professionalRows = passportEligible && passport
+    ? passportProfessionalRows({ passport: safePassport, journey, selectedRoute, copy })
+    : [];
   return (
     <div className="workspace-card">
       <p className="eyebrow">{copy.eyebrow}</p>
@@ -3046,6 +3071,24 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
         </button>
         <span>{passportEligible ? journeyStatus : copy.lockedMessage || journeyStatus}</span>
       </div>
+      {!passportEligible && (
+        <PassportLockedJourney
+          copy={copy}
+          journey={journey}
+          progress={progress}
+          selectedRoute={selectedRoute}
+          setActiveTab={setActiveTab}
+        />
+      )}
+      {passportEligible && !passport && (
+        <div className="passport-unlock-panel">
+          <ShieldCheck size={22} />
+          <div>
+            <b>{copy.readyToCreate || 'Journey proof is complete.'}</b>
+            <p>{copy.createNowHint || 'Create the Skill Passport now. The QR will show only learner-approved proof.'}</p>
+          </div>
+        </div>
+      )}
       {passport && passportEligible && (
         <div className="passport-card passport-card-enhanced">
           <div className="passport-qr-layout">
@@ -3090,21 +3133,70 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
   );
 }
 
+function PassportLockedJourney({ copy = {}, journey, progress = {}, selectedRoute, setActiveTab }) {
+  const modules = Array.isArray(journey?.modules) ? journey.modules : [];
+  const statusById = new Map((Array.isArray(progress.module_status) ? progress.module_status : []).map((module) => [module.id, module]));
+  const completionPercent = Number(progress.completion_percent || 0);
+  const proofReady = Number(progress.proof_ready_count || 0);
+  const proofRequired = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
+  const routeName = cleanPassportLabel(uiText(selectedRoute?.name, uiText(journey?.route_name, copy.selectedPath || 'Selected path')));
+  return (
+    <div className="passport-locked-panel">
+      <div className="passport-locked-head">
+        <Lock size={22} />
+        <div>
+          <b>{copy.unlockTitle || 'Complete the journey to unlock this Passport.'}</b>
+          <p>{copy.unlockHint || 'Finish each week and save the proof. After that the shareable QR can be created.'}</p>
+        </div>
+      </div>
+      {journey ? (
+        <>
+          <div className="passport-lock-progress">
+            <span><b>{completionPercent}%</b>{copy.courseProgress || 'Course progress'}</span>
+            <span><b>{proofReady}/{proofRequired || 1}</b>{copy.proofSaved || 'Proof saved'}</span>
+            <span><b>{routeName}</b>{copy.selectedPath || 'Selected path'}</span>
+          </div>
+          <div className="passport-journey-steps">
+            {modules.map((module, index) => {
+              const status = statusById.get(module.id) || {};
+              const done = Boolean(status.module_complete || status.status === 'complete');
+              const ready = Boolean(status.unlocked || index === 0);
+              return (
+                <span className={done ? 'done' : ready ? 'ready' : 'locked'} key={module.id || index}>
+                  <b>{done ? (copy.doneLabel || 'Done') : ready ? (copy.nextLabel || 'Next') : (copy.lockedLabel || 'Locked')}</b>
+                  {`Week ${module.week || index + 1}: ${uiText(module.title, uiText(module.goal, 'Journey task'))}`}
+                  <small>{uiText(module.proof || status.proof_required, copy.proofSaved || 'Proof required')}</small>
+                </span>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <p>{copy.createJourneyFirst || 'Create the learning journey first. The complete path will appear here.'}</p>
+      )}
+      <button className="primary-button" onClick={() => setActiveTab?.(journey ? 'journey' : 'pathways')} type="button">
+        {journey ? (copy.continueJourney || 'Continue journey') : (copy.goToPathway || 'Go to pathway')}
+      </button>
+    </div>
+  );
+}
+
 function passportProfessionalRows({ passport = {}, journey = {}, selectedRoute = {}, copy = {} }) {
-  const proof = passport.learning_proof || {};
+  const safePassport = passport || {};
+  const proof = safePassport.learning_proof || {};
   const progress = Number(proof.completion_percent || 0);
   const proofReady = Number(proof.proof_ready_count || 0);
   const proofRequired = Number(proof.proof_required_count || 0);
   const routeName = cleanPassportLabel(
-    uiText(selectedRoute?.name, uiText(selectedRoute?.title, uiText(journey?.route_name, passport.certs?.find((cert) => /selected pathway/i.test(cert.status || ''))?.name || 'Selected pathway'))),
+    uiText(selectedRoute?.name, uiText(selectedRoute?.title, uiText(journey?.route_name, safePassport.certs?.find((cert) => /selected pathway/i.test(cert.status || ''))?.name || 'Selected pathway'))),
   );
   const skillName = cleanPassportLabel(
     uiText(
-      passport.informal?.[0]?.name,
+      safePassport.informal?.[0]?.name,
       uiText(selectedRoute?.realistic_role, uiText(selectedRoute?.title, routeName)),
     ),
   );
-  const reviewStatus = passport.status === 'proof_ready_for_review'
+  const reviewStatus = safePassport.status === 'proof_ready_for_review'
     ? (copy.workerReviewReady || 'Ready for worker review')
     : (copy.privateDraft || 'Private draft');
   return [

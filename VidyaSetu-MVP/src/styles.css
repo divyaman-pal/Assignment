@@ -8703,6 +8703,122 @@ body {
   color: #079455;
 }
 
+.crm-app-shell .passport-locked-panel,
+.passport-locked-panel,
+.crm-app-shell .passport-unlock-panel,
+.passport-unlock-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d7e0ee;
+  border-radius: 18px;
+  padding: 18px;
+  background: #f8fbff;
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.06);
+}
+
+.crm-app-shell .passport-unlock-panel,
+.passport-unlock-panel,
+.crm-app-shell .passport-locked-head,
+.passport-locked-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.crm-app-shell .passport-locked-head svg,
+.passport-locked-head svg,
+.crm-app-shell .passport-unlock-panel svg,
+.passport-unlock-panel svg {
+  flex: 0 0 auto;
+  color: #3154f4;
+}
+
+.crm-app-shell .passport-locked-head b,
+.passport-locked-head b,
+.crm-app-shell .passport-unlock-panel b,
+.passport-unlock-panel b {
+  color: #101828;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.crm-app-shell .passport-locked-head p,
+.passport-locked-head p,
+.crm-app-shell .passport-unlock-panel p,
+.passport-unlock-panel p {
+  margin: 4px 0 0;
+  color: #667085;
+  line-height: 1.45;
+}
+
+.crm-app-shell .passport-lock-progress,
+.passport-lock-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-app-shell .passport-lock-progress span,
+.passport-lock-progress span {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #d7e0ee;
+  border-radius: 14px;
+  padding: 12px;
+  color: #667085;
+  background: #ffffff;
+}
+
+.crm-app-shell .passport-lock-progress b,
+.passport-lock-progress b {
+  color: #101828;
+  font-size: 1rem;
+}
+
+.crm-app-shell .passport-journey-steps,
+.passport-journey-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-app-shell .passport-journey-steps span,
+.passport-journey-steps span {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 8px 12px;
+  border: 1px solid #d7e0ee;
+  border-radius: 14px;
+  padding: 12px;
+  color: #344054;
+  background: #ffffff;
+}
+
+.crm-app-shell .passport-journey-steps span.done,
+.passport-journey-steps span.done {
+  border-color: #b9e4d3;
+  background: #f0fdf4;
+}
+
+.crm-app-shell .passport-journey-steps span.ready,
+.passport-journey-steps span.ready {
+  border-color: #c7d7fe;
+  background: #f5f7ff;
+}
+
+.crm-app-shell .passport-journey-steps b,
+.passport-journey-steps b {
+  color: #123aa8;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.crm-app-shell .passport-journey-steps small,
+.passport-journey-steps small {
+  grid-column: 2;
+  color: #667085;
+}
+
 .crm-app-shell .passport-proof-strip span,
 .crm-app-shell .consent-scope-grid span,
 .passport-proof-strip span,
@@ -8715,7 +8831,19 @@ body {
   .crm-app-shell .passport-professional-grid,
   .passport-professional-grid,
   .crm-app-shell .passport-qr-layout,
-  .passport-qr-layout {
+  .passport-qr-layout,
+  .crm-app-shell .passport-lock-progress,
+  .passport-lock-progress {
     grid-template-columns: 1fr;
+  }
+
+  .crm-app-shell .passport-journey-steps span,
+  .passport-journey-steps span {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-app-shell .passport-journey-steps small,
+  .passport-journey-steps small {
+    grid-column: auto;
   }
 }
