@@ -658,6 +658,15 @@ export function inferLearnerGoal(text = '', hints = {}) {
       };
     }
     if (/tailor|silai|stitch|sewing|garment/i.test(combined)) {
+      if (/ghar par|home based|certificate nahi|no certificate|kaam chahiye|orders?|customer|sample|seekha hai|karti hoon|karta hoon/i.test(combined)) {
+        return {
+          type: 'informal_skill_validation',
+          label: 'Tailoring proof to local work',
+          intent: 'proof_to_work',
+          needs_location_for_offline: true,
+          recommended_next_step: 'Save tailoring sample proof, create Skill Passport, then check nearby safe work/orders with consent.',
+        };
+      }
       return {
         type: 'vocational_training',
         label: 'Tailoring work training',
@@ -667,6 +676,15 @@ export function inferLearnerGoal(text = '', hints = {}) {
       };
     }
     if (/electrician|electrical|wireman/i.test(combined)) {
+      if (/job|naukri|naukari|nokri|opportunit|sirf|certified|certificate|iti|diploma|experience|kaam chahiye|employment/i.test(combined)) {
+        return {
+          type: 'formal_skill_job_search',
+          label: 'Electrician job search',
+          intent: 'job',
+          needs_location_for_offline: true,
+          recommended_next_step: 'Use ITI/experience proof, shortlist verified local electrician roles, then apply only with learner consent.',
+        };
+      }
       return {
         type: 'vocational_training',
         label: 'Electrician helper training',
@@ -2131,8 +2149,9 @@ function shouldKeepLocalizedRouteText(value = '', profile = {}) {
   const text = safeRouteText(value);
   if (!text || routeNameLooksNoisy(text)) return false;
   const kind = simpleLanguageKind(profile);
-  if (kind === 'hinglish' || kind === 'hi') return false;
+  if (kind === 'hinglish') return true;
   const scriptPattern = scriptPatternForProfile(profile);
+  if (kind === 'hi') return Boolean(scriptPattern ? scriptPattern.test(text) : text);
   return Boolean(scriptPattern && scriptPattern.test(text));
 }
 
@@ -2310,9 +2329,15 @@ function whatItAsksForRoute(route = {}, blockers = []) {
   return parts.length ? parts.slice(0, 3).join(' ') : 'Time, travel, fees, and documents must be checked before acting.';
 }
 
+function routeNameLooksGeneric(name = '') {
+  const text = safeRouteText(name).toLowerCase();
+  if (!text) return true;
+  return /skill pathway exploration|open counseling|career pathway|study pathway|pathway route|proof-first|training and practice|local verified[-\s]*source|chhota proof|small proof|daily practice|verified next step|generic route|compare study|compare skill|compare local/.test(text);
+}
+
 function routeNameLooksNoisy(name = '') {
   const text = safeRouteText(name);
-  if (!text) return true;
+  if (!text || routeNameLooksGeneric(text)) return true;
   const words = text.split(/\s+/).filter(Boolean);
   return (
     words.length > 10 ||
@@ -2321,6 +2346,21 @@ function routeNameLooksNoisy(name = '') {
       text,
     )
   );
+}
+
+function cleanLearnerTarget(value = '') {
+  return safeRouteText(value)
+    .replace(/\b(skill|career|study)?\s*pathway\s*exploration\b/gi, ' ')
+    .replace(/\b(open counseling|career pathway|study pathway|pathway route|selected pathway)\b/gi, ' ')
+    .replace(/\b(proof-first|verified-source|local verified-source|training and practice)\s*route\b/gi, ' ')
+    .replace(/\b(pathway|route|strategy|compare)\b/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function targetLooksGeneric(value = '') {
+  const text = cleanLearnerTarget(value).toLowerCase();
+  return !text || /^(skill|skills|career|job|study|learner goal|starter skill|safe first skill|local beginner job|help)$/i.test(text);
 }
 
 function learnerTargetForRoute(profile = {}, route = {}, family = '') {
@@ -2348,7 +2388,19 @@ function learnerTargetForRoute(profile = {}, route = {}, family = '') {
   if (/electrician|electrical|wiring|wireman/.test(text)) return 'Electrician work';
   if (/mobile|repair|technician/.test(text)) return 'Mobile repair';
   if (/tailor|silai|stitch|garment/.test(text)) return 'Tailoring work';
-  return safeRouteText(profile.learner_goal?.label || route.realistic_role || route.entry_role, 'Career pathway');
+  const candidates = [
+    profile.learner_goal?.label,
+    ...(profile.aspirations || []),
+    ...(profile.skills || []),
+    route.pathway_detail?.realistic_role,
+    route.realistic_role,
+    route.entry_role,
+    route.title,
+    route.name,
+  ]
+    .map(cleanLearnerTarget)
+    .filter((item) => item && !targetLooksGeneric(item));
+  return candidates[0] || 'starter goal';
 }
 
 function localizedCompactRouteName(profile = {}, target = '', kind = 'earn_fast', text = '') {
@@ -2441,13 +2493,13 @@ function compactRouteName(route = {}, index = 0, profile = {}, family = '', card
       return 'Apply to verified data roles';
     }
     if (/computer|office|typing|data-entry|data entry/i.test(target)) {
-      if (kind === 'earn_fast') return 'Save a typing proof';
-      if (kind === 'build_bigger') return 'Practise computer skills daily';
-      return 'Check safe NCS jobs';
+      if (kind === 'earn_fast') return 'Use typing proof for office work';
+      if (kind === 'build_bigger') return 'Practise customer-call basics';
+      return 'Check safe day-shift office jobs';
     }
-    if (kind === 'earn_fast') return `Save a small ${target} proof`;
-    if (kind === 'build_bigger') return `Practise ${target} daily`;
-    return `Verify the next ${target} step`;
+    if (kind === 'earn_fast') return `Start ${target} with one sample`;
+    if (kind === 'build_bigger') return `Learn ${target} from a free source`;
+    return `Check safe ${target} sources`;
   }
 
   if (/school_study|board_exam|entrance_exam/.test(family) || profile.learner_goal?.intent === 'study') {
@@ -2489,27 +2541,27 @@ function compactRouteName(route = {}, index = 0, profile = {}, family = '', card
   }
 
   if (/machine learning/i.test(target)) {
-    if (kind === 'earn_fast') return 'GitHub project se ML job proof banao';
-    if (kind === 'build_bigger') return 'Python-SQL practice se shortlist strong karo';
+    if (kind === 'earn_fast') return 'GitHub project se ML interview proof';
+    if (kind === 'build_bigger') return 'Python project se ML profile strong';
     return 'Verified ML roles par consent se apply karo';
   }
 
   if (/data science/i.test(target)) {
-    if (kind === 'earn_fast') return 'GitHub project se Data job proof banao';
-    if (kind === 'build_bigger') return 'Python-SQL practice se profile strong karo';
+    if (kind === 'earn_fast') return 'GitHub project se Data interview proof';
+    if (kind === 'build_bigger') return 'Python-SQL se Data profile strong';
     return 'Verified Data roles par consent se apply karo';
   }
 
   if (/mobile repair/i.test(target)) {
-    if (kind === 'earn_fast') return 'Phone repair ka pehla proof banao';
-    if (kind === 'build_bigger') return 'Free video se daily repair practice karo';
-    return 'Safe repair shop/centre verify karo';
+    if (kind === 'earn_fast') return 'Phone repair video se pehla sample';
+    if (kind === 'build_bigger') return 'Phone parts pe practice strong karo';
+    return 'Safe repair shop pehle verify karo';
   }
 
   if (/computer|office|typing|data-entry|data entry/i.test(target)) {
-    if (kind === 'earn_fast') return 'Typing ka chhota proof banao';
-    if (kind === 'build_bigger') return 'Roz computer practice karo';
-    return 'NCS par safe job check karo';
+    if (kind === 'earn_fast') return 'Typing sample se office job';
+    if (kind === 'build_bigger') return 'Customer call practice strong karo';
+    return 'Safe day-shift office job check karo';
   }
 
   if (/tailoring/i.test(target)) {
@@ -2530,9 +2582,9 @@ function compactRouteName(route = {}, index = 0, profile = {}, family = '', card
     return 'Verified electrician role check karo';
   }
 
-  if (kind === 'earn_fast') return `${target} ka chhota proof banao`;
-  if (kind === 'build_bigger') return `${target} ki daily practice karo`;
-  return `${target} ka verified next step check karo`;
+  if (kind === 'earn_fast') return `Free video se ${target} shuru karo`;
+  if (kind === 'build_bigger') return `${target} ka pehla sample banao`;
+  return `${target} ka safe source pehle check karo`;
 }
 
 function compactRouteSummary(route = {}, index = 0, profile = {}, family = '', cardKind = '') {

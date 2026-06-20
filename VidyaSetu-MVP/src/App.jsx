@@ -2398,6 +2398,86 @@ function shortVoiceLine(value = '', maxLength = 150) {
   return clipped.slice(0, Math.max(30, clipped.lastIndexOf(' '))).trim();
 }
 
+function genericPathwayTitle(value = '') {
+  return /skill pathway exploration|open counseling|career pathway|study pathway|pathway route|proof-first|training and practice|local verified[-\s]*source|chhota proof|small proof|daily practice|verified next step|compare study|compare skill|compare local/i.test(
+    uiText(value),
+  );
+}
+
+function cleanPathwayTarget(value = '') {
+  return uiText(value)
+    .replace(/\b(skill|career|study)?\s*pathway\s*exploration\b/gi, ' ')
+    .replace(/\b(open counseling|career pathway|study pathway|pathway route|selected pathway)\b/gi, ' ')
+    .replace(/\b(proof-first|verified-source|local verified-source|training and practice)\s*route\b/gi, ' ')
+    .replace(/\b(pathway|route|strategy|compare)\b/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function displayPathwayTarget(profile = {}, route = {}) {
+  const allText = [
+    profile.learner_goal?.label,
+    ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
+    ...(Array.isArray(profile.skills) ? profile.skills : []),
+    route?.pathway_detail?.realistic_role,
+    route?.realistic_role,
+    route?.entry_role,
+    route?.title,
+    route?.name,
+  ]
+    .map(uiText)
+    .join(' ')
+    .toLowerCase();
+  if (/machine learning|ml engineer/.test(allText)) return 'machine learning job';
+  if (/data science|data analyst|analytics|python|sql/.test(allText)) return 'data job';
+  if (/customer service|bpo|office|typing|computer|data-entry|data entry/.test(allText)) return 'office typing job';
+  if (/mobile|phone|repair/.test(allText)) return 'mobile repair';
+  if (/mushroom/.test(allText)) return 'mushroom business';
+  if (/poultry|chicken|broiler|layer/.test(allText)) return 'poultry business';
+  if (/tailor|silai|stitch|garment/.test(allText)) return 'silai ka kaam';
+  if (/plumb|pipe|sanitary/.test(allText)) return 'plumbing ka kaam';
+  if (/electrician|wiring|electrical/.test(allText)) return 'electrician ka kaam';
+  const candidates = [
+    profile.learner_goal?.label,
+    ...(Array.isArray(profile.aspirations) ? profile.aspirations : []),
+    ...(Array.isArray(profile.skills) ? profile.skills : []),
+    route?.pathway_detail?.realistic_role,
+    route?.realistic_role,
+    route?.entry_role,
+  ]
+    .map(cleanPathwayTarget)
+    .filter((item) => item && !genericPathwayTitle(item));
+  return candidates[0] || 'aapka goal';
+}
+
+function displayPathwayTitle(route = {}, profile = {}, index = 0) {
+  const rawTitle = uiText(route?.title, uiText(route?.name));
+  if (rawTitle && rawTitle.length <= 72 && !genericPathwayTitle(rawTitle)) return rawTitle;
+  const target = displayPathwayTarget(profile, route);
+  const kind = uiText(route?.card_kind || route?.kind || route?.axis, index === 0 ? 'earn_fast' : index === 1 ? 'build_bigger' : 'explore');
+  const isEnglish = /english/i.test(uiText(profile.preferred_language || profile.language)) && !/hinglish|hindi/i.test(uiText(profile.preferred_language || profile.language));
+  if (isEnglish) {
+    if (kind === 'earn_fast') return `Start ${target} with one sample`;
+    if (kind === 'build_bigger') return `Learn ${target} from one free source`;
+    return `Check safe ${target} sources`;
+  }
+  if (kind === 'earn_fast') return `Pehla ${target} sample banao`;
+  if (kind === 'build_bigger') return `Free source se ${target} seekho`;
+  return `${target} ka safe source check karo`;
+}
+
+function displayPathwayBrief(route = {}, profile = {}, title = '') {
+  const raw = uiText(route?.learner_summary || route?.tradeoff || route?.why_this_fits_you);
+  if (raw && raw.length <= 150 && !genericPathwayTitle(raw) && !/starts from|learner already|goal:|education:|mobility:/i.test(raw)) {
+    return raw;
+  }
+  const target = displayPathwayTarget(profile, route);
+  const isEnglish = /english/i.test(uiText(profile.preferred_language || profile.language)) && !/hinglish|hindi/i.test(uiText(profile.preferred_language || profile.language));
+  return isEnglish
+    ? `Meera will keep this focused on ${target}: one safe first action, one free resource, and proof before any application or spending.`
+    : `Meera ${target} ke liye ek safe pehla kaam, ek free resource, aur proof ke baad hi next step batayegi.`;
+}
+
 function generationWaitCopy(language = 'English', type = 'pathway') {
   const lang = String(language || '').toLowerCase();
   const journey = type === 'journey';
@@ -2596,7 +2676,9 @@ function PathwaysTab({
     uiText(route.id).startsWith('jee')
   ));
   const selectedIndex = routes.findIndex((route) => sameRoute(activeRoute, route));
-  const selectedRouteName = uiText(activeRoute?.name, academicMode ? 'Study pathway' : 'Career pathway');
+  const selectedRouteName = activeRoute
+    ? displayPathwayTitle(activeRoute, profile, selectedIndex >= 0 ? selectedIndex : 0)
+    : academicMode ? 'Study pathway' : 'Career pathway';
   const optionLabel = (index = 0) => `${t.pathway.option || 'Option'} ${index + 1}`;
   const lockMessage = t.pathway.pathLocked || 'This pathway is locked until the current learning journey proof is complete.';
   const activeSources = activeRoute ? pathwaySourceItems(activeRoute) : [];
@@ -2611,11 +2693,10 @@ function PathwaysTab({
       ? activeRoute.pathway_detail
       : {};
   const firstSource = activeSources[0] || null;
-  const routeTitle = uiText(activeRoute?.title, selectedRouteName);
-  const routeSummary = uiText(
-    activeRoute?.learner_summary,
-    uiText(activeRoute?.why_this_fits_you, uiText(activeRoute?.first_step, 'Profile ke hisaab se realistic route.')),
-  );
+  const routeTitle = activeRoute ? displayPathwayTitle(activeRoute, profile, selectedIndex >= 0 ? selectedIndex : 0) : selectedRouteName;
+  const routeSummary = activeRoute
+    ? displayPathwayBrief(activeRoute, profile, routeTitle)
+    : 'Profile ke hisaab se realistic route.';
   const simpleRole = uiText(pathwayDetail.realistic_role, routeTitle);
   const simpleWhy = uiText(
     pathwayDetail.why_realistic,
@@ -2687,7 +2768,7 @@ function PathwaysTab({
             }}
             type="button"
           >
-            {uiText(route.name, 'Route')}
+            {displayPathwayTitle(route, profile, index)}
           </button>
         );
       })}
@@ -2721,22 +2802,6 @@ function PathwaysTab({
               {isPathwaySpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
               {isPathwaySpeaking ? (t.counselor?.speaking || 'Speaking') : (t.counselor?.listen || 'Listen')}
             </button>
-          </div>
-          <div className="simple-pathway-sections">
-            <section>
-              <b>{t.pathway.pathwayLabel || 'Pathway'}</b>
-              <p>{simpleRole}</p>
-              <small>{simpleStep}</small>
-            </section>
-            <section>
-              <b>{t.pathway.whyThisRoute || 'Why Meera chose this'}</b>
-              <p>{simpleWhy}</p>
-            </section>
-            <section>
-              <b>{t.pathway.checkBefore || 'Before you start'}</b>
-              <p>{simpleCheck}</p>
-              <small>{promiseText}</small>
-            </section>
           </div>
           <div className="pathway-card-actions">
             <button className="primary-button" disabled={journeyLocked} onClick={() => createJourney(activeRoute)}>
