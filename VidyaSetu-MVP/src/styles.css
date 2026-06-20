@@ -8626,3 +8626,96 @@ body {
     gap: 2px;
   }
 }
+
+.crm-app-shell .passport-card.passport-card-enhanced,
+.passport-card.passport-card-enhanced {
+  display: grid;
+  gap: 16px;
+  border: 1px solid #d7e0ee;
+  border-radius: 18px;
+  padding: 22px;
+  color: #101828;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 18px 44px rgba(16, 24, 40, 0.1);
+}
+
+.crm-app-shell .passport-card.passport-card-enhanced *,
+.passport-card.passport-card-enhanced * {
+  color: inherit;
+}
+
+.crm-app-shell .passport-card.passport-card-enhanced h3,
+.passport-card.passport-card-enhanced h3 {
+  color: #101828;
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  line-height: 1.05;
+}
+
+.crm-app-shell .passport-card.passport-card-enhanced p,
+.passport-card.passport-card-enhanced p {
+  color: #667085;
+}
+
+.crm-app-shell .passport-professional-grid,
+.passport-professional-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-app-shell .passport-professional-grid span,
+.passport-professional-grid span {
+  display: grid;
+  gap: 6px;
+  min-height: 96px;
+  border: 1px solid #d7e0ee;
+  border-radius: 14px;
+  padding: 14px;
+  color: #344054;
+  background: #ffffff;
+}
+
+.crm-app-shell .passport-professional-grid b,
+.passport-professional-grid b {
+  color: #123aa8;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.crm-app-shell .passport-share-note,
+.passport-share-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #b9e4d3;
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: #05603a;
+  background: #ecfdf3;
+  line-height: 1.45;
+}
+
+.crm-app-shell .passport-share-note svg,
+.passport-share-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #079455;
+}
+
+.crm-app-shell .passport-proof-strip span,
+.crm-app-shell .consent-scope-grid span,
+.passport-proof-strip span,
+.consent-scope-grid span {
+  color: #344054;
+  background: #ffffff;
+}
+
+@media (max-width: 760px) {
+  .crm-app-shell .passport-professional-grid,
+  .passport-professional-grid,
+  .crm-app-shell .passport-qr-layout,
+  .passport-qr-layout {
+    grid-template-columns: 1fr;
+  }
+}

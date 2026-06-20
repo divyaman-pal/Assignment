@@ -632,6 +632,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('counselor');
   const [pathway, setPathway] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
+  const [lockedRouteKey, setLockedRouteKey] = useState('');
   const [journey, setJourney] = useState(null);
   const [passport, setPassport] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -662,6 +663,7 @@ function App() {
   const speechRequestRef = useRef(0);
   const speechTimerRef = useRef(null);
   const speechAudioRef = useRef(null);
+  const speechTabRef = useRef(activeTab);
   const previousActiveTabRef = useRef(activeTab);
 
   const selectedMatch = matches.find((match) => match.id === selectedMatchId) || matches[0];
@@ -687,7 +689,9 @@ function App() {
     ...(progressState || {}),
   };
   const journeyCompleteForPassport = isJourneyCompleteForPassport(journey, journeyProgressForLock);
-  const pathwayLocked = Boolean(journey?.modules?.length) && !journeyCompleteForPassport;
+  const routeKeyForLock = lockedRouteKey || (journey?.modules?.length ? routeKey(selectedRoute) : '');
+  const pathwayLocked = Boolean(routeKeyForLock) && !journeyCompleteForPassport;
+  const journeyLocked = Boolean(journey?.modules?.length) && !journeyCompleteForPassport;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -698,7 +702,9 @@ function App() {
   useEffect(() => {
     if (previousActiveTabRef.current !== activeTab) {
       previousActiveTabRef.current = activeTab;
-      stopSpeaking();
+      if (speechTabRef.current && speechTabRef.current !== activeTab) {
+        stopSpeaking();
+      }
     }
   }, [activeTab]);
 
@@ -966,6 +972,7 @@ function App() {
 
     const requestId = speechRequestRef.current + 1;
     speechRequestRef.current = requestId;
+    speechTabRef.current = options.tab || activeTab;
     if (speechTimerRef.current) window.clearTimeout(speechTimerRef.current);
     if (speechAudioRef.current) {
       speechAudioRef.current.pause();
@@ -1088,6 +1095,7 @@ function App() {
 
   function stopSpeaking() {
     speechRequestRef.current += 1;
+    speechTabRef.current = '';
     if (speechTimerRef.current && typeof window !== 'undefined') {
       window.clearTimeout(speechTimerRef.current);
       speechTimerRef.current = null;
@@ -1105,8 +1113,8 @@ function App() {
 
   async function generatePathway() {
     if (pathwayLocked) {
-      setActiveTab('journey');
-      setError('This pathway is locked until the current learning journey proof is complete.');
+      setActiveTab(journey?.modules?.length ? 'journey' : 'pathways');
+      setError('This pathway is locked until the selected learning journey proof is complete.');
       return;
     }
     setActiveTab('pathways');
@@ -1116,6 +1124,7 @@ function App() {
       setPathway(data);
       setLastProof(data.proof || null);
       setSelectedRoute(data.routes?.[0] || null);
+      setLockedRouteKey('');
       setJourney(null);
       setCompletedLessons({});
       setProofNotes({});
@@ -1126,11 +1135,12 @@ function App() {
 
   async function createJourney(route = selectedRoute || pathway?.routes?.[0]) {
     if (!route) return;
-    if (pathwayLocked) {
+    if (journeyLocked) {
       setActiveTab('journey');
       setError('This pathway is locked until the current learning journey proof is complete.');
       return;
     }
+    setLockedRouteKey(routeKey(route));
     setActiveTab('journey');
     await run(generationWaitCopy(profile.preferred_language || selectedLanguage || uiLanguage, 'journey').loading, async () => {
       const data = await api('/api/journey', { profile, route });
@@ -1717,10 +1727,12 @@ function App() {
               profile={profile}
               selectedRoute={selectedRoute}
               setSelectedRoute={setSelectedRoute}
+              lockSelectedRoute={(route) => setLockedRouteKey(routeKey(route))}
               generatePathway={generatePathway}
               createJourney={createJourney}
               loading={loading}
               pathwayLocked={pathwayLocked}
+              journeyLocked={journeyLocked}
               speakReply={speakReply}
               speakingIndex={speakingIndex}
               stopSpeaking={stopSpeaking}
@@ -1742,12 +1754,12 @@ function App() {
               updateProofArtifact={updateProofArtifact}
               saveJourneyProgress={saveJourneyProgress}
               progressState={progressState}
-              pathwayLocked={pathwayLocked}
+              pathwayLocked={journeyLocked}
               loading={loading}
               t={t}
             />
           )}
-          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} progressState={progressState} t={t} />}
+          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} progressState={progressState} selectedRoute={selectedRoute} profile={profile} t={t} />}
           {activeTab === 'jobs' && (
             <JobsTab
               matches={matches}
@@ -2297,6 +2309,10 @@ function sameRoute(left, right) {
   return false;
 }
 
+function routeKey(route = {}) {
+  return uiText(route.id, uiText(route.name, uiText(route.title, ''))).trim();
+}
+
 function isJourneyCompleteForPassport(journey = {}, progress = {}) {
   const modules = Array.isArray(journey?.modules) ? journey.modules : [];
   if (!modules.length) return false;
@@ -2547,10 +2563,12 @@ function PathwaysTab({
   profile = {},
   selectedRoute,
   setSelectedRoute,
+  lockSelectedRoute,
   generatePathway,
   createJourney,
   loading = '',
   pathwayLocked = false,
+  journeyLocked = false,
   speakReply,
   speakingIndex,
   stopSpeaking,
@@ -2628,7 +2646,7 @@ function PathwaysTab({
       stopSpeaking?.();
       return;
     }
-    speakReply(narrationText, narrationProfile, voiceKey, { forceServerVoice: true, source: 'pathway' });
+    speakReply(narrationText, narrationProfile, voiceKey, { forceServerVoice: true, source: 'pathway', tab: 'pathways' });
   };
   useEffect(() => {
     if (!narrationText || !voiceKey || typeof speakReply !== 'function') return undefined;
@@ -2636,7 +2654,7 @@ function PathwaysTab({
     if (autoVoiceKeyRef.current === key) return undefined;
     autoVoiceKeyRef.current = key;
     const timer = window.setTimeout(() => {
-      speakReply(narrationText, narrationProfile, voiceKey, { forceServerVoice: true, source: 'pathway_auto' });
+      speakReply(narrationText, narrationProfile, voiceKey, { forceServerVoice: true, source: 'pathway_auto', tab: 'pathways' });
     }, 350);
     return () => window.clearTimeout(timer);
   }, [narrationText, narrationProfile.preferred_language, speakReply, voiceKey]);
@@ -2650,7 +2668,10 @@ function PathwaysTab({
             disabled={pathwayLocked && !selected}
             key={uiText(route.id, `route-${index}`)}
             onClick={() => {
-              if (!pathwayLocked) setSelectedRoute(route);
+              if (!pathwayLocked) {
+                setSelectedRoute(route);
+                lockSelectedRoute?.(route);
+              }
             }}
             type="button"
           >
@@ -2706,8 +2727,8 @@ function PathwaysTab({
             </section>
           </div>
           <div className="pathway-card-actions">
-            <button className="primary-button" disabled={pathwayLocked} onClick={() => createJourney(activeRoute)}>
-              {pathwayLocked ? (t.pathway.lockedCta || 'Continue current journey') : t.btn.startThisWeek}
+            <button className="primary-button" disabled={journeyLocked} onClick={() => createJourney(activeRoute)}>
+              {journeyLocked ? (t.pathway.lockedCta || 'Continue current journey') : t.btn.startThisWeek}
             </button>
             {firstSource && (
               <a className="ghost-button" href={firstSource.url} rel="noreferrer" target="_blank">
@@ -3003,7 +3024,7 @@ function JourneyTab({
   );
 }
 
-function PassportTab({ passport, savePassport, findJobs, journey, progressState = {}, t = getTranslations('English') }) {
+function PassportTab({ passport, savePassport, findJobs, journey, progressState = {}, selectedRoute, profile = {}, t = getTranslations('English') }) {
   const copy = t.passport || getTranslations('English').passport;
   const readinessScore = Number(journey?.readiness_score ?? journey?.progress?.completion_percent ?? 0);
   const progress = {
@@ -3014,6 +3035,7 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
   const journeyStatus = journey
     ? formatCopy(copy.journeyAttached, { score: Number.isFinite(readinessScore) ? Math.round(readinessScore) : 0 })
     : copy.journeyPending;
+  const professionalRows = passportProfessionalRows({ passport, journey, selectedRoute, copy });
   return (
     <div className="workspace-card">
       <p className="eyebrow">{copy.eyebrow}</p>
@@ -3030,8 +3052,8 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
             <MockQr token={passport.qr_token} />
             <div>
               <span className="source-badge">{copy.consentQr}</span>
-              <h3>{passport.name}</h3>
-              <p>{passport.class_level} | {passport.location || copy.locationProtected}</p>
+              <h3>{passport.name || profile.name || copy.learner || 'Learner'}</h3>
+              <p>{[passport.class_level || profile.class_level, passport.location || profile.location || copy.locationProtected].filter(Boolean).join(' | ')}</p>
               <div className="passport-token">{passport.qr_token}</div>
             </div>
           </div>
@@ -3047,11 +3069,18 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
             <span className={passport.consent?.share_informal ? 'ready' : ''}><b>{copy.informalSkills}</b>{passport.consent?.share_informal ? copy.shareAllowed : copy.hidden}</span>
             <span className={passport.consent?.share_scores ? 'ready' : ''}><b>{copy.scores}</b>{passport.consent?.share_scores ? copy.shareAllowed : copy.hidden}</span>
           </div>
-          <div className="credential-list">
-            {passport.certs?.map((cert) => <span key={cert.name}>{cert.name} - {cert.status}</span>)}
-            {passport.informal?.map((skill) => <span key={skill.name}>{skill.name} - {skill.verification_method}</span>)}
+          <div className="passport-professional-grid">
+            {professionalRows.map((row) => (
+              <span key={row.label}>
+                <b>{row.label}</b>
+                {row.value}
+              </span>
+            ))}
           </div>
-          {passport.learning_proof?.next_action && <p><b>{copy.next}:</b> {passport.learning_proof.next_action}</p>}
+          <div className="passport-share-note">
+            <ShieldCheck size={17} />
+            <span>{copy.shareNote || 'Only learner-approved proof is visible through this QR. Raw chat and private notes stay hidden.'}</span>
+          </div>
         </div>
       )}
       <button className="primary-button" disabled={!passport || !passportEligible} onClick={findJobs}>
@@ -3059,6 +3088,57 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
       </button>
     </div>
   );
+}
+
+function passportProfessionalRows({ passport = {}, journey = {}, selectedRoute = {}, copy = {} }) {
+  const proof = passport.learning_proof || {};
+  const progress = Number(proof.completion_percent || 0);
+  const proofReady = Number(proof.proof_ready_count || 0);
+  const proofRequired = Number(proof.proof_required_count || 0);
+  const routeName = cleanPassportLabel(
+    uiText(selectedRoute?.name, uiText(selectedRoute?.title, uiText(journey?.route_name, passport.certs?.find((cert) => /selected pathway/i.test(cert.status || ''))?.name || 'Selected pathway'))),
+  );
+  const skillName = cleanPassportLabel(
+    uiText(
+      passport.informal?.[0]?.name,
+      uiText(selectedRoute?.realistic_role, uiText(selectedRoute?.title, routeName)),
+    ),
+  );
+  const reviewStatus = passport.status === 'proof_ready_for_review'
+    ? (copy.workerReviewReady || 'Ready for worker review')
+    : (copy.privateDraft || 'Private draft');
+  return [
+    {
+      label: copy.selectedPath || 'Selected path',
+      value: routeName || 'Selected learning route',
+    },
+    {
+      label: copy.proofBundle || 'Proof bundle',
+      value: proofRequired
+        ? `${proofReady}/${proofRequired} proof items saved, ${progress}% complete`
+        : `${progress}% complete`,
+    },
+    {
+      label: copy.skillEvidence || 'Skill evidence',
+      value: skillName ? `${skillName} evidence ready` : 'Evidence ready after review',
+    },
+    {
+      label: copy.reviewStatus || 'Review status',
+      value: reviewStatus,
+    },
+  ];
+}
+
+function cleanPassportLabel(value = '') {
+  return String(value || '')
+    .replace(/\bproof tasks?\b/gi, 'proof')
+    .replace(/\bselected pathway\b/gi, 'selected path')
+    .replace(/\bself-reported \+ counselor assessed\b/gi, 'counselor assessed')
+    .replace(/\bskill pathway exploration\b/gi, 'chosen skill path')
+    .replace(/\bpathway\b/gi, 'path')
+    .replace(/\s+-\s+/g, ' - ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function MockQr({ token = '' }) {
