@@ -905,7 +905,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
       type: 'skill_pathway_exploration',
       label: /data science|डेटा\s*साइंस|machine learning|मशीन\s*लर्निंग|analytics|एनालिटिक्स|python|पायथन|sql/i.test(combined) ? 'Data science pathway exploration' : 'Skill pathway exploration',
       intent: 'career',
-      needs_location_for_offline: true,
+      needs_location_for_offline: false,
       recommended_next_step: 'Compare training, apprenticeship, and entry-work routes based on location.',
     };
   }

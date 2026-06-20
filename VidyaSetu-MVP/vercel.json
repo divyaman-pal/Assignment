@@ -12,5 +12,11 @@
     "api/jobs.js": {
       "maxDuration": 120
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/adews?job=daily-reminders",
+      "schedule": "30 3 * * *"
+    }
+  ]
 }

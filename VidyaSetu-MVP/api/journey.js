@@ -177,9 +177,15 @@ function enrichJourneyModule(module = {}, moduleIndex = 0) {
       }));
   return {
     ...module,
+    lessons,
+    practice_tasks: Array.isArray(module.practice_tasks) && module.practice_tasks.length
+      ? module.practice_tasks.filter(Boolean)
+      : ['Finish one small practice task and save proof.'],
+    proof_tasks: proofTasks.length ? proofTasks : [proof],
     why_it_matters:
       module.why_it_matters ||
       `This week matters because it turns ${module.goal || module.title || 'the selected pathway'} into one small proof-backed step.`,
+    completion_criteria: module.completion_criteria || completion,
     proof,
     proof_task: module.proof_task || proof,
     unlocks: module.unlocks || unlock,

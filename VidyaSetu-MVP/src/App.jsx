@@ -639,6 +639,7 @@ function App() {
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [outreach, setOutreach] = useState(null);
   const [adews, setAdews] = useState(null);
+  const [dailyReminder, setDailyReminder] = useState(null);
   const [lastProof, setLastProof] = useState(null);
   const [resumeText, setResumeText] = useState('');
   const [resumeFileName, setResumeFileName] = useState('');
@@ -766,6 +767,7 @@ function App() {
     setSelectedMatchId(workspace.selectedMatchId || workspace.matches?.[0]?.id || '');
     setOutreach(workspace.outreach || null);
     setAdews(workspace.adews || null);
+    setDailyReminder(null);
     setResumeText(workspace.resumeText || '');
     setResumeFileName(workspace.resumeFileName || '');
     setOpportunityMeta(workspace.opportunityMeta || null);
@@ -1366,6 +1368,22 @@ function App() {
     });
   }
 
+  async function sendDailyReminder() {
+    await run('Preparing today WhatsApp reminder...', async () => {
+      const data = await api('/api/adews', {
+        job: 'daily-reminders',
+        learner_id: profile.learner_id,
+        limit: 1,
+      });
+      setDailyReminder(data);
+      setAdews((current) => ({
+        ...(current || {}),
+        daily_reminder: data,
+      }));
+      setActiveTab('support');
+    });
+  }
+
   async function runBalangirFieldDemo() {
     await run('Running Odia voice-to-placement field demo...', async () => {
       const demoLanguage = 'Odia';
@@ -1802,7 +1820,7 @@ function App() {
             />
           )}
           {activeTab === 'followups' && <FollowupsTab outreach={outreach} selectedMatch={selectedMatch} contactEmployer={contactEmployer} />}
-          {activeTab === 'support' && <SupportTab adews={adews} scoreSupport={scoreSupport} />}
+          {activeTab === 'support' && <SupportTab adews={adews} dailyReminder={dailyReminder} scoreSupport={scoreSupport} sendDailyReminder={sendDailyReminder} />}
           {activeTab === 'proof' && (
             <EvaluationProofTab
               adews={adews}
@@ -3896,7 +3914,7 @@ function EvaluationProofTab({
   );
 }
 
-function SupportTab({ adews, scoreSupport }) {
+function SupportTab({ adews, dailyReminder, scoreSupport, sendDailyReminder }) {
   const labels = {
     missed_checkins: 'Missed check-ins',
     attendance_drop_days: 'Attendance drop',
@@ -3904,17 +3922,36 @@ function SupportTab({ adews, scoreSupport }) {
     exam_window: 'Exam-season pressure',
     gender_window: 'Girl-specific risk window',
   };
+  const reminder = dailyReminder || adews?.daily_reminder || null;
+  const reminderResult = reminder?.results?.[0] || null;
   return (
     <div className="workspace-card">
       <p className="eyebrow">Human safety net</p>
-      <h2>If the learner goes silent, VidyaSetu escalates to a worker.</h2>
-      <button className="primary-button" onClick={scoreSupport}>
-        Run 7-day silence check
-      </button>
+      <h2>Daily WhatsApp nudges first. If the learner goes silent, ADEWS escalates.</h2>
+      <div className="action-row">
+        <button className="primary-button" onClick={sendDailyReminder}>
+          Send today reminder
+        </button>
+        <button className="ghost-button" onClick={scoreSupport}>
+          Run silence risk check
+        </button>
+      </div>
+      <div className="worker-alert-card">
+        <strong>{reminder ? 'Daily reminder result' : 'Daily reminder loop'}</strong>
+        <p>
+          {reminderResult
+            ? `${reminderResult.status}: ${reminderResult.task || reminderResult.reason || 'today task checked'}`
+            : 'Every morning, VidyaSetu picks the current unlocked journey task and sends it on WhatsApp with the first resource.'}
+        </p>
+        <small>
+          WATI: {reminder?.wati_configured ? 'configured' : 'not configured / dry run'} |
+          Sent {reminder?.sent ?? 0} | Dry run {reminder?.dry_run_count ?? 0} | Skipped {reminder?.skipped ?? 0}
+        </small>
+      </div>
       <div className="adews-scenario-grid">
-        <span><b>Scenario</b>3+ missed check-ins</span>
-        <span><b>Signal</b>attendance drop + economic stress</span>
-        <span><b>Action</b>worker call or home visit</span>
+        <span><b>Daily</b>WhatsApp task + resource</span>
+        <span><b>No journey/consent</b>skip safely</span>
+        <span><b>7 days/high risk</b>worker alert</span>
       </div>
       <div className="alert-banner">
         <span>Risk {adews?.risk ?? 'not scored'}</span>
