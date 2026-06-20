@@ -26,6 +26,18 @@ export default async function handler(req, res) {
     const completionPercent = Number(progress.completion_percent || 0);
     const passportEligible = Boolean(progress.passport_eligible);
     const academicMode = isAcademicJourney(journey);
+    if (body.require_eligible === true && !passportEligible) {
+      return sendJson(res, 409, {
+        error: 'Complete the current learning journey proof before creating the Skill Passport.',
+        learning: {
+          completion_percent: completionPercent,
+          proof_ready_count: proofReadyCount,
+          proof_required_count: proofRequiredCount,
+          passport_eligible: false,
+          next_action: progress.next_action || 'Complete the learning journey proof first.',
+        },
+      });
+    }
 
     if (body.selected_route?.name) {
       passport.certs = [

@@ -22,6 +22,23 @@ const personas = [
     },
   },
   {
+    id: 'hinglish_riya_next_action_after_complete',
+    language: 'Hinglish',
+    turns: [
+      'Mera naam Riya hai. Main Class 12 pass hoon, Varanasi ke paas rehti hoon. Mujhe computer basics, typing aur customer service job chahiye. Phone shared hai but WhatsApp voice note chal jata hai. Roz 1 hour practice kar sakti hoon. Ghar ke paas safe day shift chahiye.',
+      '10 km',
+      'ab kya krna h ?',
+    ],
+    expect: {
+      goalType: 'local_office_job',
+      goalTerms: ['computer', 'typing', 'customer'],
+      aspirationTerms: ['computer', 'typing', 'customer'],
+      finalReplyTerms: ['Rasta', 'dabao'],
+      rejectReplyTerms: ['Mauke sirf fit', 'mobile repair', 'skill pathway exploration'],
+      rejectGoalTerms: ['mobile repair', 'skill pathway exploration'],
+    },
+  },
+  {
     id: 'hi_mushroom_business_profile',
     language: 'Hindi',
     turns: [

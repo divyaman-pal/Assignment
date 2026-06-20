@@ -681,6 +681,11 @@ function App() {
     () => buildReadinessLayers({ profile, pathway, journey, passport, matches, outreach, resumeText }),
     [profile, pathway, journey, passport, matches, outreach, resumeText],
   );
+  const journeyProgressForLock = {
+    ...(journey?.progress || {}),
+    ...(progressState || {}),
+  };
+  const pathwayLocked = Boolean(journey?.modules?.length) && !Boolean(journeyProgressForLock.passport_eligible);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1090,6 +1095,11 @@ function App() {
   }
 
   async function generatePathway() {
+    if (pathwayLocked) {
+      setActiveTab('journey');
+      setError('This pathway is locked until the current learning journey proof is complete.');
+      return;
+    }
     setActiveTab('pathways');
     await run(generationWaitCopy(profile.preferred_language || selectedLanguage || uiLanguage, 'pathway').loading, async () => {
       const latestUserQuestion = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
@@ -1107,6 +1117,11 @@ function App() {
 
   async function createJourney(route = selectedRoute || pathway?.routes?.[0]) {
     if (!route) return;
+    if (pathwayLocked) {
+      setActiveTab('journey');
+      setError('This pathway is locked until the current learning journey proof is complete.');
+      return;
+    }
     setActiveTab('journey');
     await run(generationWaitCopy(profile.preferred_language || selectedLanguage || uiLanguage, 'journey').loading, async () => {
       const data = await api('/api/journey', { profile, route });
@@ -1187,16 +1202,26 @@ function App() {
   }
 
   async function savePassport() {
+    const progressForPassport = {
+      ...(journey?.progress || {}),
+      ...(progressState || {}),
+    };
+    if (!progressForPassport.passport_eligible) {
+      setActiveTab('journey');
+      setError('Complete the current learning journey proof before creating the Skill Passport.');
+      return;
+    }
     await run('Creating Skill Passport...', async () => {
       const data = await api('/api/passport', {
         profile,
         selected_route: selectedRoute,
         journey,
-        progress: progressState,
+        progress: progressForPassport,
         completed_lessons: completedLessons,
         proof_notes: proofNotes,
         proof_artifacts: proofArtifacts,
         consent: { share_certs: true, share_informal: true, share_scores: true },
+        require_eligible: true,
       });
       setPassport(data.passport);
       setLastProof(data.proof || null);
@@ -1686,6 +1711,7 @@ function App() {
               generatePathway={generatePathway}
               createJourney={createJourney}
               loading={loading}
+              pathwayLocked={pathwayLocked}
               speakReply={speakReply}
               speakingIndex={speakingIndex}
               stopSpeaking={stopSpeaking}
@@ -1707,11 +1733,12 @@ function App() {
               updateProofArtifact={updateProofArtifact}
               saveJourneyProgress={saveJourneyProgress}
               progressState={progressState}
+              pathwayLocked={pathwayLocked}
               loading={loading}
               t={t}
             />
           )}
-          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} t={t} />}
+          {activeTab === 'passport' && <PassportTab passport={passport} savePassport={savePassport} findJobs={findJobs} journey={journey} progressState={progressState} t={t} />}
           {activeTab === 'jobs' && (
             <JobsTab
               matches={matches}
@@ -2504,6 +2531,7 @@ function PathwaysTab({
   generatePathway,
   createJourney,
   loading = '',
+  pathwayLocked = false,
   speakReply,
   speakingIndex,
   stopSpeaking,
@@ -2521,6 +2549,7 @@ function PathwaysTab({
   const selectedIndex = routes.findIndex((route) => sameRoute(activeRoute, route));
   const selectedRouteName = uiText(activeRoute?.name, academicMode ? 'Study pathway' : 'Career pathway');
   const optionLabel = (index = 0) => `${t.pathway.option || 'Option'} ${index + 1}`;
+  const lockMessage = t.pathway.pathLocked || 'This pathway is locked until the current learning journey proof is complete.';
   const activeSources = activeRoute ? pathwaySourceItems(activeRoute) : [];
   const blockers = Array.isArray(activeRoute?.trace?.blockers) && activeRoute.trace.blockers.length
     ? activeRoute.trace.blockers.map((item) => uiText(item)).filter(Boolean)
@@ -2597,7 +2626,15 @@ function PathwaysTab({
       {routes.map((route, index) => {
         const selected = sameRoute(activeRoute, route);
         return (
-          <button className={selected ? 'chip-s active' : 'chip-s'} key={uiText(route.id, `route-${index}`)} onClick={() => setSelectedRoute(route)} type="button">
+          <button
+            className={selected ? 'chip-s active' : 'chip-s'}
+            disabled={pathwayLocked && !selected}
+            key={uiText(route.id, `route-${index}`)}
+            onClick={() => {
+              if (!pathwayLocked) setSelectedRoute(route);
+            }}
+            type="button"
+          >
             {uiText(route.name, 'Route')}
           </button>
         );
@@ -2650,8 +2687,8 @@ function PathwaysTab({
             </section>
           </div>
           <div className="pathway-card-actions">
-            <button className="primary-button" onClick={() => createJourney(activeRoute)}>
-              {t.btn.startThisWeek}
+            <button className="primary-button" disabled={pathwayLocked} onClick={() => createJourney(activeRoute)}>
+              {pathwayLocked ? (t.pathway.lockedCta || 'Continue current journey') : t.btn.startThisWeek}
             </button>
             {firstSource && (
               <a className="ghost-button" href={firstSource.url} rel="noreferrer" target="_blank">
@@ -2664,11 +2701,13 @@ function PathwaysTab({
         )}
       </div>
       <div className="action-row">
-        <button className="primary-button" onClick={generatePathway}>
+        <button className="primary-button" disabled={pathwayLocked} onClick={generatePathway}>
           {t.btn.refreshRecommendations}
         </button>
         <span>
-          {pathway?.callback_flag
+          {pathwayLocked
+            ? lockMessage
+            : pathway?.callback_flag
             ? uiText(pathway.callback_message, 'More learner details are needed before recommendations.')
             : activeRoute
               ? `${t.pathway.selected}${selectedIndex >= 0 ? ` ${selectedIndex + 1}` : ''}: ${selectedRouteName}.`
@@ -2718,6 +2757,7 @@ function JourneyTab({
   updateProofArtifact,
   saveJourneyProgress,
   progressState = {},
+  pathwayLocked = false,
   loading = '',
   t = getTranslations('English'),
 }) {
@@ -2776,10 +2816,11 @@ function JourneyTab({
               : copy.builtFromPathway}
           </p>
         </div>
-        <button className="primary-button" disabled={!selectedRoute} onClick={() => createJourney(selectedRoute)}>
+        <button className="primary-button" disabled={!selectedRoute || pathwayLocked} onClick={() => createJourney(selectedRoute)}>
           {journey ? copy.refresh : academicMode ? t.btn.refreshStudyPlan : t.btn.createJourney}
         </button>
       </div>
+      {pathwayLocked && <EmptyState text={copy.pathLocked || 'This pathway is locked until the current learning journey proof is complete.'} />}
       {!journey && <EmptyState text={copy.chooseRouteFirst} />}
       {journey && (
         <>
@@ -2933,8 +2974,8 @@ function JourneyTab({
               <p>{finalUnlock}</p>
               <small><b>{copy.nextNow}:</b> {nextAction}</small>
             </div>
-            <button className="primary-button" onClick={savePassport}>
-              {academicMode ? copy.saveStudyRecord : passportEligible ? copy.createProofReadyPassport : copy.createDraftPassport}
+            <button className="primary-button" disabled={!passportEligible} onClick={savePassport}>
+              {academicMode ? copy.saveStudyRecord : passportEligible ? copy.createProofReadyPassport : copy.completeBeforePassport || copy.createDraftPassport}
             </button>
           </div>
         </>
@@ -2943,9 +2984,14 @@ function JourneyTab({
   );
 }
 
-function PassportTab({ passport, savePassport, findJobs, journey, t = getTranslations('English') }) {
+function PassportTab({ passport, savePassport, findJobs, journey, progressState = {}, t = getTranslations('English') }) {
   const copy = t.passport || getTranslations('English').passport;
   const readinessScore = Number(journey?.readiness_score ?? journey?.progress?.completion_percent ?? 0);
+  const progress = {
+    ...(journey?.progress || {}),
+    ...(progressState || {}),
+  };
+  const passportEligible = Boolean(progress.passport_eligible);
   const journeyStatus = journey
     ? formatCopy(copy.journeyAttached, { score: Number.isFinite(readinessScore) ? Math.round(readinessScore) : 0 })
     : copy.journeyPending;
@@ -2954,10 +3000,10 @@ function PassportTab({ passport, savePassport, findJobs, journey, t = getTransla
       <p className="eyebrow">{copy.eyebrow}</p>
       <h2>{copy.title}</h2>
       <div className="action-row">
-        <button className="primary-button" onClick={savePassport}>
-          {copy.refresh}
+        <button className="primary-button" disabled={!passportEligible} onClick={savePassport}>
+          {passportEligible ? copy.refresh : copy.lockedUntilJourney || copy.refresh}
         </button>
-        <span>{journeyStatus}</span>
+        <span>{passportEligible ? journeyStatus : copy.lockedMessage || journeyStatus}</span>
       </div>
       {passport && (
         <div className="passport-card passport-card-enhanced">

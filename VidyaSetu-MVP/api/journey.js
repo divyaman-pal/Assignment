@@ -151,9 +151,55 @@ function stabilizeJourneySchema(base = {}, localized = {}, options = {}) {
           ? nextModule.unlock_after_completion
           : baseModule.unlock_after_completion,
     };
-  });
+  }).map((module, moduleIndex) => enrichJourneyModule(module, moduleIndex));
+  if (stable.modules.length && !/week MVP/i.test(String(stable.duration?.mvp || ''))) {
+    stable.duration = {
+      ...(stable.duration || {}),
+      mvp: `${stable.modules.length}-week MVP journey`,
+    };
+  }
 
   return syncJourneyProgress(stable);
+}
+
+function enrichJourneyModule(module = {}, moduleIndex = 0) {
+  const lessons = Array.isArray(module.lessons) ? module.lessons.filter(Boolean) : [];
+  const proofTasks = Array.isArray(module.proof_tasks) ? module.proof_tasks.filter(Boolean) : [];
+  const proof = String(module.proof || module.proof_task || proofTasks[0] || 'short proof note').trim();
+  const unlock = String(module.unlocks || module.unlock_after_completion || module.unlock || `Week ${moduleIndex + 2}`).trim();
+  const completion = String(module.completion_criteria || 'Finish the lesson, practice once, and save proof.').trim();
+  const lessonDetails = Array.isArray(module.lesson_details) && module.lesson_details.length
+    ? module.lesson_details
+    : lessons.map((lesson) => ({
+        title: lesson,
+        completion_criteria: completion,
+        proof_required: proof,
+      }));
+  return {
+    ...module,
+    why_it_matters:
+      module.why_it_matters ||
+      `This week matters because it turns ${module.goal || module.title || 'the selected pathway'} into one small proof-backed step.`,
+    proof,
+    proof_task: module.proof_task || proof,
+    unlocks: module.unlocks || unlock,
+    unlock_after_completion: module.unlock_after_completion || unlock,
+    lesson_details: lessonDetails.map((lesson) => {
+      if (lesson && typeof lesson === 'object' && !Array.isArray(lesson)) {
+        return {
+          ...lesson,
+          title: lesson.title || lesson.label || lesson.name || 'Lesson',
+          completion_criteria: lesson.completion_criteria || completion,
+          proof_required: lesson.proof_required || proof,
+        };
+      }
+      return {
+        title: String(lesson || 'Lesson'),
+        completion_criteria: completion,
+        proof_required: proof,
+      };
+    }),
+  };
 }
 
 function syncJourneyProgress(journey = {}) {
@@ -575,7 +621,9 @@ export default async function handler(req, res) {
     if (usableGeneratedModules) {
       journey.duration = {
         ...(journey.duration || {}),
-        mvp: generated.data?.duration?.mvp || `${journey.modules.length}-week journey`,
+        mvp: /week MVP/i.test(String(generated.data?.duration?.mvp || ''))
+          ? generated.data.duration.mvp
+          : `${journey.modules.length}-week MVP journey`,
       };
     }
 

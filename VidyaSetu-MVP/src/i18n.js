@@ -269,6 +269,8 @@ Object.assign(en.pathway, {
   voiceCheck: 'Remember',
   firstResource: 'First resource',
   resourceVoiceHint: 'Open it, use the first useful page or lesson, and save one note or voice proof.',
+  pathLocked: 'This pathway is locked until the current learning journey proof is complete.',
+  lockedCta: 'Continue current journey',
 });
 Object.assign(en.journey, {
   eyebrow: 'Learner Journey',
@@ -323,6 +325,8 @@ Object.assign(en.journey, {
   saveStudyRecord: 'Save study record',
   createProofReadyPassport: 'Create proof-ready Skill Passport',
   createDraftPassport: 'Create draft Skill Passport',
+  pathLocked: 'This pathway is locked until this journey proof is complete.',
+  completeBeforePassport: 'Complete journey proof first',
 });
 
 Object.assign(hinglish.btn, { generatePathway: 'Rasta banao' });
@@ -371,6 +375,8 @@ Object.assign(hinglish.pathway, {
   voiceCheck: 'Dhyan rahe',
   firstResource: 'Pehla resource',
   resourceVoiceHint: 'Isko kholiye, pehla useful page ya lesson dekhiye, aur ek note ya voice proof save kijiye.',
+  pathLocked: 'Yeh rasta current learning journey proof complete hone tak locked hai.',
+  lockedCta: 'Current journey continue karein',
   cardKinds: { earn_fast: 'Jaldi kamai', build_bigger: 'Bada banao', explore: 'Explore' },
   studyCardKinds: { earn_fast: 'Abhi shuru', build_bigger: 'Strong banao', explore: 'Explore' },
   firstIncome: 'Pehli kamai',
@@ -441,6 +447,8 @@ Object.assign(hinglish.journey, {
   saveStudyRecord: 'Study record save karein',
   createProofReadyPassport: 'Proof-ready Hunar Passport banayein',
   createDraftPassport: 'Draft Hunar Passport banayein',
+  pathLocked: 'Yeh rasta is journey ka proof complete hone tak locked hai.',
+  completeBeforePassport: 'Pehle journey proof complete karein',
 });
 
 Object.assign(hi.btn, { generatePathway: 'रास्ता बनाएं' });
@@ -1273,6 +1281,8 @@ const PASSPORT_CHROME_COPY = {
     hidden: 'hidden',
     next: 'Next',
     openOpportunities: 'Open live opportunity engine',
+    lockedUntilJourney: 'Complete journey proof first',
+    lockedMessage: 'Skill Passport opens after the current journey proof is complete.',
   },
   hinglish: {
     eyebrow: 'Hunar Passport',
@@ -1294,6 +1304,8 @@ const PASSPORT_CHROME_COPY = {
     hidden: 'hidden',
     next: 'Agla',
     openOpportunities: 'Live mauke kholo',
+    lockedUntilJourney: 'Pehle journey proof complete karein',
+    lockedMessage: 'Hunar Passport current journey proof complete hone ke baad khulega.',
   },
   hi: {
     eyebrow: 'कौशल पासपोर्ट',

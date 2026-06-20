@@ -965,8 +965,9 @@ function buildStepwiseReply({
     const nextField = nextBestIntakeField(missing, profile);
     const nextQuestion = nameConfirmationQuestion(previousProfile, profile, latestText, updates, previousAssistant) ||
       oneThingQuestion(nextField, profile, latestText);
+    const nextLooksReady = !nextField || /rasta|pathway|jankari kafi|profile complete|ready/i.test(String(nextQuestion || ''));
     const candidate = cleanCounselorReply(avoidRepeat(
-      joinParts([ack, directAnswer, nextQuestion]),
+      joinParts([nextLooksReady ? '' : ack, directAnswer, nextQuestion]),
       previousAssistant,
       profile,
       latestText,
@@ -976,10 +977,8 @@ function buildStepwiseReply({
   }
 
   const baseReply = directReply || conciseReadyReply(profile, latestText, modelReply);
-  const readyAck = lowEducationProfile(profile, latestText) ? '' : ack;
   const candidate = cleanCounselorReply(avoidRepeat(
     joinParts([
-      readyAck,
       baseReply,
     ]),
     previousAssistant,
@@ -1088,6 +1087,7 @@ function joinParts(parts = []) {
 
 function cleanCounselorReply(reply = '') {
   return String(reply || '')
+    .replace(/^\s*Theek hai,\s*jankari rakh li\.\s*Theek hai,/i, 'Theek hai,')
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .replace(/`/g, '')
@@ -1126,6 +1126,35 @@ function proofUseReply(profile = {}, latestText = '', { profileReady = false } =
     Odia: `Video କେବଳ ${target} ର ଛୋଟ proof: typing ପାଇଁ 20-30 second screen/keyboard ରେ 4-5 line type କରୁଥିବା ଦେଖାନ୍ତୁ. ଆପଣଙ୍କ permission ପରେ ମାତ୍ର share ହେବ.`,
     Bengali: `Video শুধু ${target}-এর ছোট proof: typing হলে 20-30 second screen/keyboard-এ 4-5 line type করা দেখান. আপনার permission ছাড়া share হবে না.`,
     Tamil: `Video என்பது ${target} க்கு சிறிய proof மட்டும்: typing என்றால் 20-30 second screen/keyboard-ல் 4-5 line type செய்வதை காட்டுங்கள். உங்கள் permission இல்லாமல் share ஆகாது.`,
+  });
+}
+
+function asksWhatToDoNext(latestText = '') {
+  const raw = String(latestText || '');
+  const text = raw.toLowerCase();
+  return (
+    /\b(ab|aage|age|next|now)\b.{0,40}\b(kya|what|karna|krna|karu|kru|kare|kre|do|step)\b/i.test(text) ||
+    /\b(kya|what)\b.{0,40}\b(karna|krna|karu|kru|kare|kre|do|next|step)\b/i.test(text) ||
+    /(?:अब|आगे).{0,40}(?:क्या|करना|करूं|करूँ)/.test(raw)
+  );
+}
+
+function nextActionReply(profile = {}, latestText = '') {
+  return localizedLine(profile, latestText, {
+    English:
+      'Now press My Pathway or Generate pathway. Meera will make the route from this profile; ask anything else here.',
+    Hinglish:
+      'Ab Mera Rasta ya Rasta banao dabao. Meera isi jankari se rasta banayegi; kuch aur poochna ho to yahin poochho.',
+    Hindi:
+      'अब मेरा रास्ता या रास्ता बनाएं दबाइए। मीरा इसी जानकारी से रास्ता बनाएगी; कुछ और पूछना हो तो यहीं पूछिए।',
+    Marathi:
+      'Ata Maza Marg kiwa Pathway banava daba. Meera ya mahitivarun marg banavel; ajun kahi vicharayche asel tar ithe vichara.',
+    Odia:
+      'Ebe Mo Bata ba Pathway banantu dabantu. Meera ei tathya ru bata banai deb; au kichhi pachariba thile ethare pacharantu.',
+    Bengali:
+      'Ebar Amar Path ba Pathway banan chapun. Meera ei tothyo diye path banabe; aro kichhu jiggesh korte hole ekhanei korun.',
+    Tamil:
+      'Ippoluthu En Pathai allathu Pathway uruvaakku button-ai azhuthungal. Meera indha vivarathil irundhu pathai seyyum; vera kelvi irundhaal inge kelungal.',
   });
 }
 
@@ -1185,8 +1214,8 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
   }
   if (intent === 'job' || intent === 'college') {
     return localizedLine(profile, latestText, {
-      English: 'Good, I have enough to build the pathway. I will show only matching jobs after proof and consent.',
-      Hinglish: 'Theek hai, rasta banane ke liye jankari kafi hai. Mauke sirf fit, saboot aur aapki anumati ke baad dikhengi.',
+      English: 'Good, I have enough to build the pathway. Press My Pathway or Generate pathway; jobs will show only after proof and consent.',
+      Hinglish: 'Theek hai, rasta banane ke liye jankari kafi hai. Ab Mera Rasta ya Rasta banao dabao; mauke sirf saboot aur anumati ke baad dikhengi.',
       Hindi: 'ठीक है, रास्ता बनाने के लिए जानकारी काफी है। मौके सिर्फ मेल, सबूत और आपकी अनुमति के बाद दिखेंगे।',
       Marathi: 'ठीक आहे, रस्ता बनवण्यासाठी माहिती पुरेशी आहे. कामाचे पर्याय fit, proof आणि तुमच्या permission नंतरच दिसतील.',
       Odia: 'ଠିକ ଅଛି, ରାସ୍ତା ବନାଇବା ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। fit, proof ଓ ଆପଣଙ୍କ permission ପରେ ମାତ୍ର ମୌକା ଦେଖାଯିବ।',
@@ -1354,6 +1383,9 @@ function directLatestReply(profile = {}, latestText = '', previousProfile = {}) 
   if (asksAboutProofUse(latestText)) {
     return proofUseReply(profile, latestText, { profileReady: Boolean(profile.profile_complete) });
   }
+  if (profile.profile_complete && asksWhatToDoNext(latestText)) {
+    return nextActionReply(profile, latestText);
+  }
   if (
     (goal.needs_location_for_offline || ['job', 'training', 'proof_to_work', 'career'].includes(goal.intent)) &&
     !profile.location &&
@@ -1402,7 +1434,8 @@ function avoidRepeat(reply = '', previous = '', profile = {}, latestText = '') {
   const previousClean = String(previous || '').trim();
   if (!clean) return conciseReadyReply(profile, latestText);
   if (previousClean && clean.toLowerCase() === previousClean.toLowerCase()) {
-    if (profile.profile_complete) return conciseReadyReply(profile, latestText);
+    if (profile.profile_complete && asksWhatToDoNext(latestText)) return nextActionReply(profile, latestText);
+    if (profile.profile_complete) return nextActionReply(profile, latestText);
     const nextField = nextBestIntakeField(profile.missing_fields || [], profile);
     return oneThingQuestion(nextField, profile, latestText);
   }
