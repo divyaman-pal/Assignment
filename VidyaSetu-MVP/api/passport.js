@@ -25,8 +25,9 @@ export default async function handler(req, res) {
     const proofRequiredCount = Number(progress.proof_required_count || 0);
     const completionPercent = Number(progress.completion_percent || 0);
     const passportEligible = Boolean(progress.passport_eligible);
+    const passportComplete = isJourneyCompleteForPassport(journey, progress);
     const academicMode = isAcademicJourney(journey);
-    if (body.require_eligible === true && !passportEligible) {
+    if (body.require_eligible === true && !passportComplete) {
       return sendJson(res, 409, {
         error: 'Complete the current learning journey proof before creating the Skill Passport.',
         learning: {
@@ -124,4 +125,14 @@ function safeObject(value) {
 
 function isAcademicJourney(journey = {}) {
   return ['entrance_exam_prep', 'academic_exam_prep', 'school_study_support'].includes(journey.mode);
+}
+
+function isJourneyCompleteForPassport(journey = {}, progress = {}) {
+  const modules = Array.isArray(journey?.modules) ? journey.modules : [];
+  if (!modules.length) return false;
+  const completionPercent = Number(progress.completion_percent || 0);
+  const completedModules = Number(progress.completed_module_count || 0);
+  const proofRequired = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
+  const proofReady = Number(progress.proof_ready_count || 0);
+  return completionPercent >= 100 && completedModules >= modules.length && (!proofRequired || proofReady >= proofRequired);
 }

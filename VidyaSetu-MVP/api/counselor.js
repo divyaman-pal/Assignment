@@ -960,12 +960,16 @@ function buildStepwiseReply({
 }) {
   const updates = changedProfileFields(previousProfile, profile);
   const directAnswer = directAnswerForLatest(profile, latestText);
+  const nextAsk = asksWhatToDoNext(latestText);
   const ack = updates.length ? updateLine(updates, profile, latestText) : '';
   if (!profileReady) {
     const nextField = nextBestIntakeField(missing, profile);
     const nextQuestion = nameConfirmationQuestion(previousProfile, profile, latestText, updates, previousAssistant) ||
       oneThingQuestion(nextField, profile, latestText);
     const nextLooksReady = !nextField || /rasta|pathway|jankari kafi|profile complete|ready/i.test(String(nextQuestion || ''));
+    if (nextAsk && !directAnswer && (profile.profile_complete || nextLooksReady || hasClearLearnerGoal(profile))) {
+      return nextActionReply(profile, latestText);
+    }
     const candidate = cleanCounselorReply(avoidRepeat(
       joinParts([nextLooksReady ? '' : ack, directAnswer, nextQuestion]),
       previousAssistant,
@@ -976,6 +980,7 @@ function buildStepwiseReply({
     return cleanCounselorReply(avoidRepeat(nextQuestion, previousAssistant, profile, latestText));
   }
 
+  if (nextAsk && !directAnswer) return nextActionReply(profile, latestText);
   const baseReply = directReply || conciseReadyReply(profile, latestText, modelReply);
   const candidate = cleanCounselorReply(avoidRepeat(
     joinParts([
@@ -1206,9 +1211,9 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
   const intent = profile.learner_goal?.intent || '';
   if (intent === 'study') {
     return localizedLine(profile, latestText, {
-      English: 'Good, I have enough to make a study plan now. I will keep it focused on weak topics and daily practice.',
-      Hinglish: 'Theek hai, ab padhai ki yojana ban sakti hai. Meera kamzor topics aur roz ki practice par dhyan rakhegi.',
-      Hindi: 'ठीक है, अब पढ़ाई की योजना बन सकती है। मीरा कमजोर हिस्सों और रोज़ के अभ्यास पर ध्यान रखेगी।',
+      English: 'Good, I have enough to make a study plan now. Press My Pathway or Generate pathway; ask Meera here if anything is unclear.',
+      Hinglish: 'Theek hai, ab padhai ka rasta ban sakta hai. Ab Mera Rasta ya Rasta banao dabao; kuch samajh na aaye to yahin poochho.',
+      Hindi: 'ठीक है, अब पढ़ाई का रास्ता बन सकता है। अब मेरा रास्ता या रास्ता बनाएँ दबाएँ; कुछ समझ न आए तो यहीं पूछें।',
       Marathi: 'Theek aahe, ata study plan banu shakto. Weak topics ani daily practice var focus thevu.',
     });
   }
@@ -1216,7 +1221,7 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
     return localizedLine(profile, latestText, {
       English: 'Good, I have enough to build the pathway. Press My Pathway or Generate pathway; jobs will show only after proof and consent.',
       Hinglish: 'Theek hai, rasta banane ke liye jankari kafi hai. Ab Mera Rasta ya Rasta banao dabao; mauke sirf saboot aur anumati ke baad dikhengi.',
-      Hindi: 'ठीक है, रास्ता बनाने के लिए जानकारी काफी है। मौके सिर्फ मेल, सबूत और आपकी अनुमति के बाद दिखेंगे।',
+      Hindi: 'ठीक है, रास्ता बनाने के लिए जानकारी काफी है। अब मेरा रास्ता या रास्ता बनाएँ दबाएँ; मौके सिर्फ सबूत और आपकी अनुमति के बाद दिखेंगे।',
       Marathi: 'ठीक आहे, रस्ता बनवण्यासाठी माहिती पुरेशी आहे. कामाचे पर्याय fit, proof आणि तुमच्या permission नंतरच दिसतील.',
       Odia: 'ଠିକ ଅଛି, ରାସ୍ତା ବନାଇବା ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। fit, proof ଓ ଆପଣଙ୍କ permission ପରେ ମାତ୍ର ମୌକା ଦେଖାଯିବ।',
       Bengali: 'ঠিক আছে, রাস্তা বানানোর জন্য তথ্য যথেষ্ট। fit, proof আর আপনার permission-এর পরে তবেই সুযোগ দেখানো হবে।',
@@ -1225,9 +1230,9 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
   }
   if (intent === 'self_employment') {
     return localizedLine(profile, latestText, {
-      English: 'Good, I have enough to build the small-business pathway. I will check training, cost, buyer, supplier, scheme, and loan risk before any next step.',
-      Hinglish: 'Theek hai, chhote vyapar ka rasta banane ke liye jankari kafi hai. Meera training, kharcha, buyer, supplier, scheme aur loan risk pehle check karegi.',
-      Hindi: 'ठीक है, छोटे व्यापार का रास्ता बनाने के लिए जानकारी काफी है। मीरा पहले training, खर्च, buyer, supplier, योजना और loan risk check करेगी।',
+      English: 'Good, I have enough to build the small-business pathway. Press My Pathway or Generate pathway; I will check training, cost, buyer, supplier, scheme, and loan risk first.',
+      Hinglish: 'Theek hai, chhote vyapar ka rasta banane ke liye jankari kafi hai. Ab Mera Rasta ya Rasta banao dabao; Meera pehle kharcha, buyer, supplier, scheme aur loan risk check karegi.',
+      Hindi: 'ठीक है, छोटे व्यापार का रास्ता बनाने के लिए जानकारी काफी है। अब मेरा रास्ता या रास्ता बनाएँ दबाएँ; मीरा पहले खर्च, buyer, supplier, योजना और loan risk check करेगी।',
       Marathi: 'ठीक आहे, छोट्या व्यवसायाचा मार्ग बनवण्यासाठी माहिती पुरेशी आहे. Meera आधी training, खर्च, buyer, supplier, scheme आणि loan risk तपासेल.',
       Odia: 'ଠିକ ଅଛି, ଛୋଟ business ରାସ୍ତା ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। Meera ପ୍ରଥମେ training, ଖର୍ଚ୍ଚ, buyer, supplier, scheme ଓ loan risk check କରିବ।',
       Bengali: 'ঠিক আছে, ছোট business-এর রাস্তা বানানোর জন্য তথ্য যথেষ্ট। Meera আগে training, খরচ, buyer, supplier, scheme আর loan risk check করবে।',
@@ -1236,9 +1241,9 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
   }
   if (intent === 'training') {
     return localizedLine(profile, latestText, {
-      English: 'Good, I can build the training route now. I will check safe travel, fees, proof, and placement risk.',
-      Hinglish: 'Theek hai, seekhne ka rasta ban sakta hai. Meera surakshit aana-jaana, fees, saboot, aur kaam milne ka risk check karegi.',
-      Hindi: 'ठीक है, सीखने का रास्ता बन सकता है। मीरा सुरक्षित आना-जाना, फीस, सबूत और काम मिलने का जोखिम जाँचेगी।',
+      English: 'Good, I can build the training route now. Press My Pathway or Generate pathway; I will check safe travel, fees, proof, and placement risk.',
+      Hinglish: 'Theek hai, seekhne ka rasta ban sakta hai. Ab Mera Rasta ya Rasta banao dabao; Meera fees, safe travel, saboot aur placement risk check karegi.',
+      Hindi: 'ठीक है, सीखने का रास्ता बन सकता है। अब मेरा रास्ता या रास्ता बनाएँ दबाएँ; मीरा फीस, सुरक्षित आना-जाना, सबूत और काम मिलने का जोखिम जाँचेगी।',
       Marathi: 'ठीक आहे, training चा रस्ता बनू शकतो. Meera safe travel, fees, proof आणि काम मिळण्याचा risk तपासेल.',
       Odia: 'ଠିକ ଅଛି, training ରାସ୍ତା ବନିପାରିବ। Meera safe travel, fees, proof ଓ କାମ ମିଳିବା risk check କରିବ।',
       Bengali: 'ঠিক আছে, training-এর রাস্তা বানানো যাবে। Meera safe travel, fees, proof আর কাজ পাওয়ার risk check করবে।',
@@ -1246,9 +1251,9 @@ function conciseReadyReply(profile = {}, latestText = '', modelReply = '') {
     });
   }
   return localizedLine(profile, latestText, {
-    English: 'Good, I have enough for the next step. I will keep the pathway simple and tied to this profile.',
-    Hinglish: 'Theek hai, agle kadam ke liye jankari kafi hai. Rasta isi jankari se juda rahega.',
-    Hindi: 'ठीक है, अगले कदम के लिए जानकारी काफी है। रास्ता इसी जानकारी से जुड़ा रहेगा।',
+    English: 'Good, I have enough for the next step. Press My Pathway or Generate pathway; ask Meera here if anything is unclear.',
+    Hinglish: 'Theek hai, agle kadam ke liye jankari kafi hai. Ab Mera Rasta ya Rasta banao dabao; kuch poochna ho to yahin poochho.',
+    Hindi: 'ठीक है, अगले कदम के लिए जानकारी काफी है। अब मेरा रास्ता या रास्ता बनाएँ दबाएँ; कुछ पूछना हो तो यहीं पूछें।',
     Marathi: 'ठीक आहे, पुढच्या पावलासाठी माहिती पुरेशी आहे. रस्ता या profile शी जोडलेला राहील.',
     Odia: 'ଠିକ ଅଛି, ପରବର୍ତ୍ତୀ କଦମ ପାଇଁ ତଥ୍ୟ ପର୍ଯ୍ୟାପ୍ତ। ରାସ୍ତା ଏହି profile ସହିତ ଜୁଡ଼ି ରହିବ।',
     Bengali: 'ঠিক আছে, পরের ধাপের জন্য তথ্য যথেষ্ট। রাস্তা এই profile-এর সঙ্গে যুক্ত থাকবে।',

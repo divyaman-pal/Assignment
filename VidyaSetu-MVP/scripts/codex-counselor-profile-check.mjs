@@ -52,6 +52,26 @@ const personas = [
     },
   },
   {
+    id: 'hi_small_business_next_action_after_complete',
+    language: 'Hindi',
+    turns: [
+      'दिव्यमान',
+      'हाँ',
+      'छोटा व्यापार',
+      'Kalpur',
+      'दिन के आठ से दस घंटे',
+      'सारी चीज़ों चल जाती हैं',
+      '10 से 15 किलोमीटर',
+      'अब मुझे क्या करना है?',
+      'अब आगे क्या है?',
+    ],
+    expect: {
+      goalType: 'self_employment_enterprise',
+      finalReplyTerms: ['रास्ता', 'दब'],
+      rejectReplyTerms: ['छोटे व्यापार का रास्ता बनाने के लिए जानकारी काफी है'],
+    },
+  },
+  {
     id: 'or_poultry_business_profile',
     language: 'Odia',
     turns: [

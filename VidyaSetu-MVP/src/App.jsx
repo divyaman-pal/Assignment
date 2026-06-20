@@ -685,13 +685,20 @@ function App() {
     ...(journey?.progress || {}),
     ...(progressState || {}),
   };
-  const pathwayLocked = Boolean(journey?.modules?.length) && !Boolean(journeyProgressForLock.passport_eligible);
+  const journeyCompleteForPassport = isJourneyCompleteForPassport(journey, journeyProgressForLock);
+  const pathwayLocked = Boolean(journey?.modules?.length) && !journeyCompleteForPassport;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0 });
     }
   }, [mode, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'pathways' && String(speakingIndex || '').startsWith('pathway:')) {
+      stopSpeaking();
+    }
+  }, [activeTab, speakingIndex]);
 
   async function api(url, body) {
     const response = await fetch(url, {
@@ -1206,7 +1213,7 @@ function App() {
       ...(journey?.progress || {}),
       ...(progressState || {}),
     };
-    if (!progressForPassport.passport_eligible) {
+    if (!isJourneyCompleteForPassport(journey, progressForPassport)) {
       setActiveTab('journey');
       setError('Complete the current learning journey proof before creating the Skill Passport.');
       return;
@@ -2288,6 +2295,16 @@ function sameRoute(left, right) {
   return false;
 }
 
+function isJourneyCompleteForPassport(journey = {}, progress = {}) {
+  const modules = Array.isArray(journey?.modules) ? journey.modules : [];
+  if (!modules.length) return false;
+  const completionPercent = Number(progress.completion_percent || 0);
+  const completedModules = Number(progress.completed_module_count || 0);
+  const proofRequired = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
+  const proofReady = Number(progress.proof_ready_count || 0);
+  return completionPercent >= 100 && completedModules >= modules.length && (!proofRequired || proofReady >= proofRequired);
+}
+
 function pathwaySourceItems(route = {}) {
   const rawSources = Array.isArray(route.sources) ? route.sources : [];
   const items = [
@@ -2786,7 +2803,7 @@ function JourneyTab({
   const moduleStatusById = new Map((Array.isArray(progress.module_status) ? progress.module_status : []).map((module) => [module.id, module]));
   const proofReadyCount = Number(progress.proof_ready_count || 0);
   const proofRequiredCount = Number(progress.proof_required_count || modules.filter((module) => Boolean(module.proof)).length || 0);
-  const passportEligible = Boolean(progress.passport_eligible);
+  const passportEligible = isJourneyCompleteForPassport(journey, progress);
   const currentModule = modules.find((module) => module.id === progress.current_module_id) || modules[0] || null;
   const routeName = uiText(selectedRoute?.name, uiText(journey?.route_name, academicMode ? 'Study route' : 'Career route'));
   const finalUnlock = uiText(
@@ -2991,7 +3008,7 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
     ...(journey?.progress || {}),
     ...(progressState || {}),
   };
-  const passportEligible = Boolean(progress.passport_eligible);
+  const passportEligible = isJourneyCompleteForPassport(journey, progress);
   const journeyStatus = journey
     ? formatCopy(copy.journeyAttached, { score: Number.isFinite(readinessScore) ? Math.round(readinessScore) : 0 })
     : copy.journeyPending;
@@ -3005,7 +3022,7 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
         </button>
         <span>{passportEligible ? journeyStatus : copy.lockedMessage || journeyStatus}</span>
       </div>
-      {passport && (
+      {passport && passportEligible && (
         <div className="passport-card passport-card-enhanced">
           <div className="passport-qr-layout">
             <MockQr token={passport.qr_token} />
@@ -3035,7 +3052,7 @@ function PassportTab({ passport, savePassport, findJobs, journey, progressState 
           {passport.learning_proof?.next_action && <p><b>{copy.next}:</b> {passport.learning_proof.next_action}</p>}
         </div>
       )}
-      <button className="primary-button" disabled={!passport} onClick={findJobs}>
+      <button className="primary-button" disabled={!passport || !passportEligible} onClick={findJobs}>
         {copy.openOpportunities}
       </button>
     </div>
