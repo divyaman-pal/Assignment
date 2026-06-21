@@ -1,7 +1,7 @@
 {
-  "name": "vidyasetu-clickable-prototype",
+  "name": "vidyasetu-mvp",
   "version": "1.0.0",
-  "description": "Professional clickable prototype for VidyaSetu, a WhatsApp and voice-first AI career pathway system.",
+  "description": "Voice-first vernacular AI livelihood bridge with Meera counselor, pathway lock, learner journey, proof-gated Skill Passport, WhatsApp reminders, and admin CRM.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/divyaman-pal/Github-FirstPR.git"
+    "url": "git+https://github.com/divyaman-pal/assignment.git"
   },
   "keywords": [
     "vidyasetu",
@@ -27,9 +27,9 @@
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/divyaman-pal/Github-FirstPR/issues"
+    "url": "https://github.com/divyaman-pal/assignment/issues"
   },
-  "homepage": "https://github.com/divyaman-pal/Github-FirstPR#readme",
+  "homepage": "https://github.com/divyaman-pal/assignment/tree/vidyasetu-mvp-source/VidyaSetu-MVP",
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.2",
     "jsonrepair": "^3.14.0",

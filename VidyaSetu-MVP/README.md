@@ -1,287 +1,181 @@
 # VidyaSetu MVP
 
-VidyaSetu is a voice-first AI career bridge for rural, low-income, first-generation, and other disadvantaged learners. The MVP helps a learner speak or type naturally, builds a structured learner profile, recommends a personalized pathway, turns that pathway into a weekly learning journey, preserves progress, creates a consent-aware Skill Passport, and only then moves toward opportunity discovery or outreach.
+VidyaSetu is a voice-first, vernacular AI livelihood and education bridge for first-generation, rural and low-income learners in India. The MVP helps a learner speak naturally with Meera, creates a persistent learner profile, generates practical pathways, lets the learner lock one route, turns that route into a weekly learning journey, sends daily WhatsApp task reminders, gates the Skill Passport behind proof, and gives admins a CRM view for follow-up.
 
-Live app: https://vidyasetu-mvp.vercel.app
+Live MVP: https://vidyasetu-mvp.vercel.app
 
-Repository entry points:
+## Final Submission Links
 
-- `../README.md` - judge-facing repository guide and setup summary.
-- `../END_TO_END_USER_FLOW.md` - complete identified target-user flow from login to reminders, proof, Skill Passport, and guarded opportunity discovery.
+- Repository guide: `../README.md`
+- Complete user flow: `docs/END_TO_END_USER_FLOW.md`
+- Final demo video: `docs/demo/VidyaSetu_Final_One_Persona_Demo.mp4`
+- Final judge deck: `docs/VidyaSetu_AI_Final_Deck.pdf`
+- Evaluation report: `docs/VidyaSetu_Evaluation_Report.pdf`
+- Deployment and sustainability report: `docs/VidyaSetu_Final_Deployment_And_Sustainability.pdf`
 
-Final submission PDFs:
+## What Is Built Now
 
-- `docs/VidyaSetu_AI_Final_Deck.pdf` - final judge presentation deck.
-- `docs/VidyaSetu_Evaluation_Report.pdf` - AI/model evaluation and user validation report.
-- `docs/VidyaSetu_Final_Deployment_And_Sustainability.pdf` - deployment, cost, maintenance, and sustainability plan.
+1. **Language-first login:** Learners choose language before phone login. Returning learners recover saved profile, chat memory, pathway, journey and progress.
+2. **Meera counselor:** Meera asks one question at a time, answers direct learner questions, and silently builds the structured profile from chat or voice.
+3. **Claude pathway planner:** Claude generates three practical routes from the learner profile, goal, education, location, time, proof and mobility constraints.
+4. **Pathway lock:** Learners can compare routes freely. The route is locked only when they click the lock-and-create-journey button.
+5. **Learner journey:** The locked route becomes a week-by-week plan with daily tasks, resources, proof tasks and unlock logic.
+6. **Sarvam voice layer:** STT/TTS supports Indian-language voice-first use, with browser fallback when needed.
+7. **WATI reminders:** After a journey exists, VidyaSetu can send daily WhatsApp task reminders using the approved WATI template.
+8. **Skill Passport:** The passport stays locked until learning proof is completed. It is consent-controlled and shareable only when the learner is ready.
+9. **Opportunity guardrails:** The platform does not fabricate jobs, employers, contacts, salaries, schemes, loans or guarantees.
+10. **Admin CRM:** Admins can view learner records, profile state, journey status, proof/passport readiness, ADEWS risk and reminder status.
 
-## Problem Statement
+## Complete User Flow
 
-Learners from disadvantaged backgrounds face barriers across the skilling and career funnel:
+The primary evaluation flow is documented in:
 
-- Low access to quality career guidance and skilling information.
-- Language and digital-access gaps.
-- Poor fit between learner context and recommended courses.
-- Dropout because the journey is not paced around real constraints.
-- Weak placement outcomes because proof, consent, and outreach are missing.
+```text
+docs/END_TO_END_USER_FLOW.md
+```
 
-VidyaSetu addresses this as a full pathway-to-placement system, not just a course recommender.
-
-## Current MVP Flow
-
-1. **Language-first login**
-   - The learner selects language before phone login.
-   - The app does not assume Hindi by default.
-   - Saved learner profiles can resume from the same phone login.
-
-2. **AI counselor intake**
-   - Meera, the AI counselor, asks one question at a time.
-   - User can type or speak.
-   - The counselor extracts profile facts: name, education stage, goal, location, time, device access, proof, commute, mobility, urgency, and language preference.
-   - If the learner changes goal later, the latest message wins.
-
-3. **Personalized pathway generation**
-   - The system classifies the learner into the right route family:
-     - school study support
-     - board exam preparation
-     - JEE or entrance exam preparation
-     - vocational training
-     - informal skill validation
-     - formal job search
-     - college internship or placement
-     - startup or founder outreach
-     - self-employment or enterprise setup
-   - Study-only learners are not pushed into job outreach.
-   - Offline recommendations require location and commute context.
-
-4. **Learning journey**
-   - Selected pathway becomes a weekly journey.
-   - Journey includes modules, daily practice, micro-tasks, proof tasks, progress tracking, support notes, and unlock logic.
-   - Course completion is not treated as passive watching. The learner must complete tasks and proof.
-
-5. **Skill Passport**
-   - Builds a consent-scoped proof package.
-   - Designed for learners with certificates, projects, informal work proof, or voice/photo/sample proof.
-   - Outreach or sharing is gated behind consent.
-
-6. **Opportunity engine**
-   - Job, apprenticeship, training, startup-outreach, RPL, and enterprise paths are separated.
-   - The system does not fabricate jobs.
-   - If live opportunities are not verified yet, it shows source tasks, missing proof/resume, and safe next actions instead of fake cards.
-   - Firecrawl is used only for deeper verification or contact discovery to protect credits.
-
-## Pathway relevance and journey clarity
-
-Two quality layers keep recommendations relevant and journeys actionable. Both live in `api/_lib/mvp.js` as reusable helpers (no new serverless functions).
-
-### Goal-family route validation
-
-After routes are generated (LLM-first, deterministic fallback), every route is validated against the learner's **goal family** before it reaches the UI:
-
-- `goalFamily(profile)` resolves one of: `entrance_exam`, `board_exam`, `school_study`, `data_science_job`, `college`, `informal_skill`, `enterprise`, `job`, `vocational`, `generic`.
-- `routeMatchesGoalFamily(profile, route)` / `rejectUnrelatedRoute(profile, route)` accept a route only if it contains required terms for the family and none of the forbidden terms.
-- `validatePathwayRoutes(profile, routes)` drops unrelated routes and back-fills with deterministic, family-correct routes so the learner always sees three relevant cards.
-- `buildLocationGuardrail(profile)` returns a location prompt (no cards) when an offline route needs a district/commute that the learner has not shared. A learner who refuses to relocate and hides their location now correctly hits this guardrail.
-
-Examples of what is enforced:
-
-- A **JEE/IIT** learner only gets syllabus, concept, practice, mock, and error-log routes — never beauty/PMKVY/job-outreach cards.
-- A **Class 10/12** learner gets NCERT/DIKSHA/sample-paper/revision study routes, not an employability route.
-- A **BTech data-science job seeker** gets Python/SQL/project/portfolio/resume/outreach-readiness routes, never a computer-basics-only route.
-- An **informal mechanic/tailor** gets proof/RPL/local-work/apprenticeship routes, not a generic beginner course.
-- An **enterprise** learner gets setup/budget/scheme/buyer/risk/first-30-days routes, with job-outreach blocked as the primary route.
-
-Each validated route also carries deterministic explanation fields when the model omits them: `why_this_route`, `matched_profile_facts`, `next_action`, `locked_until`, `risk` (tradeoff), and `expected_outcome`.
-
-### Learner journey enrichment
-
-`enrichJourneyForLearner(profile, route, journey)` (with `enrichModule`, `buildTodayTask`, and `buildProofTask`) makes every journey understandable for a real learner:
-
-- Each **module** has `week`, `title`, `goal`, `why_it_matters`, `lessons`, `daily_plan`, `practice_tasks`, `proof_task`, `checkpoint`, and `unlocks`.
-- Each **lesson** carries `title`, `type`, `estimated_time`, `instructions`, `completion_criteria`, `proof_required`, and a `resource`.
-- The journey exposes a `start_here` panel and `today_task` so the learner knows what to start today, how to complete the step, what proof is required, and what unlocks next, plus a `selected_pathway_summary`.
-
-These fields are additive, so existing progress tracking, persistence, and the opportunity engine continue to work unchanged.
-
-## Vernacular UI and "this week" actions
-
-Two changes make the product usable by a first-generation rural learner on her own and give her something to do today.
-
-### Vernacular UI chrome (`src/i18n.js`)
-
-The learner's language choice now drives the **interface chrome**, not just the chat. `src/i18n.js` provides dictionaries for English, Hindi, Hinglish, and Odia (the persona languages) covering the navigation, page headers, primary buttons, and the pathway/journey panels. The explicit login language is stored in a dedicated `uiLanguage` state and is **not** overwritten by later language detection, so the menus and labels stay in the chosen language even if the learner types a chat message in another language (the counselor still replies in the detected language). Other languages fall back to English chrome while the conversation stays in-language — full per-language chrome translation is a follow-up.
-
-### "This week" hyperlocal actions (`buildThisWeekActions`)
-
-Every pathway response now includes `this_week_actions`: 5-10 concrete steps the learner can take this week, tailored to her goal family and location, and surfaced as a numbered "Do this week" list on the Pathway screen. These use only **real official portals** (National Career Service, DigiLocker, Skill India Digital, NCERT/DIKSHA, NTA, National Scholarship Portal, Udyam, PMEGP, PM FME) and **real local-action types** (capture sample-work proof, ask nearby shops/customers for small work). Consistent with the no-fake-data policy, there are **no fabricated employers, phone numbers, or specific job listings**. The list also appears on the location guardrail, so a learner who has not shared her location still gets actionable steps plus a prompt to share her exact block/panchayat. The dynamic action descriptions are currently in simple English; translating them per language is the next step.
+Short version: Riya, a Class 12 learner near Varanasi, logs in by phone, speaks to Meera in Hinglish, builds a profile for computer basics, typing and customer-service work, chooses and locks one pathway, receives a 4-week learning journey, gets daily WhatsApp task reminders, saves proof, unlocks a consent-controlled Skill Passport, and then sees only verified or source-backed opportunity steps.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-  A["Learner: phone + language login"] --> B["React UI: Meera counselor"]
+  A["Learner chooses language + phone login"] --> B["Meera counselor UI"]
   B --> C["/api/counselor: profile extraction + next question"]
-  C --> D["Supabase: learner memory + progress"]
-  C --> E["/api/pathway: route generation"]
-  E --> F["/api/journey: weekly learning journey"]
-  F --> G["/api/progress: lesson and proof progress"]
-  F --> H["/api/passport: consent-aware Skill Passport"]
-  H --> I["/api/jobs: opportunity engine"]
-  I --> J["Live search and contact discovery"]
-  J --> K["OpenAI web search"]
-  J --> L["Firecrawl deep verification"]
-  I --> M["/api/outreach: consent-based outreach draft"]
+  C --> D["Supabase: learner memory and progress"]
+  C --> E["/api/pathway: Claude pathway planner"]
+  E --> F["Learner locks one route"]
+  F --> G["/api/journey: Claude weekly journey builder"]
+  G --> H["/api/progress: tasks and proof"]
+  G --> I["/api/adews: reminders and risk follow-up"]
+  I --> J["WATI WhatsApp daily task reminder"]
+  H --> K["/api/passport: proof-gated Skill Passport"]
+  K --> L["/api/jobs and /api/outreach: guarded opportunity steps"]
+  D --> M["Admin CRM"]
 ```
 
 ## Tech Stack
 
-- **Frontend:** React 19, Vite, Lucide icons, responsive CSS.
-- **Hosting:** Vercel static frontend plus serverless API functions.
-- **Database:** Supabase REST for learners, progress, passports, and outreach state.
-- **Primary reasoning LLM:** Anthropic Claude, used for higher quality counseling and structured reasoning.
-- **Reasoning LLM:** Anthropic Claude for counselor, profile, pathway, journey, opportunity-plan, and resume JSON generation.
-- **Live search:** OpenAI web search for broad discovery.
-- **Deep web/contact verification:** Firecrawl, used sparingly and only where needed.
-- **Voice:** Browser speech recognition/playback first, Sarvam STT/TTS fallback for Indian language accessibility.
-- **Email outreach:** AgentMail placeholder is wired conceptually, but production sending remains disabled until a real key is added.
+- Frontend: React 19, Vite, Lucide icons, responsive CSS.
+- Hosting: Vercel static frontend plus serverless API functions.
+- Database: Supabase REST for learners, conversations, journeys, progress, passports, reminders and CRM data.
+- AI reasoning: Anthropic Claude for counselor, pathway generation, journey generation, resume/proof and structured JSON planning.
+- Voice: Sarvam STT/TTS, with browser fallback.
+- WhatsApp reminders: WATI approved template plus Vercel cron.
+- Search and verification: Claude web-search path and guarded source review; Firecrawl remains optional/deep verification only.
 
 ## API Layer
 
 | File | Purpose |
 | --- | --- |
-| `api/signup.js` | Phone-based learner session, saved profile recovery, and multi-learner handling. |
-| `api/counselor.js` | Meera counselor orchestration, profile extraction, language handling, and one-question-at-a-time intake. |
-| `api/intake.js` | Voice/audio intake, Sarvam STT, and Sarvam TTS fallback via `action: "tts"`. |
-| `api/pathway.js` | Personalized pathway recommendation with study/job/location guardrails. |
-| `api/journey.js` | Converts a selected pathway into a structured learning journey. |
-| `api/progress.js` | Saves lesson completion, proof notes, and journey progress. |
-| `api/passport.js` | Creates the Skill Passport and consent-scoped proof package. |
-| `api/resume.js` | Builds a truthful resume/profile summary from counselor facts. |
-| `api/jobs.js` | Opportunity engine for jobs, training, proof-to-work, startup outreach, and enterprise setup. |
-| `api/outreach.js` | Drafts outreach only after consent and readiness checks. |
-| `api/adews.js` | Early warning support layer for dropout, safety, and learner risk signals. |
-| `api/health.js` | Shows configured service status and AI policy. |
+| `api/signup.js` | Phone login, learner restoration and admin login. |
+| `api/counselor.js` | Meera counselor, one-question intake, memory and profile extraction. |
+| `api/intake.js` | Sarvam STT/TTS and voice metadata. |
+| `api/pathway.js` | Personalized pathway generation and source guardrails. |
+| `api/journey.js` | Converts the locked pathway into a weekly learning journey. |
+| `api/progress.js` | Saves lesson completion, proof notes and progress. |
+| `api/passport.js` | Builds the proof-gated, consent-controlled Skill Passport. |
+| `api/jobs.js` | Guarded opportunity discovery and source review. |
+| `api/outreach.js` | Consent-based outreach draft flow. |
+| `api/adews.js` | Daily reminders, ADEWS risk status and worker alert support. |
+| `api/health.js` | Service health and AI configuration status. |
 
-Shared server helpers are in `api/_lib/`:
+Shared helpers live in `api/_lib/`:
 
-- `http.js`: request/response utilities.
+- `services.js`: Claude, Sarvam, WATI, Firecrawl and HTTP service wrappers.
+- `mvp.js`: pathway/journey validation, guardrails and structured MVP helpers.
+- `language.js`: language detection, voice code and same-language policy.
 - `supabase.js`: Supabase REST wrapper.
-- `services.js`: LLM, Sarvam, OpenAI search, and Firecrawl service wrappers.
-- `language.js`: language detection, same-language response policy, STT/TTS metadata.
-- `mvp.js`: deterministic knowledge base, route templates, journey templates, guardrails, and fallback logic.
+- `http.js`: request/response utilities.
 
-## Frontend Structure
-
-| File | Purpose |
-| --- | --- |
-| `src/App.jsx` | Main product shell, counselor UI, profile card, pathways, journey, passport, jobs, CRM, support, and evaluation proof. |
-| `src/main.jsx` | React app bootstrapping. |
-| `src/styles.css` | Responsive product UI, mobile bottom nav, counselor avatar, pathway cards, journey views, and accessibility states. |
-
-The UI is intentionally mobile-first because the target learner is likely to use a phone, shared device, low-data browser, or voice input.
-
-## Environment Variables
-
-Create `.env.local` for local development. Do not commit real keys.
+## Local Setup
 
 ```bash
-SUPABASE_REST_URL=https://your-project.supabase.co/rest/v1
-SUPABASE_SERVICE_KEY=replace-with-service-role-key
-OPENAI_API_KEY=replace-with-openai-key
-ANTHROPIC_API_KEY=replace-with-anthropic-key
-SARVAM_API_KEY=replace-with-sarvam-key
-FIRECRAWL_API_KEY=replace-with-firecrawl-key
-AGENTMAIL_API_KEY=placeholder
-WHATSAPP_SENDER_ID=replace-with-demo-sender-number
-```
-
-Optional cost controls:
-
-```bash
-OPENAI_JOB_SEARCH_QUERY_LIMIT=1
-FIRECRAWL_JOB_SEARCH_LIMIT=2
-ENABLE_FIRECRAWL_STARTUP_AUTO=false
-ENABLE_FIRECRAWL_SCRAPE=false
-MODEL_JSON_TIMEOUT_MS=12000
-OPENAI_SEARCH_TIMEOUT_MS=10000
-FIRECRAWL_TIMEOUT_MS=8000
-SARVAM_TTS_TIMEOUT_MS=12000
-```
-
-## Local Development
-
-```bash
+cd VidyaSetu-MVP
 npm install
+cp .env.example .env.local
+```
+
+Fill `.env.local` with your own keys. Never commit secrets.
+
+Required for full functionality:
+
+```text
+ANTHROPIC_API_KEY=...
+SUPABASE_REST_URL=...
+SUPABASE_SERVICE_KEY=...
+SARVAM_API_KEY=...
+WATI_API_BASE_URL=...
+WATI_API_TOKEN=...
+WATI_TEMPLATE_NAME=vidyasetu_daily_task_reminder
+```
+
+Useful local controls:
+
+```text
+DISABLE_PATHWAY_WEB_SEARCH=true
+DAILY_REMINDERS_LIVE_SEND=false
+MODEL_JSON_TIMEOUT_MS=90000
+PATHWAY_CLAUDE_TIMEOUT_MS=90000
+JOURNEY_CLAUDE_TIMEOUT_MS=90000
+```
+
+## Run Locally
+
+```bash
 npm run build
 npm run serve:mvp
 ```
 
 Open:
 
-```bash
+```text
 http://localhost:4175
 ```
 
-For development with Vite:
+For Vite development:
 
 ```bash
 npm run dev
 ```
 
-## Verification
+## Tests And Benchmarks
 
-The repository includes automated smoke and benchmark scripts:
-
-```bash
-npm run build
-node scripts/persona-e2e-test.mjs
-npm run benchmark:slice3
-npm run benchmark:slice4
-npm run benchmark:slice5
-npm run benchmark:slice6
-```
-
-The current persona suite covers school, Class 12, JEE switch, dropout tailoring, ITI electrician, nursing, mobile repair, BTech data science, no-location job, no-location training, informal mechanic, poultry enterprise, driver, hospitality, design, agri drone, and open counseling cases. Beyond pass/fail, the persona and slice-5 suites now assert pathway/journey **content quality** per family (for example: JEE output contains mock/practice/error-log and never beauty/job-outreach; data-science output contains Python/SQL/project/resume; informal output contains proof/RPL/local work; enterprise output contains setup/budget/scheme), that every route carries explanation fields, and that journeys have at least three modules with lessons, completion criteria, proof tasks, and unlock logic.
-
-For fast, low-cost local runs, set `DISABLE_PATHWAY_WEB_SEARCH=true` and point the suites at the local server:
+From `VidyaSetu-MVP/`:
 
 ```bash
 npm run build
-DISABLE_PATHWAY_WEB_SEARCH=true npm run serve:mvp   # in one terminal
 TEST_BASE_URL=http://localhost:4175 node scripts/persona-e2e-test.mjs
 SLICE5_BASE_URL=http://localhost:4175 node scripts/slice5-journey-progress-benchmark.mjs
 SLICE6_BASE_URL=http://localhost:4175 node scripts/slice6-final-smoke.mjs
 ```
 
-`DISABLE_PATHWAY_WEB_SEARCH` only skips the live web-search evidence step (keeping tests fast and deterministic); production leaves it unset so OpenAI web search and Firecrawl still ground recommendations.
+For fast local tests, run the server with:
 
-## Responsible AI and Product Guardrails
+```bash
+DISABLE_PATHWAY_WEB_SEARCH=true npm run serve:mvp
+```
 
-- No fake jobs or fabricated employer contacts.
-- No offline recommendation without location or mobility context.
-- Study-first learners remain study-first until they explicitly ask for career or job mode.
-- Same-language counseling is preserved across text, speech, and pathway outputs.
-- Outreach is blocked until proof and consent are ready.
-- Shared-phone and returning-profile flows are supported.
-- Firecrawl is credit-safe and used only for deep verification, not every request.
+## Responsible AI Guardrails
 
-## Current Limitations
-
-- AgentMail sending is still a placeholder until a real production key is configured.
-- Live opportunity quality depends on available public sources and configured search providers.
-- Voice playback may fall back to Sarvam if browser speech is unavailable.
-- This is a hackathon MVP and demo-ready system, not a fully field-tested deployment.
+- No fake jobs, employers, contacts, salaries, scheme approvals or loan approvals.
+- Offline actions require location and safe commute context.
+- Pathway can be inspected before locking; locking happens only on explicit learner action.
+- Skill Passport is proof-gated and consent-controlled.
+- Outreach remains blocked until proof and learner consent are ready.
+- Firecrawl is not used on every request; it is reserved for deeper verification.
+- Shared-phone and returning-profile flows preserve learner memory.
 
 ## Deployment
 
-The app is configured for Vercel:
+Production app:
 
-```bash
-npx vercel deploy --prod
+```text
+https://vidyasetu-mvp.vercel.app
 ```
 
-Production alias:
+Manual production deploy:
 
 ```bash
-https://vidyasetu-mvp.vercel.app
+npx vercel deploy --prod -y
 ```
