@@ -2625,7 +2625,7 @@ function AdminCrm({
         </button>
         <div className="admin-source-card">
           <b>Data source</b>
-          <span>Learners, conversations, journeys, passports, matches, outreach and ADEWS are read from the app tables.</span>
+          <span>Learners, passports, matches, outreach and ADEWS are read from app tables. If journey or chat tables are unavailable, the CRM uses the saved learner memory copy and labels it as fallback.</span>
           {adminData?.demo_auth && <small>Demo admin password active. Configure ADMIN_PASSWORD for production.</small>}
         </div>
       </aside>

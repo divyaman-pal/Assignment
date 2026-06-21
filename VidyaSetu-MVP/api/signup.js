@@ -489,14 +489,17 @@ async function buildAdminOverview(body = {}) {
     selectRows('conversations', { order: 'updated_at.desc', limit }),
   ]);
 
+  const learnerRows = learners.ok ? learners.data || [] : [];
+  const journeyFallbackRows = adminJourneyFallbackRowsFromLearners(learnerRows);
+  const conversationFallbackRows = adminConversationFallbackRowsFromLearners(learnerRows);
   const rows = {
-    learners: learners.ok ? learners.data || [] : [],
-    journeys: journeys.ok ? journeys.data || [] : [],
+    learners: learnerRows,
+    journeys: journeys.ok ? journeys.data || [] : journeyFallbackRows,
     passports: passports.ok ? passports.data || [] : [],
     alerts: alerts.ok ? alerts.data || [] : [],
     matches: matches.ok ? matches.data || [] : [],
     outreach: outreach.ok ? outreach.data || [] : [],
-    conversations: conversations.ok ? conversations.data || [] : [],
+    conversations: conversations.ok ? conversations.data || [] : conversationFallbackRows,
   };
   const matchById = Object.fromEntries(rows.matches.map((match) => [match.id, match]));
   const grouped = {
@@ -519,12 +522,18 @@ async function buildAdminOverview(body = {}) {
     demo_auth: !process.env.ADMIN_PASSWORD,
     persistence: {
       learners: proofForAdmin(learners),
-      learning_journeys: proofForAdmin(journeys),
+      learning_journeys: proofForAdmin(journeys, {
+        fallbackRows: journeyFallbackRows,
+        fallbackSource: 'learners.profile_json.memory_journey',
+      }),
       skill_passport: proofForAdmin(passports),
       adews_scores: proofForAdmin(alerts),
       matches: proofForAdmin(matches),
       outreach: proofForAdmin(outreach),
-      conversations: proofForAdmin(conversations),
+      conversations: proofForAdmin(conversations, {
+        fallbackRows: conversationFallbackRows,
+        fallbackSource: 'learners.profile_json.memory_messages',
+      }),
     },
     metrics: adminMetrics(users, rows),
     users: filteredUsers,
@@ -558,13 +567,56 @@ async function acknowledgeAdminAlert(body = {}) {
   };
 }
 
-function proofForAdmin(result = {}) {
+function proofForAdmin(result = {}, { fallbackRows = [], fallbackSource = '' } = {}) {
+  const usedFallback = !result.ok && Array.isArray(fallbackRows) && fallbackRows.length > 0;
   return {
-    ok: Boolean(result.ok),
-    count: Array.isArray(result.data) ? result.data.length : 0,
-    fallback: Boolean(result.fallback),
-    error: result.error || null,
+    ok: Boolean(result.ok || usedFallback),
+    count: result.ok && Array.isArray(result.data) ? result.data.length : fallbackRows.length,
+    fallback: Boolean(result.fallback || usedFallback),
+    fallback_source: usedFallback ? fallbackSource : null,
+    error: result.ok ? null : result.error || null,
   };
+}
+
+function adminJourneyFallbackRowsFromLearners(learners = []) {
+  return learners
+    .map((learner) => {
+      const profile = learner.profile_json || {};
+      const journey = profile.memory_journey || null;
+      if (!journey || !Array.isArray(journey.modules) || !journey.modules.length) return null;
+      return {
+        id: `memory_journey_${learner.id}`,
+        learner_id: learner.id,
+        route_json: profile.memory_selected_route || {},
+        journey_json: journey,
+        modules_json: journey.modules || [],
+        progress_json: profile.memory_progress || journey.progress || {},
+        route_name: journey.route_name || profile.memory_selected_route?.name || '',
+        created_at: profile.memory_reminders?.started_at || learner.created_at,
+        updated_at: profile.updated_at || profile.last_updated || learner.updated_at || learner.created_at,
+      };
+    })
+    .filter(Boolean);
+}
+
+function adminConversationFallbackRowsFromLearners(learners = []) {
+  return learners
+    .map((learner) => {
+      const profile = learner.profile_json || {};
+      const messages = Array.isArray(profile.memory_messages) ? profile.memory_messages : [];
+      if (!messages.length) return null;
+      return {
+        id: `memory_conversation_${learner.id}`,
+        learner_id: learner.id,
+        phone_hash: learner.phone_hash || profile.phone_hash || '',
+        messages,
+        profile_json: profile,
+        last_summary: profile.memory_last_reply || '',
+        created_at: learner.created_at,
+        updated_at: profile.memory_last_message_at || profile.updated_at || profile.last_updated || learner.updated_at,
+      };
+    })
+    .filter(Boolean);
 }
 
 function groupByLearner(rows = []) {
