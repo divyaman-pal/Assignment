@@ -9,16 +9,16 @@ Live MVP: https://vidyasetu-mvp.vercel.app
 ```text
 assignment/
   README.md                         # Judge-facing repository guide
-  END_TO_END_USER_FLOW.md           # Complete target-user flow for evaluation
   VidyaSetu-MVP/
     README.md                       # Product architecture and developer setup
+    END_TO_END_USER_FLOW.md         # Complete target-user flow for evaluation
     package.json                    # Build, local server, and benchmark scripts
     vercel.json                     # Vercel function limits and daily reminder cron
     supabase_schema.sql             # Persistence schema reference
     src/                            # React/Vite frontend
     api/                            # Vercel serverless API functions
       _lib/                         # Shared AI, language, Supabase, and MVP helpers
-    docs/                           # User flow, evaluation reports, demo notes, proof docs
+    docs/                           # Evaluation reports, demo notes, proof docs
     scripts/                        # Local server, tests, reports, demo helpers
     CODEX_HANDOFF/                  # Handoff notes and implementation context
 ```
@@ -39,7 +39,7 @@ The complete product source code is in `VidyaSetu-MVP/`.
 
 ## End-To-End User Flow
 
-See [END_TO_END_USER_FLOW.md](END_TO_END_USER_FLOW.md) or [VidyaSetu-MVP/docs/END_TO_END_USER_FLOW.md](VidyaSetu-MVP/docs/END_TO_END_USER_FLOW.md) for the full target-user journey used for evaluation.
+See [VidyaSetu-MVP/END_TO_END_USER_FLOW.md](VidyaSetu-MVP/END_TO_END_USER_FLOW.md) for the full target-user journey used for evaluation.
 
 Short version: Riya, a Class 12 learner near Varanasi, logs in by phone, speaks to Meera in Hinglish, builds a profile for computer basics/typing/customer-service work, chooses and locks one pathway, receives a 4-week learning journey, gets daily WhatsApp task reminders, saves proof, unlocks a consent-controlled Skill Passport, and then sees only verified/source-backed opportunity steps.
 
@@ -138,7 +138,7 @@ npx vercel deploy --prod -y
 ## Key Documentation
 
 - `VidyaSetu-MVP/README.md` - detailed architecture, API map, setup, constraints, and verification.
-- `VidyaSetu-MVP/docs/END_TO_END_USER_FLOW.md` - complete Riya user flow from login to reminders, proof, Skill Passport, and guarded opportunities.
+- `VidyaSetu-MVP/END_TO_END_USER_FLOW.md` - complete Riya user flow from login to reminders, proof, Skill Passport, and guarded opportunities.
 - `VidyaSetu-MVP/docs/VidyaSetu_AI_Final_Deck.pdf` - final judge presentation deck.
 - `VidyaSetu-MVP/docs/VidyaSetu_Evaluation_Report.pdf` - AI/model evaluation and user validation report.
 - `VidyaSetu-MVP/docs/VidyaSetu_Final_Deployment_And_Sustainability.pdf` - deployment, cost, maintenance, and sustainability plan.

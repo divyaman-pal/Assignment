@@ -7,7 +7,7 @@ Live MVP: https://vidyasetu-mvp.vercel.app
 ## Final Submission Links
 
 - Repository guide: `../README.md`
-- Complete user flow: `docs/END_TO_END_USER_FLOW.md`
+- Complete user flow: `END_TO_END_USER_FLOW.md`
 - Final demo video: `docs/demo/VidyaSetu_Final_One_Persona_Demo.mp4`
 - Final judge deck: `docs/VidyaSetu_AI_Final_Deck.pdf`
 - Evaluation report: `docs/VidyaSetu_Evaluation_Report.pdf`
@@ -31,7 +31,7 @@ Live MVP: https://vidyasetu-mvp.vercel.app
 The primary evaluation flow is documented in:
 
 ```text
-docs/END_TO_END_USER_FLOW.md
+END_TO_END_USER_FLOW.md
 ```
 
 Short version: Riya, a Class 12 learner near Varanasi, logs in by phone, speaks to Meera in Hinglish, builds a profile for computer basics, typing and customer-service work, chooses and locks one pathway, receives a 4-week learning journey, gets daily WhatsApp task reminders, saves proof, unlocks a consent-controlled Skill Passport, and then sees only verified or source-backed opportunity steps.
