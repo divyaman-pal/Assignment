@@ -15,7 +15,7 @@ export default async function handler(_req, res) {
       sarvam: configured('SARVAM_API_KEY'),
       agentmail: configured('AGENTMAIL_API_KEY') && process.env.AGENTMAIL_API_KEY !== 'placeholder',
       whatsapp_sender: configured('WHATSAPP_SENDER_ID'),
-      wati: configured('WATI_API_BASE_URL') && configured('WATI_API_TOKEN'),
+      wati: (configured('WATI_API_BASE_URL') || configured('WATI_API_ENDPOINT') || configured('WATI_ENDPOINT')) && configured('WATI_API_TOKEN'),
       daily_reminder_cron: true,
       sarvam_tts: configured('SARVAM_API_KEY'),
     },

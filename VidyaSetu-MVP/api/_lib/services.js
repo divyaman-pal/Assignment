@@ -230,7 +230,7 @@ export async function callAnthropicJson({
       const requestBody = {
         model,
         max_tokens: Math.max(maxTokens, 1200),
-        temperature: 0.1,
+        temperature: 0.4,
         system: `${system}\nReturn valid JSON only. Do not include markdown.`,
         messages: [{ role: 'user', content: prompt }],
       };
@@ -444,7 +444,7 @@ export async function discoverWithClaudeWeb(query, fallback = [], options = {}) 
         body: JSON.stringify({
           model,
           max_tokens: Number(options.maxTokens || process.env.CLAUDE_WEB_SEARCH_MAX_TOKENS || 1400),
-          temperature: 0.1,
+          temperature: 0.4,
           system:
             'You are VidyaSetu source discovery for rural India. Use web search when useful. Prefer official, free, public, goal-specific, India-relevant sources. Do not invent URLs, jobs, contacts, wages, centres, eligibility, or scheme approvals. Return valid JSON only.',
           tools: [tool],
@@ -707,7 +707,7 @@ export function inferLearnerGoal(text = '', hints = {}) {
       text,
     );
   const hasTrainingAsk =
-    /training|course|vocational|skill course|learn skill|seekhna|sikhna|apprentice|apprenticeship|pmkvy|skill india|nsdc|हुनर|कौशल|स्किल|प्रशिक्षण|सीखना|सीखनी|सीखूं|सीखें/i.test(
+    /training|course|vocational|work skill|learning\s+(?:a\s+)?work skill|learn(?:ing)?\s+(?:a\s+)?skill|skill training|skill course|kaam ka hunar|hunar seekh|hunar sikh|kaam seekh|kaam sikh|seekhna|sikhna|apprentice|apprenticeship|pmkvy|skill india|nsdc|हुनर|कौशल|स्किल|प्रशिक्षण|सीखना|सीखनी|सीखूं|सीखें/i.test(
       text,
     );
 
@@ -1361,12 +1361,48 @@ Profile=${JSON.stringify(conciseProfileForPlanner(profile, question))}
 Family=${family}
 Exact goal=${safeRouteText(goal.label || (profile.aspirations || [])[0] || question || 'learner goal')}
 
-Return exactly 3 route cards. Keep each learner-facing field in the learner language/script. Do not put week counts, salaries, guarantees, fake contacts, or abstract words like pathway/proof-first/verified-source in route names.
+Return exactly 3 route cards. Keep each learner-facing field in the learner language/script. The UI will show each route as an expandable option card with "Option 1/2/3", the route name, and learner_summary; write names and summaries so they make sense in that format. Each learner_summary must be unique, 1-2 spoken lines, and must not simply repeat the route name. Do not put week counts, salaries, guarantees, fake contacts, or abstract words like pathway/proof-first/verified-source in route names.
 Each route must be a small real action: one free/official/source check, one practice/proof action, or one buyer/employer/source verification action.
 For business: cost, buyer, supplier, risk, scheme/loan eligibility before spending. For training/job: skill proof, safety/commute, source verification, consent.
 
 JSON shape:
-{"routes":[{"id":"route-1","name":"","card_kind":"earn_fast","source_url":"https://www.youtube.com/results?search_query=","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}},{"id":"route-2","name":"","card_kind":"build_bigger","source_url":"https://www.skillindiadigital.gov.in","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}},{"id":"route-3","name":"","card_kind":"explore","source_url":"https://kvk.icar.gov.in","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
+{"routes":[{"id":"route-1","name":"","card_kind":"earn_fast","learner_summary":"","source_url":"https://www.youtube.com/results?search_query=","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}},{"id":"route-2","name":"","card_kind":"build_bigger","learner_summary":"","source_url":"https://www.skillindiadigital.gov.in","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}},{"id":"route-3","name":"","card_kind":"explore","learner_summary":"","source_url":"https://kvk.icar.gov.in","source_title":"","tradeoff":"","first_step":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
+}
+
+function pathwayPlannerSystemPrompt(outputLanguage = '') {
+  return `${outputLanguage}
+ROLE
+You are Meera, VidyaSetu's AI livelihood counsellor for Tier-3 and rural India. This is step 2 of a 3-step flow: (1) a short conversation already happened, (2) now you propose the IDEA of exactly 3 pathways the learner can choose from, (3) after they pick one, a separate step builds that pathway's week-by-week roadmap. Here you only propose the 3 choices; do not write the full roadmap.
+
+CONTEXT
+The learner is usually rural, first-generation, low-income, phone-first, more comfortable listening than reading, low budget, and limited English. Write every learner-facing field in simple spoken words in the learner's own language/script. Only suggest real, free, official, or goal-specific public resources. Never invent employers, jobs, wages, fees, contacts, schemes, loans, or guarantees.
+
+INPUT
+The user prompt contains a condensed learner profile, detected goal, goal family, and sometimes resource hints or roadmap catalog entries. Use only those facts plus safe public/official resource types already present in the prompt. Do not add facts that the learner did not give.
+
+OUTPUT
+Return one JSON object only, no markdown:
+{"routes":[3 route objects],"confidence":0-1,"callback_flag":false,"callback_reason":null}
+Each route object must follow this shape:
+{"id":"","name":"","card_kind":"earn_fast|build_bigger|explore","learner_summary":"","tradeoff":"","first_step":"","source_url":"","source_title":"","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"","what_to_check":"","not_a_promise":""}}
+
+RULES
+1. The 3 pathways MUST be clearly different and easy to tell apart at a glance.
+   - If the goal is broad or unsure, offer 3 genuinely different livelihoods/trades that fit the learner's persona, time, device, location, budget and safety. Never give three versions of the same trade.
+   - If the goal is specific, offer 3 distinct approaches inside that one goal: a first-earning/test option, a stronger-skill option, and a low-risk verified-next-step option.
+2. learner_summary must be unique for each card and must be 1-2 short spoken sentences. It should make this option's distinct value obvious in an expanded option card: what the learner actually does, the realistic outcome, the tradeoff, and how it differs from the other two. Do not copy the route name into learner_summary. The three learner_summary lines must read clearly differently.
+3. name must be a concrete action the learner understands, 4-8 words. Do not use abstract words such as pathway, route, explore, strategy, proof-first, verified-source, enterprise setup, or compare. Do not include week counts, salaries, guarantees, or fake contacts in names.
+4. Prefer real links from the prompt's resource hints or roadmap catalog for source_url/source_title. If no exact link is available, use only a safe official/free public source that matches the exact learner goal, such as an official portal or a goal-specific YouTube search URL. Never invent employer, centre, contact, scheme approval, fee, salary, or deadline.
+5. Respect the learner's constraints: daily time, phone/computer access, language, schooling, budget, location/commute, family or safety limits, and urgency. Set requires_worker_confirmation true for anything needing offline, safety, employer, buyer, supplier, loan, scheme, or travel checks.
+6. If the goal is genuinely unclear and you cannot propose meaningfully, set callback_flag true, routes [], and callback_reason to one short specific question in the learner's language.
+7. Keep every learner-facing field short enough for voice. The UI will speak this content, so avoid repetitive lines, raw profile dumps, and English jargon unless it is a product/source name.
+
+EXAMPLES are illustrative only. Adapt to the real learner; never copy verbatim.
+Broad goal example:
+{"routes":[{"id":"route-1","name":"Ghar se silai alteration shuru","card_kind":"earn_fast","learner_summary":"Silai machine se chhote alteration kaam test karo. Jaldi shuru ho sakta hai, par pehle customer aur fitting proof chahiye.","source_title":"Skill India Digital","source_url":"https://www.skillindiadigital.gov.in","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"alteration helper","what_to_check":"Machine, kapda, local demand, safe customer handover.","not_a_promise":"Income guarantee nahi hai; pehle demand aur proof check hoga."}},{"id":"route-2","name":"Ghar ka tiffin sample becho","card_kind":"build_bigger","learner_summary":"Ek dish ka sample bana kar aas-paas demand samjho. Dheere badhega, par repeat customer ban sakte hain.","source_title":"FSSAI FoSCoS","source_url":"https://foscos.fssai.gov.in","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"home tiffin starter","what_to_check":"Hygiene, buyer, cost, delivery, family support.","not_a_promise":"Customer ya profit promise nahi hai; pehle small test hoga."}},{"id":"route-3","name":"Mehndi service chhota test","card_kind":"explore","learner_summary":"Kam kharch mein mehndi ka sample proof banao. Isse pata chalega yeh kaam suit karta hai ya nahi.","source_title":"Skill India Digital","source_url":"https://www.skillindiadigital.gov.in","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"mehndi service starter","what_to_check":"Practice photo, safe customer, local occasion demand.","not_a_promise":"Booking guarantee nahi hai; pehle sample proof check hoga."}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}
+
+Specific goal example:
+{"routes":[{"id":"route-1","name":"Typing speed se pehla data kaam","card_kind":"earn_fast","learner_summary":"Typing speed aur ek chhota sample banao. Jaldi basic data-entry kaam ke liye proof mil sakta hai.","source_title":"TypingClub","source_url":"https://www.typingclub.com","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"data-entry trainee","what_to_check":"Typing speed, computer access, safe source, consent.","not_a_promise":"Job guarantee nahi hai; pehle proof aur source check hoga."}},{"id":"route-2","name":"Excel seekhke operator bano","card_kind":"build_bigger","learner_summary":"Excel aur office basics seekhkar computer operator role ke liye taiyari karo. Dheere hai, par skill strong hogi.","source_title":"GCFGlobal Excel","source_url":"https://edu.gcfglobal.org/en/excel/","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"computer operator trainee","what_to_check":"Practice time, computer access, sample sheet proof.","not_a_promise":"Placement promise nahi hai; skill proof ke baad source check hoga."}},{"id":"route-3","name":"Safe local office source check","card_kind":"explore","learner_summary":"Do safe local sources check karke dekho ki data-entry ya office ka kaam sach mein available hai ya nahi.","source_title":"National Career Service","source_url":"https://www.ncs.gov.in","requires_worker_confirmation":true,"pathway_detail":{"realistic_role":"office assistant trainee","what_to_check":"Location, commute, day shift, employer/source verification.","not_a_promise":"Job ya salary promise nahi hai; verified source ke baad hi apply hoga."}}],"confidence":0.8,"callback_flag":false,"callback_reason":null}`;
 }
 
 const PATHWAY_TOOL_SCHEMA = {
@@ -1499,14 +1535,28 @@ export async function generatePathways(profile, question = '') {
   }
 
   const activeGoal = profile.learner_goal || {};
+  const activeGoalNonStudy =
+    Boolean(activeGoal.intent && activeGoal.intent !== 'study') ||
+    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(activeGoal.type || '');
+  const latestQuestionText = String(question || '').toLowerCase();
+  const latestCareerOrLivelihoodText =
+    /job|naukri|naukari|nokri|placement|customer service|typing|data entry|office|career|training|course|skill|business|enterprise|self.?employment|mushroom|poultry|loan|scheme|buyer|supplier|काम|नौकरी|रोजगार|बिजनेस|बिज़नेस|व्यापार|व्यवसाय|मशरूम|लोन|योजना/i.test(
+      latestQuestionText,
+    );
+  const latestExplicitStudySwitch =
+    /\b(?:now|ab|instead|switch|change|only|sirf|bas)\b|अब|सिर्फ|बस|बदल/i.test(latestQuestionText) &&
+    /study|padhai|exam|board|ncert|sample paper|marks|score|homework|पढ़|पढ़|परीक्षा|नंबर|अंक/i.test(latestQuestionText) &&
+    !latestCareerOrLivelihoodText;
+  const shouldHonorLatestStudyText = !activeGoalNonStudy || latestExplicitStudySwitch;
   const academicGoalType = profile.academic_goal?.type || '';
   const academicGoalOverridesStaleCareer =
-    academicGoalType === 'entrance_exam_prep' ||
-    academicGoalType === 'class_12_exam_prep' ||
-    academicGoalType === 'school_study_support';
-  const latestEntrancePrep = isEntranceExamPrepText(question);
-  const latestAcademicPrep = !latestEntrancePrep && isAcademicPrepText(question);
-  const latestSchoolStudy = !latestEntrancePrep && !latestAcademicPrep && isSchoolStudyText(question);
+    !activeGoalNonStudy &&
+    (academicGoalType === 'entrance_exam_prep' ||
+      academicGoalType === 'class_12_exam_prep' ||
+      academicGoalType === 'school_study_support');
+  const latestEntrancePrep = shouldHonorLatestStudyText && isEntranceExamPrepText(question);
+  const latestAcademicPrep = shouldHonorLatestStudyText && !latestEntrancePrep && isAcademicPrepText(question);
+  const latestSchoolStudy = shouldHonorLatestStudyText && !latestEntrancePrep && !latestAcademicPrep && isSchoolStudyText(question);
   const latestStudyRequest = latestEntrancePrep || latestAcademicPrep || latestSchoolStudy;
   const inferredGoal = inferLearnerGoal(question, {
     entrancePrep: latestEntrancePrep,
@@ -1521,9 +1571,7 @@ export async function generatePathways(profile, question = '') {
     Boolean(String(question || '').trim()) &&
     !genericPathwayRequest &&
     Boolean(inferredGoal.intent && !['study', 'unknown'].includes(inferredGoal.intent));
-  const explicitProfileNonStudyGoal =
-    Boolean(activeGoal.intent && activeGoal.intent !== 'study') ||
-    /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(activeGoal.type || '');
+  const explicitProfileNonStudyGoal = activeGoalNonStudy;
   const inferredNonStudyGoal = /job|training|career|enterprise|self_employment|informal_skill|local_office|college/i.test(
     inferredGoal.type || '',
   );
@@ -1633,7 +1681,7 @@ export async function generatePathways(profile, question = '') {
         'claude-sonnet-4-5',
       ],
       toolSchema: PATHWAY_TOOL_SCHEMA,
-      system: `${outputLanguage} You are VidyaSetu's Tier-3 India livelihood pathway planner. Return only concise structured JSON with a top-level routes array. No markdown.`,
+      system: pathwayPlannerSystemPrompt(outputLanguage),
       prompt: buildCompactClaudePathwayPrompt(pathwayProfile, goal, question || 'Generate a personalized pathway map.', family),
     })
     : await callClaudeJson({
@@ -1655,7 +1703,7 @@ export async function generatePathways(profile, question = '') {
         'claude-haiku-4-5-20251001',
       ],
       toolSchema: PATHWAY_TOOL_SCHEMA,
-      system: `${outputLanguage} You create three concise VidyaSetu pathway cards for rural India. Use the emit_json tool with a top-level routes array. No markdown.`,
+      system: pathwayPlannerSystemPrompt(outputLanguage),
       prompt: buildCompactClaudePathwayPrompt(pathwayProfile, goal, question || 'Generate a personalized pathway map.', family),
     });
     generated = compactRetry.ok && coerceGeneratedRoutes(compactRetry.data).length >= 3

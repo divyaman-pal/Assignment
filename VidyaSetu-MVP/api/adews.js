@@ -65,8 +65,9 @@ function cronAuthorized(req, url) {
   return auth === `Bearer ${secret}` || querySecret === secret;
 }
 
-async function runDailyReminderJob({ dryRun = false, learnerId = '', limit } = {}) {
+export async function runDailyReminderJob({ dryRun = false, learnerId = '', limit, forceEnabled = false } = {}) {
   const scanLimit = Math.max(1, Math.min(250, Number(limit || process.env.REMINDER_SCAN_LIMIT || 100)));
+  const liveSendEnabled = dailyReminderLiveSendEnabled();
   const learners = learnerId
     ? await selectRows('learners', { filters: { id: learnerId }, limit: 1 })
     : await selectRows('learners', { order: 'updated_at.desc', limit: scanLimit });
@@ -78,14 +79,20 @@ async function runDailyReminderJob({ dryRun = false, learnerId = '', limit } = {
       error: learners.error,
       scanned: 0,
       sent: 0,
-      dry_run: Boolean(dryRun || !watiConfigured()),
+      dry_run: Boolean(dryRun || !watiConfigured() || !liveSendEnabled),
+      live_send_enabled: liveSendEnabled,
     };
   }
 
   const todayKey = localDateKey();
   const results = [];
   for (const learner of learners.data || []) {
-    const result = await maybeSendDailyReminder({ learner, todayKey, dryRun });
+    const result = await maybeSendDailyReminder({
+      learner,
+      todayKey,
+      dryRun: dryRun || !liveSendEnabled,
+      forceEnabled,
+    });
     results.push(result);
   }
 
@@ -100,21 +107,27 @@ async function runDailyReminderJob({ dryRun = false, learnerId = '', limit } = {
     skipped: results.filter((item) => item.status === 'skipped').length,
     failed: results.filter((item) => item.status === 'failed').length,
     wati_configured: watiConfigured(),
-    dry_run: Boolean(dryRun || !watiConfigured()),
+    dry_run: Boolean(dryRun || !watiConfigured() || !liveSendEnabled),
+    live_send_enabled: liveSendEnabled,
     results,
   };
 }
 
-async function maybeSendDailyReminder({ learner = {}, todayKey = localDateKey(), dryRun = false }) {
+async function maybeSendDailyReminder({ learner = {}, todayKey = localDateKey(), dryRun = false, forceEnabled = false }) {
   const profile = learner.profile_json || {};
   const learnerId = learner.id || profile.learner_id || '';
   const phone = normalizeWhatsAppPhone(profile.phone || learner.phone || '');
   const reminderState = profile.reminder_state || profile.memory_reminders || {};
   if (!learnerId) return skipped('missing_learner_id');
+  if (!reminderLearnerAllowed(learnerId)) return skipped('learner_not_in_reminder_allowlist', learnerId);
   if (profile.reminders_opt_out || profile.whatsapp_opt_out || profile.consent?.whatsapp_reminders === false) {
     return skipped('learner_opted_out', learnerId);
   }
+  if (!forceEnabled && !remindersEnabled(profile, reminderState)) {
+    return skipped('daily_reminders_not_enabled_until_pathway_lock', learnerId);
+  }
   if (!phone) return skipped('missing_phone', learnerId);
+  if (!reminderPhoneAllowed(phone)) return skipped('phone_not_in_reminder_allowlist', learnerId);
   if (reminderState.last_daily_reminder_date === todayKey) {
     return skipped('already_sent_today', learnerId);
   }
@@ -254,12 +267,12 @@ function firstResource(module = {}) {
 }
 
 async function sendWatiMessage({ phone, reminder, profile = {} }) {
-  const base = String(process.env.WATI_API_BASE_URL || '').replace(/\/$/, '');
+  const base = watiApiBase();
   const token = process.env.WATI_API_TOKEN || '';
   const templateName = process.env.WATI_TEMPLATE_NAME || '';
   const broadcastName = process.env.WATI_BROADCAST_NAME || 'vidyasetu_daily_reminder';
   if (!base || !token) {
-    return { ok: false, provider: 'wati', dry_run: true, error: 'WATI_API_BASE_URL or WATI_API_TOKEN missing' };
+    return { ok: false, provider: 'wati', dry_run: true, error: 'WATI_API_BASE_URL/WATI_API_ENDPOINT or WATI_API_TOKEN missing' };
   }
 
   const headers = {
@@ -280,12 +293,7 @@ async function sendWatiMessage({ phone, reminder, profile = {} }) {
         body: JSON.stringify({
           template_name: templateName,
           broadcast_name: broadcastName,
-          parameters: [
-            { name: 'name', value: firstName(profile.name) || 'learner' },
-            { name: 'today_task', value: reminder.task },
-            { name: 'resource', value: reminder.resource_title || 'VidyaSetu' },
-            { name: 'proof_step', value: reminder.proof_step || 'VidyaSetu app me Done tap karke proof save karein' },
-          ],
+          parameters: watiTemplateParameters({ profile, reminder }),
         }),
       });
     } else {
@@ -315,7 +323,26 @@ async function sendWatiMessage({ phone, reminder, profile = {} }) {
 }
 
 function watiConfigured() {
-  return Boolean(process.env.WATI_API_BASE_URL && process.env.WATI_API_TOKEN);
+  return Boolean(watiApiBase() && process.env.WATI_API_TOKEN);
+}
+
+function watiApiBase() {
+  return String(process.env.WATI_API_BASE_URL || process.env.WATI_API_ENDPOINT || process.env.WATI_ENDPOINT || '').replace(/\/$/, '');
+}
+
+function dailyReminderLiveSendEnabled() {
+  const raw = process.env.DAILY_REMINDERS_LIVE_SEND;
+  if (raw === undefined || raw === '') return true;
+  return String(raw).toLowerCase() === 'true';
+}
+
+function remindersEnabled(profile = {}, reminderState = {}) {
+  return Boolean(
+    reminderState.enabled === true ||
+      reminderState.daily_enabled === true ||
+      profile.whatsapp_reminders_enabled === true ||
+      profile.consent?.whatsapp_reminders === true,
+  );
 }
 
 function normalizeWhatsAppPhone(value = '') {
@@ -323,6 +350,27 @@ function normalizeWhatsAppPhone(value = '') {
   if (digits.length === 10) return `${process.env.WATI_COUNTRY_CODE || '91'}${digits}`;
   if (digits.length >= 11 && digits.length <= 15) return digits;
   return '';
+}
+
+function reminderPhoneAllowed(phone = '') {
+  if (!reminderAllowlistEnforced()) return true;
+  const raw = process.env.DAILY_REMINDER_ALLOWED_PHONES || process.env.REMINDER_ALLOWED_PHONES || '';
+  const entries = raw.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean);
+  if (!entries.length) return true;
+  const allowed = entries.map(normalizeWhatsAppPhone).filter(Boolean);
+  return allowed.includes(phone);
+}
+
+function reminderLearnerAllowed(learnerId = '') {
+  if (!reminderAllowlistEnforced()) return true;
+  const raw = process.env.DAILY_REMINDER_ALLOWED_LEARNER_IDS || process.env.REMINDER_ALLOWED_LEARNER_IDS || '';
+  const entries = raw.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean);
+  if (!entries.length) return true;
+  return entries.includes(String(learnerId || '').trim());
+}
+
+function reminderAllowlistEnforced() {
+  return String(process.env.DAILY_REMINDERS_ENFORCE_ALLOWLIST || '').toLowerCase() === 'true';
 }
 
 function maskPhone(phone = '') {
@@ -346,8 +394,136 @@ function firstName(value = '') {
   return cleanTaskText(value).split(/\s+/).filter(Boolean)[0] || '';
 }
 
+function watiTemplateParameters({ profile = {}, reminder = {} }) {
+  const parameters = [
+    { name: 'name', value: firstName(profile.name) || 'learner' },
+    { name: 'today_task', value: reminder.task },
+    { name: 'resource', value: reminder.resource_title || 'VidyaSetu' },
+  ];
+  if (process.env.WATI_INCLUDE_PROOF_STEP === 'true') {
+    parameters.push({
+      name: 'proof_step',
+      value: reminder.proof_step || 'VidyaSetu app me Done tap karke proof save karein',
+    });
+  }
+  return parameters;
+}
+
+function stableReminderCopy(raw = '') {
+  const variants = [
+    {
+      match: /english/.test(raw) && !/hinglish|hindi/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaste ${name}, today's VidyaSetu task: ${task}`,
+        resource: 'Resource',
+        how: 'How to use',
+        done: 'When done, open VidyaSetu, tap Done, and save one short proof note/photo.',
+        proofStep: 'Open VidyaSetu, tap Done, and save one short proof note/photo.',
+      },
+    },
+    {
+      match: /odia|oriya/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaskar ${name}, aaji ra VidyaSetu kaam: ${task}`,
+        resource: 'Sadhan',
+        how: 'Kemiti karibe',
+        done: 'Sari gale VidyaSetu kholi Done dabantu ebam chhota proof note/photo save karantu.',
+        proofStep: 'VidyaSetu re Done dabai chhota proof save karantu.',
+      },
+    },
+    {
+      match: /bengali|bangla/.test(raw),
+      copy: {
+        intro: (name, task) => `Nomoskar ${name}, aajker VidyaSetu kaaj: ${task}`,
+        resource: 'Resource',
+        how: 'Kibhabe korben',
+        done: 'Hoye gele VidyaSetu khule Done chapun ebong chhoto proof note/photo save korun.',
+        proofStep: 'VidyaSetu te Done chapun ebong chhoto proof save korun.',
+      },
+    },
+    {
+      match: /marathi/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaste ${name}, aajche VidyaSetu kaam: ${task}`,
+        resource: 'Sadhan',
+        how: 'Kase karayche',
+        done: 'Purna zalyavar VidyaSetu ughada, Done daba ani chhota purava note/photo save kara.',
+        proofStep: 'VidyaSetu madhe Done dabun chhota purava save kara.',
+      },
+    },
+    {
+      match: /tamil/.test(raw),
+      copy: {
+        intro: (name, task) => `Vanakkam ${name}, indraiya VidyaSetu velai: ${task}`,
+        resource: 'Resource',
+        how: 'Eppadi seivathu',
+        done: 'Mudinthathum VidyaSetu thirandhu Done azhuthi siru proof note/photo save seiyavum.',
+        proofStep: 'VidyaSetu il Done azhuthi siru proof save seiyavum.',
+      },
+    },
+    {
+      match: /telugu/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaste ${name}, ee roju VidyaSetu pani: ${task}`,
+        resource: 'Resource',
+        how: 'Ela cheyali',
+        done: 'Poorthayyaka VidyaSetu terichi Done nokki chinna proof note/photo save cheyandi.',
+        proofStep: 'VidyaSetu lo Done nokki chinna proof save cheyandi.',
+      },
+    },
+    {
+      match: /kannada/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaste ${name}, indina VidyaSetu kelasa: ${task}`,
+        resource: 'Resource',
+        how: 'Hege madabeku',
+        done: 'Mugida mele VidyaSetu tereyiri, Done otti, chikka proof note/photo save madi.',
+        proofStep: 'VidyaSetu nalli Done otti chikka proof save madi.',
+      },
+    },
+    {
+      match: /malayalam/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaskaram ${name}, innathe VidyaSetu joli: ${task}`,
+        resource: 'Resource',
+        how: 'Engane cheyyam',
+        done: 'Mudinjaal VidyaSetu thurannu Done amarthi cheriya proof note/photo save cheyyuka.',
+        proofStep: 'VidyaSetu il Done amarthi cheriya proof save cheyyuka.',
+      },
+    },
+    {
+      match: /gujarati/.test(raw),
+      copy: {
+        intro: (name, task) => `Namaste ${name}, aajnu VidyaSetu kaam: ${task}`,
+        resource: 'Sadhan',
+        how: 'Kevi rite karvu',
+        done: 'Purna thay pachi VidyaSetu kholo, Done dabavo ane nano proof note/photo save karo.',
+        proofStep: 'VidyaSetu ma Done dabavi nano proof save karo.',
+      },
+    },
+    {
+      match: /punjabi/.test(raw),
+      copy: {
+        intro: (name, task) => `Sat sri akal ${name}, aaj da VidyaSetu kaam: ${task}`,
+        resource: 'Resource',
+        how: 'Kiven karna hai',
+        done: 'Poora ho jave ta VidyaSetu kholo, Done dabao ate chhota proof note/photo save karo.',
+        proofStep: 'VidyaSetu vich Done daba ke chhota proof save karo.',
+      },
+    },
+  ];
+  return variants.find((variant) => variant.match)?.copy || {
+    intro: (name, task) => `Namaste ${name}, aaj ka VidyaSetu kaam: ${task}`,
+    resource: 'Resource',
+    how: 'Kaise karna hai',
+    done: 'Ho jaye to VidyaSetu kholkar Done tap karein aur ek chhota proof note/photo save karein.',
+    proofStep: 'VidyaSetu app me Done tap karke proof save karein.',
+  };
+}
+
 function reminderCopy(language = '') {
   const raw = String(language || '').toLowerCase();
+  return stableReminderCopy(raw);
   if (/english/.test(raw) && !/hinglish|hindi/.test(raw)) {
     return {
       intro: (name, task) => `Namaste ${name}, today's VidyaSetu task: ${task}`,

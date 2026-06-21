@@ -4,6 +4,17 @@ VidyaSetu is a voice-first AI career bridge for rural, low-income, first-generat
 
 Live app: https://vidyasetu-mvp.vercel.app
 
+Repository entry points:
+
+- `../README.md` - judge-facing repository guide and setup summary.
+- `../END_TO_END_USER_FLOW.md` - complete identified target-user flow from login to reminders, proof, Skill Passport, and guarded opportunity discovery.
+
+Final submission PDFs:
+
+- `docs/VidyaSetu_AI_Final_Deck.pdf` - final judge presentation deck.
+- `docs/VidyaSetu_Evaluation_Report.pdf` - AI/model evaluation and user validation report.
+- `docs/VidyaSetu_Final_Deployment_And_Sustainability.pdf` - deployment, cost, maintenance, and sustainability plan.
+
 ## Problem Statement
 
 Learners from disadvantaged backgrounds face barriers across the skilling and career funnel:

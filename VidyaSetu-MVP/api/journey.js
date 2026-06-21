@@ -4,6 +4,7 @@ import { buildLearningJourney } from './_lib/mvp.js';
 import { languageInstruction } from './_lib/language.js';
 import { callAnthropicJson, callClaudeJson } from './_lib/services.js';
 import { tier3PlannerGuide } from './_lib/tier3-roadmaps.js';
+import { runDailyReminderJob } from './adews.js';
 
 const DEFAULT_JOURNEY_CLAUDE_TIMEOUT_MS = 90_000;
 const MAX_JOURNEY_CLAUDE_TIMEOUT_MS = 150_000;
@@ -465,6 +466,36 @@ function journeyTargetWeeks(profile = {}, route = {}, fallbackJourney = {}) {
   return 4;
 }
 
+function journeyBuilderSystemPrompt(profile = {}, route = {}, { useTool = false } = {}) {
+  const lang = languageInstruction(profile, route.name || route.tradeoff || '');
+  const emit = useTool ? 'Use the emit_json tool.' : 'Return valid JSON only.';
+  return `${lang}
+CONTEXT
+You are Meera, VidyaSetu's learner-journey builder for Tier-3 and rural India.
+Two steps already happened: you spoke with the learner and understood their life, then they picked one pathway toward a livelihood goal. This is the final step: turn that one pathway into a 4-week, day-by-day roadmap this exact learner can actually follow on a phone.
+Picture the learner: phone-first, low budget, more comfortable listening than reading, limited English, often the first in their family to attempt this. They need tiny doable steps, free or official resources, and a feeling of real progress every single day.
+
+INPUT
+You are given the learner profile, selected pathway, target week count, and a roadmap catalog/resource guide. Use the learner's language, goal, location, daily time, phone access, commute distance, education level, and any assets or constraints. Use the selected pathway's name, realistic role, first step, and verification needs. Use only the roadmap catalog/resource guide, selected route source, or safe free/official goal-specific search URLs for weekly resources. Never invent links, names, phone numbers, centres, contacts, jobs, wages, fees, or approvals.
+
+OUTPUT
+${emit} Follow the given JSON shape exactly: a top-level "modules" array of week objects. Produce 4 week-modules unless the input target_weeks asks for more. Each week object must have: title, goal, 2 short lessons, day-wise daily_micro_tasks ending with a Sunday review where possible, 1 practice task, proof, proof_tasks, exactly 1 resource with title/type/source_url/search_query/how_to_use/proof_to_save, completion_criteria, low_data_alternative, voice_whatsapp_version, unlock_after_completion. All learner-facing text must be in the learner's language/script; official names and URLs stay unchanged.
+
+RULES
+1. Personalise to this learner and this goal. If the goal is oyster mushroom, every week, task, and resource must be mushroom-specific. Never fall back to generic "enterprise setup", "career exploration", or "do a Skill India course" when a goal-specific free/official source exists.
+2. Every week must move forward. No repeated or filler weeks. Natural arc: Week 1 learn and set up; middle weeks practise and make the first real attempt, such as first batch, first sale, first application, first sample, or first source check; final week stabilise and plan what comes next.
+3. Inside a week, make the daily shape feel simple: understand; watch or listen to one small part of the resource; do one tiny safe task; ask or review with a helpline, centre, trusted person, buyer, worker, or source; save proof; short Sunday review.
+4. Exactly 1 resource per week. Prefer the official portal, helpline, or local centre when appropriate: KVK, ITI, bank, CSC, Kisan Call Centre, NCS, Skill India, or another route-specific official/free source. For a hands-on skill, a precise YouTube search URL is allowed. Always fill how_to_use: watch one part, pause, write 2-3 points, do the tiny task, save proof.
+5. One clear, photographable or recordable proof each week must gate the next week: before/after photo, 1-minute voice note, screenshot, sample work, score, notebook page, or submitted-form proof. Reflect it in completion_criteria and unlock_after_completion.
+6. Keep every learner-facing sentence short enough to be spoken aloud. Use concrete verbs. No jargon, long paragraphs, or English-heavy strategy words.
+7. Guardrails. Business/scheme weeks must check buyer, supplier, cost, risk, and official eligibility before spending or taking a loan. Job weeks must include proof, commute/safety, source verification, and consent before outreach. Regulated fields must route to official portals or recognised centres and stay within the learner's trained scope.
+8. Never invent jobs, employers, fees, salaries, contacts, loan approvals, centres, or guaranteed outcomes. If something must be confirmed locally, make "go confirm it" the task itself.
+9. Always provide low_data_alternative and voice_whatsapp_version so the journey works on weak networks and daily reminders.
+
+EXAMPLE SHAPE ONLY - adapt fully, never copy content:
+{"week":2,"title":"Pehla mushroom batch lagao","goal":"Apne shaded kamre mein oyster mushroom ka pehla chhota batch shuru karna","lessons":["Spawn, straw aur bag kaise taiyaar karte hain","Roz ki nami aur safai ka dhyan"],"daily_micro_tasks":["Day 1: oyster mushroom setup ka ek part dekho, 3 point likho","Day 2: spawn aur straw ka cost likho aur 1 supplier confirm karo","Day 3: ek bag mein straw bharke spawn lagao","Day 4: Kisan Call Centre ko call karke nami/temperature poocho","Day 5: bag ki photo lo aur date likho","Sunday: hafte ka review - kya theek raha, kya badalna hai"],"practice_tasks":["Khud ek poora mushroom bag taiyaar karo"],"proof":"Pehle din ke bag ki photo with date","proof_tasks":["Bag photo save karo"],"resources":[{"title":"Skill India Digital - Mushroom Cultivation","type":"official","source_url":"https://www.skillindiadigital.gov.in","search_query":"oyster mushroom cultivation training","how_to_use":"Ek hi part dekho, pause karke 3 point likho, phir ek bag khud lagao","proof_to_save":"Notes + bag ki photo"}],"completion_criteria":"Ek mushroom bag laga diya aur photo save ki","low_data_alternative":"Video na chale to KVK ya Kisan Call Centre se steps poocho","voice_whatsapp_version":"Is hafte maine apna pehla mushroom bag lagaya","unlock_after_completion":"Week 3: roz ki care aur growth tracking"}`;
+}
+
 function buildClaudeJourneyPrompt(profile = {}, route = {}, fallbackJourney = {}) {
   const guide = tier3PlannerGuide(profile, route.name || route.tradeoff || '', route);
   const targetWeeks = journeyTargetWeeks(profile, route, fallbackJourney);
@@ -515,15 +546,18 @@ Tool input shape:
 }
 
 function buildCompactClaudeJourneyPrompt(profile = {}, route = {}, fallbackJourney = {}) {
+  const guide = tier3PlannerGuide(profile, route.name || route.tradeoff || '', route);
   const targetWeeks = journeyTargetWeeks(profile, route, fallbackJourney);
   return `Return one valid JSON object with a top-level "modules" array. Do not include markdown.
 Learner=${JSON.stringify({
     language: profile.preferred_language || profile.language || 'learner language',
     goal: profile.learner_goal?.label || (profile.aspirations || [])[0] || route.name || '',
+    education: profile.class_level || profile.education_status || '',
     location: profile.location || '',
     time_available: profile.time_available || '',
     phone_access: profile.phone_access || profile.device || '',
     commute_km: profile.commute_km || '',
+    support_needs: profile.support_needs || [],
   })}
 Selected route=${JSON.stringify({
     name: route.name,
@@ -532,11 +566,13 @@ Selected route=${JSON.stringify({
     what_to_check: route.pathway_detail?.what_to_check,
     source_url: route.source_url,
   })}
+Roadmap catalog=${guide.guide}
+target_weeks=${targetWeeks}
 
-Return exactly ${targetWeeks} week modules in the learner language/script. Each week must be specific to the exact goal, not generic enterprise/career content. For each week use 2 short lessons, 3 day-wise daily_micro_tasks, 1 practice task, 1 proof, proof_tasks, and exactly 1 free/official/goal-specific resource. Use YouTube search URLs for specific free videos when official resources are not enough. Explain how to consume the resource: watch/listen one small part, pause, do the tiny task, save proof. No fake jobs, contacts, fees, income, loan approval, or centre claims.
+Return exactly ${targetWeeks} week modules in the learner language/script. Each week must be specific to the exact goal, not generic enterprise/career content. For each week use 2 short lessons, 5-6 day-wise daily_micro_tasks ending with a Sunday review, 1 practice task, 1 proof, proof_tasks, and exactly 1 free/official/goal-specific resource. Use YouTube search URLs for specific free videos when official resources are not enough. Explain how to consume the resource: watch/listen one small part, pause, do the tiny task, save proof. No fake jobs, contacts, fees, income, loan approval, or centre claims.
 
 JSON shape:
-{"title":"","duration":{"mvp":"${targetWeeks}-week journey"},"modules":[{"id":"week-1","week":1,"title":"","goal":"","lessons":["",""],"daily_micro_tasks":["Day 1:","Day 2:","Day 3:"],"practice_tasks":[""],"proof":"","proof_tasks":[""],"resources":[{"title":"","type":"official|free_video_search|practice","source_url":"https://www.youtube.com/results?search_query=","search_query":"","how_to_use":"","proof_to_save":""}],"completion_criteria":"","low_data_alternative":"","voice_whatsapp_version":"","unlock_after_completion":""}],"progress":{"completion_percent":0,"completed_count":0,"proof_ready_count":0,"passport_eligible":false,"placement_unlocked":false,"next_action":"Week 1: start Day 1"}}`;
+{"title":"","duration":{"mvp":"${targetWeeks}-week journey"},"modules":[{"id":"week-1","week":1,"title":"","goal":"","lessons":["",""],"daily_micro_tasks":["Day 1:","Day 2:","Day 3:","Day 4:","Day 5:","Sunday:"],"practice_tasks":[""],"proof":"","proof_tasks":[""],"resources":[{"title":"","type":"official|free_video_search|practice","source_url":"https://www.youtube.com/results?search_query=","search_query":"","how_to_use":"","proof_to_save":""}],"completion_criteria":"","low_data_alternative":"","voice_whatsapp_version":"","unlock_after_completion":""}],"progress":{"completion_percent":0,"completed_count":0,"proof_ready_count":0,"passport_eligible":false,"placement_unlocked":false,"next_action":"Week 1: start Day 1"}}`;
 }
 
 export default async function handler(req, res) {
@@ -564,7 +600,7 @@ export default async function handler(req, res) {
             'claude-sonnet-4-5',
           ],
           toolSchema: JOURNEY_GENERATOR_TOOL_SCHEMA,
-          system: `You create VidyaSetu learner journeys for Tier-3 India. ${languageInstruction(profile, route.name || route.tradeoff || '')} Use the learner profile and selected pathway, not generic templates. Return valid JSON only.`,
+          system: journeyBuilderSystemPrompt(profile, route, { useTool: false }),
           prompt: buildCompactClaudeJourneyPrompt(profile, route, fallbackJourney),
         })
       : process.env.ENABLE_AI_JOURNEY_LOCALIZATION === 'true' || body.ai_localize === true
@@ -596,7 +632,7 @@ export default async function handler(req, res) {
           'claude-haiku-4-5-20251001',
         ],
         toolSchema: JOURNEY_GENERATOR_TOOL_SCHEMA,
-        system: `You create concise VidyaSetu learner journeys for Tier-3 India. ${languageInstruction(profile, route.name || route.tradeoff || '')} Use the emit_json tool with a top-level modules array. No markdown.`,
+        system: journeyBuilderSystemPrompt(profile, route, { useTool: true }),
         prompt: buildCompactClaudeJourneyPrompt(profile, route, fallbackJourney),
       });
       generated = compactRetry.ok && hasUsableGeneratedModules(compactRetry.data)
@@ -641,21 +677,34 @@ export default async function handler(req, res) {
       progress_json: journey.progress,
       readiness_score: journey.readiness_score,
     });
-    let fallbackPersistence = { ok: false, error: null };
-    if (!persistence.ok && profile.learner_id) {
-      fallbackPersistence = await patchRows('learners', { id: profile.learner_id }, {
+    const now = new Date().toISOString();
+    const reminderState = {
+      ...(profile.reminder_state || profile.memory_reminders || {}),
+      enabled: true,
+      daily_enabled: true,
+      started_at: profile.reminder_state?.started_at || profile.memory_reminders?.started_at || now,
+      started_reason: 'pathway_locked',
+      selected_route_name: route.name || journey.route_name || '',
+      pathway_locked_at: now,
+    };
+    let learnerMemoryPersistence = { ok: false, error: profile.learner_id ? null : 'No learner_id' };
+    if (profile.learner_id) {
+      learnerMemoryPersistence = await patchRows('learners', { id: profile.learner_id }, {
         profile_json: {
           ...profile,
           memory_selected_route: route,
           memory_journey: journey,
           memory_progress: journey.progress || {},
+          reminder_state: reminderState,
+          memory_reminders: reminderState,
+          whatsapp_reminders_enabled: true,
           last_active_tab: 'journey',
           last_action: 'journey_created',
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         },
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       });
-      if (fallbackPersistence.ok) {
+      if (!persistence.ok && learnerMemoryPersistence.ok) {
         persistence = {
           ok: true,
           table: 'learners.profile_json',
@@ -663,6 +712,19 @@ export default async function handler(req, res) {
         };
       }
     }
+    const immediateReminder = profile.learner_id
+      ? await runDailyReminderJob({
+          learnerId: profile.learner_id,
+          limit: 1,
+          forceEnabled: true,
+          dryRun: body.reminder_dry_run === true,
+        })
+      : {
+          ok: false,
+          job: 'daily-reminders',
+          error: 'No learner_id for immediate reminder.',
+          sent: 0,
+        };
 
     return sendJson(res, 200, {
       journey,
@@ -684,7 +746,21 @@ export default async function handler(req, res) {
           ok: persistence.ok,
           table: persistence.table || 'learning_journeys',
           error: persistence.error,
-          fallback: fallbackPersistence.ok ? 'learners.profile_json' : null,
+          fallback: !persistence.ok && learnerMemoryPersistence.ok ? 'learners.profile_json' : null,
+          learner_memory: {
+            ok: learnerMemoryPersistence.ok,
+            table: 'learners.profile_json',
+            error: learnerMemoryPersistence.error || null,
+          },
+        },
+        reminder: {
+          ok: Boolean(immediateReminder.ok),
+          provider: 'wati',
+          sent: Number(immediateReminder.sent || 0),
+          dry_run: Boolean(immediateReminder.dry_run),
+          skipped: Number(immediateReminder.skipped || 0),
+          failed: Number(immediateReminder.failed || 0),
+          error: immediateReminder.error || null,
         },
       },
     });

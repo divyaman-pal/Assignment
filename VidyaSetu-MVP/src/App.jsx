@@ -4,21 +4,26 @@ import {
   Bell,
   BookOpen,
   Briefcase,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Clock3,
   FileText,
   GraduationCap,
   Languages,
   LayoutDashboard,
+  LogOut,
   Lock,
   MessageCircle,
   Mic,
+  RefreshCw,
   Search,
   Send,
   Settings,
   ShieldCheck,
   UserRound,
+  UsersRound,
   Upload,
   Volume2,
   VolumeX,
@@ -656,6 +661,13 @@ function App() {
   const [returning, setReturning] = useState(false);
   const [learnerChoices, setLearnerChoices] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminToken, setAdminToken] = useState('');
+  const [adminData, setAdminData] = useState(null);
+  const [adminQuery, setAdminQuery] = useState('');
+  const [adminStatus, setAdminStatus] = useState('all');
+  const [adminSelectedLearnerId, setAdminSelectedLearnerId] = useState('');
+  const [adminNotice, setAdminNotice] = useState('');
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
   const speechRecognitionRef = useRef(null);
@@ -745,6 +757,69 @@ function App() {
     }
   }
 
+  async function adminLogin(event) {
+    event.preventDefault();
+    await run('Opening admin CRM...', async () => {
+      const data = await api('/api/signup', { action: 'admin_login', password: adminPassword });
+      setAdminToken(data.admin_token);
+      setAdminNotice(data.message || 'Admin session opened.');
+      setMode('admin');
+      await loadAdminCrm(data.admin_token, adminSelectedLearnerId);
+    });
+  }
+
+  async function loadAdminCrm(token = adminToken, learnerId = adminSelectedLearnerId) {
+    if (!token) return null;
+    const data = await api('/api/signup', {
+      action: 'admin_overview',
+      admin_token: token,
+      learner_id: learnerId,
+      limit: 250,
+    });
+    setAdminData(data);
+    if (!learnerId && data.users?.[0]?.learner_id) {
+      setAdminSelectedLearnerId(data.users[0].learner_id);
+    }
+    return data;
+  }
+
+  async function refreshAdminCrm() {
+    await run('Refreshing admin CRM...', async () => {
+      await loadAdminCrm(adminToken, adminSelectedLearnerId);
+      setAdminNotice('Admin CRM refreshed.');
+    });
+  }
+
+  async function selectAdminLearner(learnerId) {
+    setAdminSelectedLearnerId(learnerId);
+    await run('Loading learner detail...', async () => {
+      await loadAdminCrm(adminToken, learnerId);
+    });
+  }
+
+  async function acknowledgeAdminAlert(learnerId, scoreId) {
+    await run('Acknowledging worker alert...', async () => {
+      const data = await api('/api/signup', {
+        action: 'admin_ack_adews',
+        admin_token: adminToken,
+        learner_id: learnerId,
+        score_id: scoreId,
+      });
+      if (!data.ok) throw new Error(data.error || 'Could not acknowledge alert.');
+      setAdminNotice('Worker alert acknowledged.');
+      await loadAdminCrm(adminToken, learnerId);
+    });
+  }
+
+  function closeAdminCrm() {
+    setAdminToken('');
+    setAdminPassword('');
+    setAdminData(null);
+    setAdminSelectedLearnerId('');
+    setAdminNotice('');
+    setMode('landing');
+  }
+
   function hydrateWorkspace(data) {
     const workspace = data.workspace || {};
     const baseProfile = { ...emptyProfile(phone), ...(workspace.profile || data.profile || {}) };
@@ -753,15 +828,22 @@ function App() {
     const nextProfile = profileWithPreferredLanguage(baseProfile, requestedLanguage);
     const starter = starterMessageForLanguage(nextProfile.preferred_language || requestedLanguage);
     const restoredMessages = workspace.messages?.length ? workspace.messages : data.messages?.length ? data.messages : [];
-    const resetMessagesForSelectedLanguage = Boolean(selectedLanguage && storedLanguage && selectedLanguage !== storedLanguage);
+    const restoredJourney = workspace.journey || null;
+    const restoredSelectedRoute = workspace.selectedRoute || null;
+    const restoredProgress = workspace.progress || restoredJourney?.progress || {};
     setProfile(nextProfile);
     setSelectedLanguage(nextProfile.preferred_language || requestedLanguage);
     setUiLanguage(nextProfile.preferred_language || requestedLanguage);
-    setMessages(resetMessagesForSelectedLanguage || !restoredMessages.length ? [starter] : restoredMessages);
+    setMessages(restoredMessages.length ? restoredMessages : [starter]);
     setReturning(Boolean(data.returning));
     setPathway(workspace.pathway || null);
-    setSelectedRoute(workspace.selectedRoute || null);
-    setJourney(workspace.journey || null);
+    setSelectedRoute(restoredSelectedRoute);
+    setJourney(restoredJourney);
+    setLockedRouteKey(
+      restoredJourney?.modules?.length && !isJourneyCompleteForPassport(restoredJourney, restoredProgress)
+        ? routeKey(restoredSelectedRoute)
+        : '',
+    );
     setPassport(workspace.passport || null);
     setMatches(workspace.matches || []);
     setSelectedMatchId(workspace.selectedMatchId || workspace.matches?.[0]?.id || '');
@@ -777,7 +859,7 @@ function App() {
     setCompletedLessons(workspace.completedLessons || {});
     setProofNotes(workspace.proofNotes || {});
     setProofArtifacts(workspace.proofArtifacts || {});
-    setProgressState(workspace.progress || workspace.journey?.progress || {});
+    setProgressState(restoredProgress);
     setLastProof(data.proof || null);
     setLearnerChoices([]);
     setMode('platform');
@@ -1142,12 +1224,12 @@ function App() {
       setError('This pathway is locked until the current learning journey proof is complete.');
       return;
     }
-    setLockedRouteKey(routeKey(route));
     setActiveTab('journey');
     await run(generationWaitCopy(profile.preferred_language || selectedLanguage || uiLanguage, 'journey').loading, async () => {
       const data = await api('/api/journey', { profile, route });
       setSelectedRoute(route);
       setJourney(data.journey);
+      setLockedRouteKey(routeKey(route));
       setCompletedLessons({});
       setProofNotes({});
       setProofArtifacts({});
@@ -1536,6 +1618,39 @@ function App() {
     });
   }
 
+  if (mode === 'adminLogin') {
+    return (
+      <AdminLoginScreen
+        adminLogin={adminLogin}
+        adminPassword={adminPassword}
+        error={error}
+        loading={loading}
+        setAdminPassword={setAdminPassword}
+        setMode={setMode}
+      />
+    );
+  }
+
+  if (mode === 'admin') {
+    return (
+      <AdminCrm
+        acknowledgeAdminAlert={acknowledgeAdminAlert}
+        adminData={adminData}
+        adminNotice={adminNotice}
+        adminQuery={adminQuery}
+        adminSelectedLearnerId={adminSelectedLearnerId}
+        adminStatus={adminStatus}
+        closeAdminCrm={closeAdminCrm}
+        error={error}
+        loading={loading}
+        refreshAdminCrm={refreshAdminCrm}
+        selectAdminLearner={selectAdminLearner}
+        setAdminQuery={setAdminQuery}
+        setAdminStatus={setAdminStatus}
+      />
+    );
+  }
+
   if (mode === 'landing') {
     return (
       <main className="crm-login-shell prototype-login-shell">
@@ -1586,6 +1701,9 @@ function App() {
           </label>
           <button className="crm-primary" disabled={phone.length !== 10 || !selectedLanguage} type="submit">
             Continue
+          </button>
+          <button className="admin-entry-button" onClick={() => setMode('adminLogin')} type="button">
+            <ShieldCheck size={16} /> Admin CRM
           </button>
           {!selectedLanguage && <small className="login-helper-text">Select language first so VidyaSetu does not assume Hindi.</small>}
           {learnerChoices.length > 0 && (
@@ -1745,7 +1863,6 @@ function App() {
               profile={profile}
               selectedRoute={selectedRoute}
               setSelectedRoute={setSelectedRoute}
-              lockSelectedRoute={(route) => setLockedRouteKey(routeKey(route))}
               generatePathway={generatePathway}
               createJourney={createJourney}
               loading={loading}
@@ -2422,6 +2539,333 @@ function genericPathwayTitle(value = '') {
   );
 }
 
+function AdminLoginScreen({ adminLogin, adminPassword, error, loading, setAdminPassword, setMode }) {
+  return (
+    <main className="admin-login-shell">
+      <form className="admin-login-card" onSubmit={adminLogin}>
+        <div className="logo-row">
+          <span className="crm-brand-mark brandmark"><ShieldCheck size={20} /></span>
+          <div>
+            <b>VidyaSetu Admin</b>
+            <small>central CRM for learners, journeys, proof, alerts and outreach</small>
+          </div>
+        </div>
+        <h1>Platform command center</h1>
+        <p>
+          Login as an admin to see who is coming on the app, what stage they are in, which learners need worker
+          support, and what proof or opportunity step is pending.
+        </p>
+        <label className="prototype-phone-login">
+          <span>Admin password</span>
+          <input
+            autoComplete="current-password"
+            onChange={(event) => setAdminPassword(event.target.value)}
+            placeholder="Default demo: vidyasetu-admin"
+            type="password"
+            value={adminPassword}
+          />
+        </label>
+        <button className="crm-primary" disabled={!adminPassword || Boolean(loading)} type="submit">
+          {loading || 'Open admin CRM'}
+        </button>
+        <button className="ghost-button wide" onClick={() => setMode('landing')} type="button">
+          Back to learner app
+        </button>
+        {error && <div className="site-alert">{error}</div>}
+        <small className="login-helper-text">
+          Set ADMIN_PASSWORD in Vercel before real deployment. The default password is only for hackathon demo control.
+        </small>
+      </form>
+    </main>
+  );
+}
+
+function AdminCrm({
+  acknowledgeAdminAlert,
+  adminData,
+  adminNotice,
+  adminQuery,
+  adminSelectedLearnerId,
+  adminStatus,
+  closeAdminCrm,
+  error,
+  loading,
+  refreshAdminCrm,
+  selectAdminLearner,
+  setAdminQuery,
+  setAdminStatus,
+}) {
+  const users = filterAdminCrmUsers(adminData?.users || [], adminQuery, adminStatus);
+  const selected = adminData?.selected || adminData?.users?.find((user) => user.learner_id === adminSelectedLearnerId) || null;
+  const metrics = adminData?.metrics || {};
+  const metricCards = [
+    { label: 'Learners', value: metrics.learners || 0, detail: 'total profiles', Icon: UsersRound },
+    { label: 'Journeys', value: metrics.active_journeys || 0, detail: 'active learning plans', Icon: BookOpen },
+    { label: 'Passports', value: metrics.passports_ready || 0, detail: 'proof ready', Icon: ClipboardList },
+    { label: 'Worker alerts', value: metrics.worker_alerts || 0, detail: 'need action', Icon: Bell },
+    { label: 'Matches', value: metrics.matches || 0, detail: 'opportunity records', Icon: Search },
+    { label: 'Languages', value: metrics.languages || 0, detail: 'learner languages', Icon: Languages },
+  ];
+
+  return (
+    <main className="admin-crm-shell">
+      <aside className="admin-crm-sidebar">
+        <div className="crm-sidebar-logo">
+          <span className="crm-brand-mark"><ShieldCheck size={15} /></span>
+          <div>
+            <p>VidyaSetu</p>
+            <small>Admin CRM</small>
+          </div>
+        </div>
+        <button className="primary-button wide" onClick={refreshAdminCrm} type="button">
+          <RefreshCw size={16} /> Refresh data
+        </button>
+        <button className="ghost-button wide" onClick={closeAdminCrm} type="button">
+          <LogOut size={16} /> Exit admin
+        </button>
+        <div className="admin-source-card">
+          <b>Data source</b>
+          <span>Learners, conversations, journeys, passports, matches, outreach and ADEWS are read from the app tables.</span>
+          {adminData?.demo_auth && <small>Demo admin password active. Configure ADMIN_PASSWORD for production.</small>}
+        </div>
+      </aside>
+
+      <section className="admin-crm-main">
+        <header className="admin-crm-header">
+          <div>
+            <p className="eyebrow">Central operations</p>
+            <h1>Admin CRM</h1>
+            <p>See learner intake, journey progress, proof readiness, risk alerts, reminders and outreach from one place.</p>
+          </div>
+          <span className="admin-live-pill"><Clock3 size={15} /> {adminData?.generated_at ? prettyDate(adminData.generated_at) : 'Not loaded'}</span>
+        </header>
+
+        {loading && <div className="memory-banner">{loading}</div>}
+        {adminNotice && <div className="memory-banner">{adminNotice}</div>}
+        {error && <div className="site-alert">{error}</div>}
+
+        <div className="admin-metric-grid">
+          {metricCards.map(({ label, value, detail, Icon }) => (
+            <div className="admin-metric-card" key={label}>
+              <Icon size={20} />
+              <b>{value}</b>
+              <span>{label}</span>
+              <small>{detail}</small>
+            </div>
+          ))}
+        </div>
+
+        <div className="admin-workspace-grid">
+          <section className="admin-list-panel">
+            <div className="admin-panel-head">
+              <div>
+                <h2>Learners</h2>
+                <p>{users.length} visible after filters</p>
+              </div>
+              <span>{metrics.profile_complete || 0} complete profiles</span>
+            </div>
+            <div className="admin-filter-row">
+              <input
+                onChange={(event) => setAdminQuery(event.target.value)}
+                placeholder="Search name, district, goal, language"
+                value={adminQuery}
+              />
+              <select onChange={(event) => setAdminStatus(event.target.value)} value={adminStatus}>
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="journey">Journey active</option>
+                <option value="passport">Passport ready</option>
+                <option value="risk">Risk/watch</option>
+                <option value="needs_worker">Needs worker</option>
+              </select>
+            </div>
+            <div className="admin-learner-list">
+              {users.map((user) => (
+                <button
+                  className={user.learner_id === selected?.learner_id ? 'admin-learner-row active' : 'admin-learner-row'}
+                  key={user.learner_id}
+                  onClick={() => selectAdminLearner(user.learner_id)}
+                  type="button"
+                >
+                  <span className={adminRiskClass(user)}>{user.needs_worker ? '!' : user.name.slice(0, 1).toUpperCase()}</span>
+                  <div>
+                    <strong>{user.name}</strong>
+                    <small>{user.goal} | {user.location}</small>
+                    <em>{user.stage} - {user.journey_progress || 0}% journey - {user.language}</em>
+                  </div>
+                </button>
+              ))}
+              {!users.length && <EmptyState text="No learners match this filter yet." />}
+            </div>
+          </section>
+
+          <section className="admin-detail-panel">
+            {!selected ? (
+              <EmptyState text="Select a learner to review profile, journey, alerts and outreach." />
+            ) : (
+              <AdminLearnerDetail selected={selected} acknowledgeAdminAlert={acknowledgeAdminAlert} />
+            )}
+          </section>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function AdminLearnerDetail({ selected, acknowledgeAdminAlert }) {
+  const facts = [
+    ['Phone', selected.phone_mask],
+    ['Language', selected.language],
+    ['Education', selected.education],
+    ['Daily time', selected.time_available],
+    ['Stage', selected.stage],
+    ['Updated', prettyDate(selected.updated_at)],
+  ];
+  const progress = selected.journey?.progress || {};
+  const modules = selected.journey?.modules || [];
+  return (
+    <div className="admin-detail-content">
+      <div className="admin-detail-hero">
+        <div>
+          <p className="eyebrow">Learner profile</p>
+          <h2>{selected.name}</h2>
+          <p>{selected.goal}</p>
+        </div>
+        <span className={adminRiskClass(selected)}>{selected.risk_level}</span>
+      </div>
+
+      <div className="admin-fact-grid">
+        {facts.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <b>{value || 'pending'}</b>
+          </div>
+        ))}
+      </div>
+
+      <div className="admin-progress-strip">
+        <div>
+          <span>Journey</span>
+          <b>{selected.journey_progress || 0}%</b>
+        </div>
+        <div>
+          <span>Proof</span>
+          <b>{selected.proof_ready_count || 0}/{selected.proof_required_count || 0}</b>
+        </div>
+        <div>
+          <span>Passport</span>
+          <b>{selected.passport_ready ? 'Ready' : 'Locked'}</b>
+        </div>
+        <div>
+          <span>Risk</span>
+          <b>{selected.risk || 0}</b>
+        </div>
+      </div>
+
+      {selected.alert && (
+        <div className={selected.needs_worker ? 'admin-alert-card urgent' : 'admin-alert-card'}>
+          <div>
+            <strong>{selected.needs_worker ? 'Worker action needed' : 'ADEWS status'}</strong>
+            <p>{selected.alert.fired_at ? `Fired ${prettyDate(selected.alert.fired_at)}` : 'Monitoring only'} | Risk {selected.alert.risk}</p>
+          </div>
+          <button
+            className="primary-button"
+            disabled={selected.alert.worker_ack}
+            onClick={() => acknowledgeAdminAlert(selected.learner_id, selected.alert.id)}
+            type="button"
+          >
+            <CheckCircle2 size={16} /> {selected.alert.worker_ack ? 'Acknowledged' : 'Mark handled'}
+          </button>
+        </div>
+      )}
+
+      <div className="admin-two-col">
+        <div className="admin-mini-panel">
+          <h3>Next action</h3>
+          <p>{selected.next_action || 'No next action saved yet.'}</p>
+          <small>Reminder: {selected.reminder_status || 'not sent'}</small>
+        </div>
+        <div className="admin-mini-panel">
+          <h3>Opportunity state</h3>
+          <p>{selected.match_count || 0} matches, {selected.outreach_count || 0} outreach records</p>
+          <small>Outreach: {selected.outreach_status || 'none'}</small>
+        </div>
+      </div>
+
+      <div className="admin-mini-panel">
+        <h3>Learning journey</h3>
+        <p>{selected.journey?.title || selected.journey_title || 'Journey not created yet.'}</p>
+        {progress.next_action && <small>{progress.next_action}</small>}
+        <div className="admin-module-list">
+          {modules.slice(0, 8).map((module) => (
+            <span key={module.id || module.title}>
+              W{module.week || '-'}: {module.title || 'Module'} {module.proof ? `- proof: ${module.proof}` : ''}
+            </span>
+          ))}
+          {!modules.length && <span>No weekly modules yet.</span>}
+        </div>
+      </div>
+
+      <div className="admin-two-col">
+        <div className="admin-mini-panel">
+          <h3>Recent conversation</h3>
+          <div className="admin-message-list">
+            {(selected.conversation || []).slice(-5).map((message, index) => (
+              <p key={`${message.role}-${index}`}><b>{message.role}:</b> {message.content}</p>
+            ))}
+            {!selected.conversation?.length && <small>No conversation restored yet.</small>}
+          </div>
+        </div>
+        <div className="admin-mini-panel">
+          <h3>Proof package</h3>
+          {selected.passport ? (
+            <p>QR {selected.passport.qr_token} | {selected.passport.cert_count} cert rows | {selected.passport.informal_count} skill rows</p>
+          ) : (
+            <p>Skill Passport is locked until journey proof is complete.</p>
+          )}
+          <small>{selected.qr_token || 'No QR token yet'}</small>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function filterAdminCrmUsers(users = [], query = '', status = 'all') {
+  const needle = String(query || '').trim().toLowerCase();
+  const desired = String(status || 'all').toLowerCase();
+  return users.filter((user) => {
+    const statusOk =
+      desired === 'all' ||
+      (desired === 'active' && user.stage !== 'new') ||
+      (desired === 'journey' && user.journey_active) ||
+      (desired === 'passport' && user.passport_ready) ||
+      (desired === 'risk' && ['risk', 'watch'].includes(user.risk_level)) ||
+      (desired === 'needs_worker' && user.needs_worker);
+    if (!statusOk) return false;
+    if (!needle) return true;
+    return [user.name, user.goal, user.location, user.language, user.education, user.learner_id]
+      .some((value) => String(value || '').toLowerCase().includes(needle));
+  });
+}
+
+function prettyDate(value = '') {
+  if (!value) return 'not recorded';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 16);
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function adminRiskClass(user = {}) {
+  if (user.needs_worker || user.risk_level === 'risk') return 'risk-chip risk';
+  if (user.risk_level === 'watch') return 'risk-chip watch';
+  return 'risk-chip normal';
+}
+
 function cleanPathwayTarget(value = '') {
   return uiText(value)
     .replace(/\b(skill|career|study)?\s*pathway\s*exploration\b/gi, ' ')
@@ -2486,7 +2930,7 @@ function displayPathwayTitle(route = {}, profile = {}, index = 0) {
 
 function displayPathwayBrief(route = {}, profile = {}, title = '') {
   const raw = uiText(route?.learner_summary || route?.tradeoff || route?.why_this_fits_you);
-  if (raw && raw.length <= 150 && !genericPathwayTitle(raw) && !/starts from|learner already|goal:|education:|mobility:/i.test(raw)) {
+  if (raw && raw.length <= 260 && !genericPathwayTitle(raw) && !/starts from|learner already|goal:|education:|mobility:/i.test(raw)) {
     return raw;
   }
   const target = displayPathwayTarget(profile, route);
@@ -2673,7 +3117,6 @@ function PathwaysTab({
   profile = {},
   selectedRoute,
   setSelectedRoute,
-  lockSelectedRoute,
   generatePathway,
   createJourney,
   loading = '',
@@ -2769,25 +3212,47 @@ function PathwaysTab({
     }, 350);
     return () => window.clearTimeout(timer);
   }, [narrationText, narrationProfile.preferred_language, speakReply, voiceKey]);
-  const routeChoiceStrip = routes.length > 1 && (
-    <div className="reslinks route-choice-strip route-choice-strip-top">
+  const lockCreateLabel =
+    t.pathway.lockCreateCta ||
+    (/(hindi|hinglish)/i.test(uiText(profile.preferred_language || profile.language || ''))
+      ? 'Is raste ko lock karke meri journey banao'
+      : 'Lock this path and create my journey');
+  const routeAccordion = routes.length > 0 && (
+    <div className="pathway-accordion-list">
       {routes.map((route, index) => {
         const selected = sameRoute(activeRoute, route);
+        const lockedOut = pathwayLocked && !selected;
+        const title = displayPathwayTitle(route, profile, index);
+        const summary = displayPathwayBrief(route, profile, title);
         return (
-          <button
-            className={selected ? 'chip-s active' : 'chip-s'}
-            disabled={pathwayLocked && !selected}
-            key={uiText(route.id, `route-${index}`)}
-            onClick={() => {
-              if (!pathwayLocked) {
-                setSelectedRoute(route);
-                lockSelectedRoute?.(route);
-              }
-            }}
-            type="button"
-          >
-            {displayPathwayTitle(route, profile, index)}
-          </button>
+          <article className={selected ? 'pathway-option-card active' : 'pathway-option-card'} key={uiText(route.id, `route-${index}`)}>
+            <button
+              className="pathway-option-header"
+              disabled={lockedOut}
+              onClick={() => {
+                if (!lockedOut) setSelectedRoute(route);
+              }}
+              type="button"
+            >
+              <span>{optionLabel(index)}</span>
+              <strong>{title}</strong>
+              <ChevronRight aria-hidden="true" className={selected ? 'open' : ''} size={16} />
+            </button>
+            {selected && (
+              <div className="pathway-option-expanded">
+                <p>{summary}</p>
+                <button
+                  className="primary-button pathway-lock-button"
+                  disabled={journeyLocked}
+                  onClick={() => createJourney(route)}
+                  type="button"
+                >
+                  <Lock size={18} />
+                  {journeyLocked ? (t.pathway.lockedCta || 'Continue current journey') : lockCreateLabel}
+                </button>
+              </div>
+            )}
+          </article>
         );
       })}
     </div>
@@ -2796,8 +3261,8 @@ function PathwaysTab({
     <div className="prototype-screen pathway-screen">
       <GenerationWaitCard language={profile.preferred_language || profile.language} loading={loading} t={t} type="pathway" />
       {!routes.length && <EmptyState text={t.pathway.empty} />}
-      {routeChoiceStrip}
-      <div className="card pathway-detail-card">
+      {routeAccordion}
+      <div className="card pathway-detail-card pathway-expanded-detail">
         {!activeRoute && <p>{t.pathway.generateAfterProfile}</p>}
         {pathway?.result_type === 'human_callback' && pathway?.callback_reason && (
           <div className="pathway-worker-note">
@@ -2822,9 +3287,6 @@ function PathwaysTab({
             </button>
           </div>
           <div className="pathway-card-actions">
-            <button className="primary-button" disabled={journeyLocked} onClick={() => createJourney(activeRoute)}>
-              {journeyLocked ? (t.pathway.lockedCta || 'Continue current journey') : t.btn.startThisWeek}
-            </button>
             {firstSource && (
               <a className="ghost-button" href={firstSource.url} rel="noreferrer" target="_blank">
                 {t.btn.open}: {firstSource.title}

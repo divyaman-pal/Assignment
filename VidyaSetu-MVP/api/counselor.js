@@ -55,6 +55,8 @@ function latestIsBackgroundContext(latestText = '') {
 
 function mergeLearnerGoal(baseGoal = {}, nextGoal = {}, latestText = '') {
   if (!hasValue(nextGoal)) return baseGoal;
+  if (isGenericTrainingChoice(latestText) && isGenericTrainingGoal(nextGoal)) return baseGoal || null;
+  if (isGenericBusinessChoice(latestText) && isGenericBusinessGoal(nextGoal)) return baseGoal || null;
   if (!baseGoal || isGenericGoal(baseGoal)) return nextGoal;
   if (isGenericGoal(nextGoal)) return baseGoal;
   if (baseGoal.intent === 'job' && nextGoal.type === 'skill_pathway_exploration' && !latestExplicitGoalSwitch(latestText)) return baseGoal;
@@ -81,8 +83,8 @@ function mergeProfile(base = {}, update = {}, { latestText = '' } = {}) {
     if (['aspirations', 'skills', 'content_preferences', 'support_needs'].includes(key)) {
       const baseValues = Array.isArray(base[key]) ? base[key] : [];
       const nextValues = Array.isArray(value) ? value : [];
-      const mergedValues = [...baseValues, ...nextValues].map((item) => String(item).trim()).filter(Boolean);
-      if (mergedValues.length) merged[key] = [...new Set(mergedValues)];
+      const mergedValues = meaningfulArraySignals([...baseValues, ...nextValues]);
+      merged[key] = [...new Set(mergedValues)];
       return;
     }
     if (hasValue(value)) merged[key] = value;
@@ -103,7 +105,64 @@ function meaningfulArraySignals(values = []) {
     .map((item) => String(item || '').trim())
     .filter(Boolean)
     .filter((item) => !/^(?:mera|my|ab|now)?\s*(?:pathway|pathwat|raasta|rasta|roadmap|plan|next step)(?:\s+banao|\s+build|\s+make)?$/i.test(item))
-    .filter((item) => !/\b(?:pathway|pathwat|raasta|rasta|roadmap)\s+(?:banao|build|make)\b/i.test(item));
+    .filter((item) => !/\b(?:pathway|pathwat|raasta|rasta|roadmap)\s+(?:banao|build|make)\b/i.test(item))
+    .filter((item) => !isGenericSkillSignal(item))
+    .filter((item) => !isGenericBusinessSignal(item));
+}
+
+function isGenericSkillSignal(value = '') {
+  return /^(?:work skill|learning work skill|learn(?:ing)?\s+(?:a\s+)?work skill|skill|skill training|vocational training|learn(?:ing)?\s+(?:a\s+)?skill|skill learning|kaam ka hunar|hunar|hunar seekhna|hunar sikhna|kaam seekhna|kaam sikhna|काम का हुनर|हुनर|हुनर सीखना|कौशल|कौशल सीखना|प्रशिक्षण|स्किल सीखना)$/i.test(
+    String(value || '').trim(),
+  );
+}
+
+function isGenericTrainingChoice(value = '') {
+  return isGenericSkillSignal(value);
+}
+
+function isGenericBusinessSignal(value = '') {
+  const text = String(value || '').trim();
+  return /^(?:small business|starting a small business|start(?:ing)? business|business|business setup|small enterprise|self[-\s]?employment|own business|apna kaam|apna business|chhota vyapar|chota vyapar|chhota business|chota business|vyapar|vyavsay|dukan kholna|shop kholna|छोटा व्यापार|छोटा व्यवसाय|व्यापार|व्यवसाय|बिजनेस|बिज़नेस|कारोबार|धंधा)$/i.test(text);
+}
+
+function isGenericBusinessChoice(value = '') {
+  return isGenericBusinessSignal(value);
+}
+
+function isGenericTrainingGoal(goal = {}) {
+  return Boolean(
+    goal?.intent === 'training' &&
+      goal?.type === 'vocational_training' &&
+      /^(?:vocational training|work skill|skill training|learning work skill)$/i.test(String(goal.label || '').trim()),
+  );
+}
+
+function isGenericBusinessGoal(goal = {}) {
+  return Boolean(
+    goal?.intent === 'self_employment' &&
+      goal?.type === 'self_employment_enterprise' &&
+      /^(?:self-employment enterprise setup|small business setup|business setup|starting a small business|small enterprise setup)$/i.test(
+        String(goal.label || '').trim(),
+      ),
+  );
+}
+
+function markPendingTrainingLane(profile = {}) {
+  return {
+    ...profile,
+    learner_goal: null,
+    pending_goal_intent: 'training',
+    pending_goal_label: 'work skill learning',
+  };
+}
+
+function markPendingBusinessLane(profile = {}) {
+  return {
+    ...profile,
+    learner_goal: null,
+    pending_goal_intent: 'business',
+    pending_goal_label: 'small business',
+  };
 }
 
 function applyLatestSignals(profile = {}, latestText = '') {
@@ -223,6 +282,22 @@ function applyGeneralGoal(profile = {}, latestText = '') {
   const extractedGoal =
     extractedGoalFromText?.intent && extractedGoalFromText.intent !== 'unknown' ? extractedGoalFromText : inferredGoal;
   const existingGoal = profile.learner_goal;
+  if (isGenericTrainingChoice(latestText) && (!existingGoal || isGenericGoal(existingGoal) || isGenericTrainingGoal(existingGoal))) {
+    return markPendingTrainingLane({
+      ...profile,
+      academic_goal: null,
+      aspirations: meaningfulArraySignals(profile.aspirations || []),
+      skills: meaningfulArraySignals(profile.skills || []),
+    });
+  }
+  if (isGenericBusinessChoice(latestText) && (!existingGoal || isGenericGoal(existingGoal) || isGenericBusinessGoal(existingGoal))) {
+    return markPendingBusinessLane({
+      ...profile,
+      academic_goal: null,
+      aspirations: meaningfulArraySignals(profile.aspirations || []),
+      skills: meaningfulArraySignals(profile.skills || []),
+    });
+  }
   const hasMeaningfulExtractedGoal = Boolean(extractedGoal?.intent && extractedGoal.intent !== 'unknown');
   const latestExplicitChange =
     /actually|instead|change(?:d)?|\bab\b|now|also|too|sirf|only|bas|but|first|pehle|career|job|role|full.?time|internship|placement|training|course|naukri|नौकरी|रोजगार|प्लेसमेंट|पहले|बट/i.test(
@@ -250,6 +325,8 @@ function applyGeneralGoal(profile = {}, latestText = '') {
   const next = {
     ...profile,
     learner_goal: goal,
+    pending_goal_intent: goal?.intent && !isGenericTrainingGoal(goal) && !isGenericBusinessGoal(goal) ? '' : profile.pending_goal_intent,
+    pending_goal_label: goal?.intent && !isGenericTrainingGoal(goal) && !isGenericBusinessGoal(goal) ? '' : profile.pending_goal_label,
   };
   if (goal?.intent && goal.intent !== 'study') {
     next.academic_goal = null;
@@ -285,6 +362,8 @@ function exactGoalFromProfileSignals(profile = {}, latestText = '') {
   const directGoal = inferLearnerGoal(signalText, {
     aspirations: [...(profile.aspirations || []), ...(profile.skills || [])],
   });
+  if (isGenericTrainingChoice(latestText) && isGenericTrainingGoal(directGoal)) return null;
+  if (isGenericBusinessChoice(latestText) && isGenericBusinessGoal(directGoal)) return null;
   const officeJobSignal =
     /computer basics|typing|data entry|computer operator|front desk|reception|billing|office assistant|office job|local office|bpo|call center|customer service|retail billing/i.test(
       signalText,
@@ -323,9 +402,17 @@ function preserveExactGoalFromSignals(profile = {}, latestText = '', previousPro
   const shouldRestorePrevious =
     previousGoal?.intent &&
     previousGoal.intent !== 'unknown' &&
+    !isGenericTrainingGoal(previousGoal) &&
+    !isGenericBusinessGoal(previousGoal) &&
     (isGenericGoal(currentGoal) || currentGoal.type === 'skill_pathway_exploration') &&
     !latestExplicitGoalSwitch(latestText);
   const learnerGoal = shouldUseExact ? exactGoal : shouldRestorePrevious ? previousGoal : currentGoal;
+  const hasSpecificLearnerGoal = Boolean(
+    learnerGoal?.intent &&
+      learnerGoal.intent !== 'unknown' &&
+      !isGenericTrainingGoal(learnerGoal) &&
+      !isGenericBusinessGoal(learnerGoal),
+  );
   const aspirations = [...(profile.aspirations || [])];
   if (learnerGoal?.type === 'local_office_job') {
     ['computer basics', 'typing', 'customer service'].forEach((item) => {
@@ -339,6 +426,8 @@ function preserveExactGoalFromSignals(profile = {}, latestText = '', previousPro
   return {
     ...profile,
     learner_goal: learnerGoal,
+    pending_goal_intent: hasSpecificLearnerGoal ? '' : profile.pending_goal_intent,
+    pending_goal_label: hasSpecificLearnerGoal ? '' : profile.pending_goal_label,
     aspirations: aspirations.length ? aspirations : profile.aspirations,
     academic_goal: learnerGoal?.intent && learnerGoal.intent !== 'study' ? null : profile.academic_goal,
   };
@@ -626,12 +715,18 @@ function profileCompleteness(profile = {}) {
   return { missing, complete: missing.length === 0 };
 }
 
+function requireEducation(fields = []) {
+  return [...new Set(['class_level', ...fields])];
+}
+
 function hasClearLearnerGoal(profile = {}) {
   const goal = profile.learner_goal || {};
   return Boolean(
     goal.intent &&
       goal.intent !== 'unknown' &&
-      !['open_counseling', 'goal_clarification_needed'].includes(goal.type),
+      !['open_counseling', 'goal_clarification_needed'].includes(goal.type) &&
+      !isGenericTrainingGoal(goal) &&
+      !isGenericBusinessGoal(goal),
   );
 }
 
@@ -681,12 +776,8 @@ function fieldHasValue(profile = {}, field) {
     ]
       .map((item) => String(item || '').trim())
       .filter(Boolean)
-      .filter(
-        (item) =>
-          !/^(?:work skill|kaam ka hunar|hunar|skill|skill training|vocational training|learn skill|learn a skill|skill learning|काम का हुनर|हुनर|हुनर सीखना|कौशल|कौशल सीखना|प्रशिक्षण|स्किल सीखना)$/i.test(
-            item,
-          ),
-      );
+      .filter((item) => !isGenericSkillSignal(item))
+      .filter((item) => !isGenericBusinessSignal(item));
     return specificSignals.length > 0;
   }
   if (field === 'mobility_signal') {
@@ -707,30 +798,42 @@ function fieldHasValue(profile = {}, field) {
 }
 
 function requiredFieldsForProfile(profile = {}) {
+  if (isGenericTrainingGoal(profile.learner_goal)) {
+    return ['skill_signal', 'class_level'];
+  }
+  if (profile.pending_goal_intent === 'training' && !fieldHasValue(profile, 'skill_signal')) {
+    return ['skill_signal', 'class_level'];
+  }
+  if (isGenericBusinessGoal(profile.learner_goal)) {
+    return ['skill_signal', 'class_level'];
+  }
+  if (profile.pending_goal_intent === 'business' && !fieldHasValue(profile, 'skill_signal')) {
+    return ['skill_signal', 'class_level'];
+  }
   if (!hasClearLearnerGoal(profile)) {
     return ['goal_signal'];
   }
   const goalType = profile.learner_goal?.type || 'goal_clarification_needed';
   const lowEducation = lowEducationProfile(profile);
   if (['school_study_support', 'school_exam_prep', 'entrance_exam_prep'].includes(goalType)) {
-    return ['class_level', 'academic_subjects', 'time_available', 'phone_access'];
+    return requireEducation(['academic_subjects', 'time_available', 'phone_access']);
   }
   if (['college_career', 'college_internship_project'].includes(goalType)) {
-    return ['class_level', 'college_goal', ...(profile.learner_goal?.needs_location_for_offline ? ['location'] : [])];
+    return requireEducation(['college_goal', ...(profile.learner_goal?.needs_location_for_offline ? ['location'] : [])]);
   }
   if (['job_search_only', 'formal_skill_job_search', 'college_job_search', 'local_office_job'].includes(goalType)) {
-    return ['skill_signal', ...(profile.relocation_preference ? [] : ['location']), 'mobility_signal'];
+    return requireEducation(['skill_signal', ...(profile.relocation_preference ? [] : ['location']), 'mobility_signal']);
   }
   if (['informal_skill_validation', 'vocational_training', 'skill_pathway_exploration'].includes(goalType)) {
-    return ['location', 'skill_signal', 'time_available', 'mobility_signal'];
+    return requireEducation(['location', 'skill_signal', 'time_available', 'mobility_signal']);
   }
   if (goalType === 'self_employment_enterprise' || profile.learner_goal?.intent === 'self_employment') {
-    return ['location', 'skill_signal', 'time_available', 'mobility_signal', 'phone_access'];
+    return requireEducation(['location', 'skill_signal', 'time_available', 'mobility_signal', 'phone_access']);
   }
   if (lowEducation) {
-    return ['skill_signal', 'location', 'time_available', 'mobility_signal'];
+    return requireEducation(['skill_signal', 'location', 'time_available', 'mobility_signal']);
   }
-  return ['class_level', 'skill_signal'];
+  return requireEducation(['skill_signal']);
 }
 
 function nextQuestionForMissing(missing = [], profile = {}, latestText = '') {
@@ -760,6 +863,8 @@ function nextBestIntakeField(missing = [], profile = {}) {
   const lowEducation = lowEducationProfile(profile);
   if (!profile.name) return 'name';
   if (missing.includes('goal_signal')) return 'goal_signal';
+  if ((isGenericTrainingGoal(goal) || profile.pending_goal_intent === 'training') && missing.includes('skill_signal')) return 'skill_signal';
+  if ((isGenericBusinessGoal(goal) || profile.pending_goal_intent === 'business') && missing.includes('skill_signal')) return 'skill_signal';
   if (missing.includes('class_level') && !lowEducation) return 'class_level';
   if (missing.includes('academic_subjects')) return 'academic_subjects';
   if (missing.includes('college_goal')) return 'college_goal';
@@ -818,6 +923,9 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     if (lowEducationProfile(profile, latestText)) {
       return lowEducationLine(profile, latestText, 'goal');
     }
+    if (profile.pending_goal_intent === 'business' || isGenericBusinessGoal(goal)) {
+      return exactBusinessQuestion(profile, latestText);
+    }
     if (goal.intent === 'self_employment' || goal.type === 'self_employment_enterprise') {
       return localizedLine(profile, latestText, {
         English: 'For this small business, what do you already have: space, small budget, buyer contact, supplier contact, or none yet?',
@@ -837,7 +945,10 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
         Marathi: 'Sagleat aadhi target role kiwa skill sanga. Proof asel tar sanga: resume, certificate, project, sample work, kiwa experience.',
       });
     }
-    if (goal.intent === 'training') {
+    if (goal.intent === 'training' || profile.pending_goal_intent === 'training') {
+      return exactSkillQuestion(profile, latestText);
+    }
+    if (goal.intent === 'training' || profile.pending_goal_intent === 'training') {
       return localizedLine(profile, latestText, {
         English: 'Which skill or course do you want to learn first?',
         Hinglish: 'Sabse pehle kaunsa hunar ya training seekhna chahte hain?',
@@ -873,6 +984,40 @@ function oneThingQuestion(field = '', profile = {}, latestText = '') {
     });
   }
   return nextQuestionForMissing([field], profile, latestText);
+}
+
+function exactSkillQuestion(profile = {}, latestText = '') {
+  return localizedLine(profile, latestText, {
+    English: 'Which exact skill do you want to learn first: food work, mobile repair, tailoring, computer work, beauty, plumbing, electrical work, or something else?',
+    Hinglish: 'Kaunsa exact hunar seekhna hai: food ka kaam, mobile repair, silai, computer ka kaam, beauty, plumbing, electrical kaam, ya kuch aur?',
+    Hindi: 'कौन-सा exact हुनर सीखना है: food का काम, mobile repair, सिलाई, computer का काम, beauty, plumbing, electrical काम, या कुछ और?',
+    Marathi: 'Nakki konta skill shikaycha aahe: food work, mobile repair, silai, computer work, beauty, plumbing, electrical kaam, ki kahi dusra?',
+    Odia: 'Keun exact skill shikhibaku chahanti: food work, mobile repair, silai, computer work, beauty, plumbing, electrical kaam, na au kichhi?',
+    Bengali: 'Kon exact skill shikhte chan: food work, mobile repair, silai, computer work, beauty, plumbing, electrical kaaj, na onno kichhu?',
+    Tamil: 'Endha exact skill kathukkanum: food work, mobile repair, tailoring, computer work, beauty, plumbing, electrical work, alladhu vera edhavathu?',
+    Telugu: 'Ye exact skill nerchukovali: food work, mobile repair, tailoring, computer work, beauty, plumbing, electrical work, leda vere edaina?',
+    Kannada: 'Yava exact skill kaliyabeku: food work, mobile repair, tailoring, computer work, beauty, plumbing, electrical work, athava bere enadaru?',
+    Malayalam: 'Eth exact skill padikkanam: food work, mobile repair, tailoring, computer work, beauty, plumbing, electrical work, allenkil vere enthenkilum?',
+    Gujarati: 'Kayo exact skill shikhvo chhe: food work, mobile repair, silai, computer work, beauty, plumbing, electrical kaam, ke biju kai?',
+    Punjabi: 'Kehra exact skill sikhna hai: food work, mobile repair, silai, computer work, beauty, plumbing, electrical kaam, ya hor kujh?',
+  });
+}
+
+function exactBusinessQuestion(profile = {}, latestText = '') {
+  return localizedLine(profile, latestText, {
+    English: 'Which exact small business do you want to start: mushroom, poultry, tiffin/food, tailoring, a shop, goat/dairy, or something else?',
+    Hinglish: 'Kaunsa exact chhota vyapar shuru karna hai: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, ya kuch aur?',
+    Hindi: 'Kaunsa exact chhota vyapar shuru karna hai: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, ya kuch aur?',
+    Marathi: 'Nakki konta chhota business suru karaycha aahe: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, ki kahi dusra?',
+    Odia: 'Keun exact chhota business arambha karibaku chahanti: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, na au kichhi?',
+    Bengali: 'Kon exact chhoto business shuru korte chan: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, na onno kichhu?',
+    Tamil: 'Endha exact siru business start panna virumburinga: mushroom, poultry, tiffin/food, tailoring, shop, goat/dairy, alladhu vera edhavathu?',
+    Telugu: 'Ye exact chinna business start cheyyali: mushroom, poultry, tiffin/food, tailoring, shop, goat/dairy, leda vere edaina?',
+    Kannada: 'Yava exact chikka business start madabeku: mushroom, poultry, tiffin/food, tailoring, shop, goat/dairy, athava bere enadaru?',
+    Malayalam: 'Eth exact cheriya business thudanganam: mushroom, poultry, tiffin/food, tailoring, shop, goat/dairy, allenkil vere enthenkilum?',
+    Gujarati: 'Kayo exact nano business sharu karvo chhe: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, ke biju kai?',
+    Punjabi: 'Kehra exact chhota business shuru karna hai: mushroom, poultry, tiffin/food, silai, dukan, goat/dairy, ya hor kujh?',
+  });
 }
 
 function directAnswerForLatest(profile = {}, latestText = '') {
@@ -1450,7 +1595,10 @@ function avoidRepeat(reply = '', previous = '', profile = {}, latestText = '') {
 function fallbackCounselor({ messages, profile }) {
   const text = messages.filter((message) => message.role === 'user').map((message) => message.content).join('\n');
   const latestText = latestUserContent(messages);
-  const extracted = applyLowEducationSignal(mergeProfile(profile, fallbackProfileFromTranscript(text), { latestText }), latestText);
+  const extracted = applyGeneralGoal(
+    applyLowEducationSignal(mergeProfile(profile, fallbackProfileFromTranscript(text), { latestText }), latestText),
+    latestText,
+  );
   const { missing, complete } = profileCompleteness(extracted);
   const nextQuestion = nextQuestionForMissing(missing, extracted, latestText);
 
@@ -1527,8 +1675,8 @@ export default async function handler(req, res) {
     const generated = await callClaudeJson({
       fallback,
       maxTokens: 420,
-      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. When asking about education, use learner words in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If the selected or detected learner language is Odia, Bengali, Tamil, Marathi, Telugu, Kannada, Malayalam, Gujarati, or Punjabi, do not start with Hinglish/Hindi filler such as "Theek hai", "jankari rakh li", "save kar liya", or "samajh gaya"; use that language and script for the main reply. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to press the pathway/rasta button and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
-      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Do not use Hinglish/Hindi acknowledgements like Theek hai, jankari rakh li, save kar liya, or samajh gaya unless the learner language is Hindi/Hinglish. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If asking education, say it simply in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If enough information is available, say the next step briefly and tell the learner to press the pathway/rasta button. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
+      system: `You are VidyaSetu, a 24/7 multilingual India career and learning counselor for school learners, entrance-exam aspirants, college learners, formal job seekers, informal workers, vocational trainees, and self-employment/enterprise aspirants. ${languageInstruction(profile, latestText)} Detect the learner goal before asking questions. If the learner says only that they want to learn a skill/work skill/training, do not repeat the broad goal menu; ask which exact skill they mean, with simple examples like food work, mobile repair, tailoring, computer work, beauty, plumbing, or electrical work. If the learner says only small business/business/vyapar/self-employment, do not repeat the broad goal menu; ask which exact small business they mean, with simple examples like mushroom, poultry, tiffin/food, tailoring, shop, goat, or dairy. Always collect education background before marking the profile ready. The latest user message wins when it clearly changes goal. Intake must feel like a counselor conversation, not a form or chatbot demo: answer the learner's direct question first, then ask only one next-best question. Keep the spoken reply short: maximum two short sentences. Do not summarize the whole profile unless the learner explicitly asks for a summary. Do not use markdown, stars, bullet symbols, numbered lists, headings, or tables because voice will read them aloud. Meera is the female counselor voice; use female or neutral wording for Meera and do not assume learner gender. Build the structured profile silently in JSON. When asking about education, use learner words in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. If the selected or detected learner language is Odia, Bengali, Tamil, Marathi, Telugu, Kannada, Malayalam, Gujarati, or Punjabi, do not start with Hinglish/Hindi filler such as "Theek hai", "jankari rakh li", "save kar liya", or "samajh gaya"; use that language and script for the main reply. If the learner says they never studied, did not go to school, cannot read, or does not understand formal education/job words, record that as education_status/support_need and do not ask class/stage/school/ITI/diploma/resume questions unless the learner asks for them. For low/no-schooling learners, use simple words and ask one concrete question at a time: work interest, district/village, daily time, safe travel, phone access, or simple proof such as photo, video, voice note, or sample work. If enough information is available, tell them to press the pathway/rasta button and invite any other question. If the learner wants poultry, mushroom, food processing, home business, shop, loan, scheme, or self-employment, classify it as enterprise setup; gather location, space/resources, starter budget/loan need, training access, buyer channel, and risk constraints one at a time; do not show job outreach as the main path. Extract profile facts only from user messages, never from assistant messages. Never copy the previous assistant reply. If the learner changes any fact or goal later, update the profile silently and acknowledge briefly. Offline jobs/training/enterprise support must not be recommended without current location plus commute or local-office travel preference. Never ask caste, religion, or community. Do not shame dropout, low marks, informal work, or career gaps. Return strict JSON only.`,
+      prompt: `Current profile:\n${JSON.stringify(profile)}\n\nLatest user message:\n${latestText}\n\nPrevious assistant reply to avoid repeating:\n${previousAssistant}\n\nConversation:\n${JSON.stringify(messages)}\n\nReturn JSON: { "reply": "short warm counselor response in the learner's current language and script. Maximum two short sentences. No markdown, no stars, no bullets, no full profile recap. Do not sound like a generic AI assistant. Do not use Hinglish/Hindi acknowledgements like Theek hai, jankari rakh li, save kar liya, or samajh gaya unless the learner language is Hindi/Hinglish. Meera is female; use female or neutral wording for Meera, and do not assume learner gender. Answer direct questions first. Ask at most one next-best question if information is missing. If the learner gave only a generic skill/training/work-skill answer, ask for the exact skill with simple examples; do not repeat the broad study/job/business menu. If the learner gave only a generic small-business/business/vyapar answer, ask for the exact business with simple examples like mushroom, poultry, tiffin/food, tailoring, shop, goat, or dairy; do not repeat the broad study/job/business menu. If asking education, say it simply in the learner's language: school, college, work, learning a skill, or school was not possible. Do not say stage, dropout, graduate, diploma, ITI, or resume unless the learner used those words first. Do not mark profile_complete true until education/class_level/education_status is known or low/no schooling is clearly recorded. If enough information is available, say the next step briefly and tell the learner to press the pathway/rasta button. If user wants a job plan, mention proof/resume, pathway, opportunity search, or consent only when relevant. If the learner has low/no schooling, do not use class/stage/school/ITI/diploma/resume wording; ask about work interest, location, time, safe travel, phone, or simple photo/video/voice/sample proof. If user wants self-employment/enterprise/loan/scheme, mention setup roadmap, scheme/loan caution, buyer/supplier verification, and risk checks instead of job cards. If user changes to a study/exam goal, do not mention old job/outreach pipeline.", "profile": { "name": string, "age": number, "class_level": string, "education_status": string, "location": string, "commute_km": number, "commute_constraint": string, "relocation_preference": string, "aspirations": string[], "skills": string[], "proof_available": string[], "phone_access": string, "device": string, "time_available": string, "earning_urgency": "immediate" | "1-2 months" | "after training" | "not sure", "income_pressure": boolean, "language": string, "preferred_language": string, "content_preferences": string[], "support_needs": string[], "profile_complete": boolean }, "profile_complete": boolean, "missing_fields": string[] }`,
     });
 
     const mergedGeneratedProfile = mergeProfile(profile, generated.data.profile || {}, { latestText });
@@ -1587,6 +1735,13 @@ export default async function handler(req, res) {
     const reply = guardCounselorReplyLanguage(rawReply, nextProfile, latestText, effectiveMissing);
 
     const savedMessages = [...messages, { role: 'assistant', content: reply }];
+    const persistenceTimestamp = new Date().toISOString();
+    const profileForPersistence = {
+      ...nextProfile,
+      memory_messages: compactConversationForMemory(savedMessages),
+      memory_last_reply: reply,
+      memory_last_message_at: persistenceTimestamp,
+    };
     let conversationPersistence = { ok: false, error: 'No learner_id yet' };
     if (body.learner_id || nextProfile.learner_id) {
       const learnerId = body.learner_id || nextProfile.learner_id;
@@ -1599,16 +1754,16 @@ export default async function handler(req, res) {
       if (existing?.id) {
         conversationPersistence = await patchRows('conversations', { id: existing.id }, {
           messages: savedMessages,
-          profile_json: nextProfile,
+          profile_json: profileForPersistence,
           last_summary: reply,
-          updated_at: new Date().toISOString(),
+          updated_at: persistenceTimestamp,
         });
       } else {
         conversationPersistence = await insertRows('conversations', {
           learner_id: learnerId,
           phone_hash: body.phone_hash || null,
           messages: savedMessages,
-          profile_json: nextProfile,
+          profile_json: profileForPersistence,
           last_summary: reply,
         });
       }
@@ -1616,8 +1771,8 @@ export default async function handler(req, res) {
         name: nextProfile.name || 'Learner',
         language: nextProfile.preferred_language || nextProfile.language || 'Hindi or local language',
         location: nextProfile.location || '',
-        profile_json: nextProfile,
-        updated_at: new Date().toISOString(),
+        profile_json: profileForPersistence,
+        updated_at: persistenceTimestamp,
       });
     }
 
@@ -1649,4 +1804,15 @@ export default async function handler(req, res) {
   } catch (error) {
     return sendJson(res, 500, { error: error.message });
   }
+}
+
+function compactConversationForMemory(messages = []) {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((message) => message && (message.role === 'user' || message.role === 'assistant'))
+    .slice(-40)
+    .map((message) => ({
+      role: message.role,
+      content: String(message.content || '').replace(/\s+/g, ' ').trim().slice(0, 900),
+    }))
+    .filter((message) => message.content);
 }

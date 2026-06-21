@@ -1,5 +1,5 @@
 import { methodNotAllowed, readJson, sendJson, stableId } from './_lib/http.js';
-import { insertRows, selectRows } from './_lib/supabase.js';
+import { insertRows, patchRows, selectRows } from './_lib/supabase.js';
 
 const LANGUAGE_META = {
   English: { stt: 'en-IN', script: 'Latin' },
@@ -61,6 +61,19 @@ export default async function handler(req, res) {
 
   try {
     const body = await readJson(req);
+    const action = body.action || '';
+    if (action === 'admin_login') {
+      return handleAdminLogin(body, res);
+    }
+    if (action === 'admin_overview') {
+      if (!adminAuthorized(body)) return sendJson(res, 401, { error: 'Admin login required.' });
+      return sendJson(res, 200, await buildAdminOverview(body));
+    }
+    if (action === 'admin_ack_adews') {
+      if (!adminAuthorized(body)) return sendJson(res, 401, { error: 'Admin login required.' });
+      return sendJson(res, 200, await acknowledgeAdminAlert(body));
+    }
+
     const phone = String(body.phone || '').replace(/\D/g, '').slice(-10);
     if (phone.length !== 10) {
       return sendJson(res, 400, { error: 'Enter a valid 10-digit mobile number.' });
@@ -275,9 +288,10 @@ async function hydrateLearnerWorkspace({ learner, phone, accountPhoneHash, retur
         learning_proof: buildLearningProof(progressJson, journeyJson),
       }
     : null;
+  const workspaceMessages = conversationMessagesForWorkspace(profile, conversation, storedLanguage.name);
   const workspace = {
     profile,
-    messages: conversation.ok && conversation.data?.[0]?.messages?.length ? conversation.data[0].messages : [starterMessageForLanguage(profile.preferred_language)],
+    messages: workspaceMessages,
     pathway: pathwayRow
       ? {
           routes: pathwayRow.routes_json || [],
@@ -349,6 +363,27 @@ function emptyWorkspace({ profile, activeTab }) {
   };
 }
 
+function conversationMessagesForWorkspace(profile = {}, conversationResult = {}, language = 'English') {
+  const conversationMessages = conversationResult.ok && conversationResult.data?.[0]?.messages?.length
+    ? conversationResult.data[0].messages
+    : [];
+  const profileMessages = Array.isArray(profile.memory_messages) ? profile.memory_messages : [];
+  const messages = conversationMessages.length ? conversationMessages : profileMessages;
+  const clean = compactWorkspaceMessages(messages);
+  return clean.length ? clean : [starterMessageForLanguage(profile.preferred_language || profile.language || language)];
+}
+
+function compactWorkspaceMessages(messages = []) {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((message) => message && (message.role === 'user' || message.role === 'assistant'))
+    .slice(-50)
+    .map((message) => ({
+      role: message.role,
+      content: String(message.content || '').replace(/\s+/g, ' ').trim().slice(0, 1200),
+    }))
+    .filter((message) => message.content);
+}
+
 function buildLearningProof(progress = {}, journey = {}) {
   return {
     mode: journey?.mode || 'journey_pending',
@@ -412,4 +447,351 @@ function nextActiveTab({ pathwayRow, journeyRow, passportRow, matches, outreach 
   if (journeyRow) return 'journey';
   if (pathwayRow) return 'pathways';
   return 'overview';
+}
+
+function handleAdminLogin(body, res) {
+  const password = String(body.password || body.admin_password || '').trim();
+  if (!password || password !== adminPassword()) {
+    return sendJson(res, 401, { error: 'Invalid admin password.' });
+  }
+  return sendJson(res, 200, {
+    ok: true,
+    admin_token: adminToken(),
+    demo_auth: !process.env.ADMIN_PASSWORD,
+    message: process.env.ADMIN_PASSWORD
+      ? 'Admin session opened.'
+      : 'Admin session opened with demo password. Set ADMIN_PASSWORD before production use.',
+  });
+}
+
+function adminPassword() {
+  return process.env.ADMIN_PASSWORD || 'vidyasetu-admin';
+}
+
+function adminToken() {
+  return process.env.ADMIN_SESSION_TOKEN || 'vidyasetu-admin-session';
+}
+
+function adminAuthorized(body = {}) {
+  return String(body.admin_token || body.token || '') === adminToken();
+}
+
+async function buildAdminOverview(body = {}) {
+  const limit = Math.max(25, Math.min(300, Number(body.limit || 200)));
+  const selectedLearnerId = body.learner_id || body.selected_learner_id || '';
+  const [learners, journeys, passports, alerts, matches, outreach, conversations] = await Promise.all([
+    selectRows('learners', { order: 'updated_at.desc', limit }),
+    selectRows('learning_journeys', { order: 'updated_at.desc', limit }),
+    selectRows('skill_passport', { order: 'updated_at.desc', limit }),
+    selectRows('adews_scores', { order: 'updated_at.desc', limit }),
+    selectRows('matches', { order: 'updated_at.desc', limit }),
+    selectRows('outreach', { order: 'updated_at.desc', limit }),
+    selectRows('conversations', { order: 'updated_at.desc', limit }),
+  ]);
+
+  const rows = {
+    learners: learners.ok ? learners.data || [] : [],
+    journeys: journeys.ok ? journeys.data || [] : [],
+    passports: passports.ok ? passports.data || [] : [],
+    alerts: alerts.ok ? alerts.data || [] : [],
+    matches: matches.ok ? matches.data || [] : [],
+    outreach: outreach.ok ? outreach.data || [] : [],
+    conversations: conversations.ok ? conversations.data || [] : [],
+  };
+  const matchById = Object.fromEntries(rows.matches.map((match) => [match.id, match]));
+  const grouped = {
+    journeys: latestByLearner(rows.journeys),
+    passports: latestByLearner(rows.passports),
+    alerts: latestByLearner(rows.alerts),
+    conversations: latestByLearner(rows.conversations),
+    matches: groupByLearner(rows.matches),
+    outreach: groupOutreachByLearner(rows.outreach, matchById),
+  };
+  const users = rows.learners.map((learner) => adminLearnerSummary(learner, grouped));
+  const filteredUsers = filterAdminUsers(users, body.query || '', body.status || '');
+  const selected = selectedLearnerId
+    ? adminLearnerDetail(rows.learners.find((learner) => learner.id === selectedLearnerId), grouped)
+    : adminLearnerDetail(rows.learners[0], grouped);
+
+  return {
+    ok: true,
+    generated_at: new Date().toISOString(),
+    demo_auth: !process.env.ADMIN_PASSWORD,
+    persistence: {
+      learners: proofForAdmin(learners),
+      learning_journeys: proofForAdmin(journeys),
+      skill_passport: proofForAdmin(passports),
+      adews_scores: proofForAdmin(alerts),
+      matches: proofForAdmin(matches),
+      outreach: proofForAdmin(outreach),
+      conversations: proofForAdmin(conversations),
+    },
+    metrics: adminMetrics(users, rows),
+    users: filteredUsers,
+    selected,
+  };
+}
+
+async function acknowledgeAdminAlert(body = {}) {
+  const learnerId = body.learner_id || '';
+  const scoreId = body.score_id || body.alert_id || '';
+  let targetId = scoreId;
+  if (!targetId && learnerId) {
+    const latest = await selectRows('adews_scores', {
+      filters: { learner_id: learnerId },
+      order: 'updated_at.desc',
+      limit: 1,
+    });
+    targetId = latest.ok ? latest.data?.[0]?.id || '' : '';
+  }
+  if (!targetId) {
+    return { ok: false, error: 'No alert found to acknowledge.' };
+  }
+  const result = await patchRows('adews_scores', { id: targetId }, {
+    worker_ack: true,
+    updated_at: new Date().toISOString(),
+  });
+  return {
+    ok: result.ok,
+    score_id: targetId,
+    error: result.error,
+  };
+}
+
+function proofForAdmin(result = {}) {
+  return {
+    ok: Boolean(result.ok),
+    count: Array.isArray(result.data) ? result.data.length : 0,
+    fallback: Boolean(result.fallback),
+    error: result.error || null,
+  };
+}
+
+function groupByLearner(rows = []) {
+  return rows.reduce((acc, row) => {
+    const id = row.learner_id || row.profile_json?.learner_id || '';
+    if (!id) return acc;
+    if (!acc[id]) acc[id] = [];
+    acc[id].push(row);
+    return acc;
+  }, {});
+}
+
+function latestByLearner(rows = []) {
+  const grouped = groupByLearner(rows);
+  return Object.fromEntries(
+    Object.entries(grouped).map(([learnerId, learnerRows]) => [
+      learnerId,
+      [...learnerRows].sort((left, right) => String(right.updated_at || right.created_at || '').localeCompare(String(left.updated_at || left.created_at || '')))[0],
+    ]),
+  );
+}
+
+function groupOutreachByLearner(rows = [], matchById = {}) {
+  return rows.reduce((acc, row) => {
+    const match = matchById[row.match_id] || {};
+    const id = row.learner_id || match.learner_id || '';
+    if (!id) return acc;
+    if (!acc[id]) acc[id] = [];
+    acc[id].push(row);
+    return acc;
+  }, {});
+}
+
+function filterAdminUsers(users = [], query = '', status = '') {
+  const needle = String(query || '').trim().toLowerCase();
+  const desired = String(status || '').trim().toLowerCase();
+  return users.filter((user) => {
+    const statusOk =
+      !desired ||
+      desired === 'all' ||
+      (desired === 'risk' && user.risk_level === 'risk') ||
+      (desired === 'active' && user.stage !== 'new') ||
+      (desired === 'passport' && user.passport_ready) ||
+      (desired === 'journey' && user.journey_active) ||
+      (desired === 'needs_worker' && user.needs_worker);
+    if (!statusOk) return false;
+    if (!needle) return true;
+    return [
+      user.name,
+      user.location,
+      user.goal,
+      user.education,
+      user.language,
+      user.learner_id,
+      user.phone_mask,
+    ].some((value) => String(value || '').toLowerCase().includes(needle));
+  });
+}
+
+function adminLearnerSummary(learner = {}, grouped = {}) {
+  const profile = learner.profile_json || {};
+  const learnerId = learner.id || profile.learner_id || '';
+  const journeyRow = grouped.journeys?.[learnerId] || null;
+  const passportRow = grouped.passports?.[learnerId] || null;
+  const alertRow = grouped.alerts?.[learnerId] || null;
+  const matchRows = grouped.matches?.[learnerId] || [];
+  const outreachRows = grouped.outreach?.[learnerId] || [];
+  const progress = journeyRow?.progress_json || profile.memory_progress || {};
+  const journey = journeyRow?.journey_json || profile.memory_journey || {};
+  const hasJourney = Boolean(journeyRow || (Array.isArray(journey.modules) && journey.modules.length));
+  const risk = Number(alertRow?.risk || 0);
+  const workerAck = Boolean(alertRow?.worker_ack);
+  const proofReady = Number(progress.proof_ready_count || 0);
+  const proofRequired = Number(progress.proof_required_count || 0);
+  const journeyProgress = Number(progress.completion_percent || journey.progress?.completion_percent || 0);
+  const needsWorker = Boolean((alertRow?.fired_at || risk >= 60) && !workerAck);
+  const stage = adminStage({ profile, hasJourney, passportRow, matchRows, outreachRows });
+  return {
+    learner_id: learnerId,
+    name: profile.name || learner.name || 'Unnamed learner',
+    phone_mask: maskAdminPhone(profile.phone || learner.phone || ''),
+    language: profile.preferred_language || profile.language || learner.language || 'Language pending',
+    location: profile.location || learner.location || profile.relocation_preference || 'Location pending',
+    goal: profile.learner_goal?.label || profile.academic_goal?.target || (profile.aspirations || [])[0] || 'Goal pending',
+    education: profile.class_level || profile.education_status || 'Education pending',
+    time_available: profile.time_available || 'Time pending',
+    profile_complete: Boolean(profile.profile_complete),
+    profile_confidence: Number(profile.profile_confidence || 0),
+    stage,
+    journey_active: hasJourney,
+    journey_title: journey.title || journey.route_name || journeyRow?.route_name || '',
+    journey_progress: Number.isFinite(journeyProgress) ? journeyProgress : 0,
+    proof_ready_count: proofReady,
+    proof_required_count: proofRequired,
+    passport_ready: Boolean(passportRow?.qr_token || progress.passport_eligible),
+    qr_token: passportRow?.qr_token || '',
+    match_count: matchRows.length,
+    outreach_count: outreachRows.length,
+    outreach_status: outreachRows[0]?.sent_at ? 'sent' : outreachRows.length ? 'draft/review' : 'none',
+    risk,
+    risk_level: risk >= 60 || alertRow?.fired_at ? 'risk' : risk >= 30 ? 'watch' : 'normal',
+    worker_ack: workerAck,
+    needs_worker: needsWorker,
+    last_action: profile.last_action || progress.last_action || '',
+    next_action: progress.next_action || nextAdminAction({ profile, hasJourney, passportRow, matchRows, outreachRows, needsWorker }),
+    reminder_status: profile.reminder_state?.last_daily_reminder_status || profile.memory_reminders?.last_daily_reminder_status || 'not sent',
+    updated_at: learner.updated_at || profile.updated_at || profile.last_updated || learner.created_at,
+  };
+}
+
+function adminLearnerDetail(learner = null, grouped = {}) {
+  if (!learner) return null;
+  const summary = adminLearnerSummary(learner, grouped);
+  const learnerId = summary.learner_id;
+  const profile = learner.profile_json || {};
+  const journeyRow = grouped.journeys?.[learnerId] || null;
+  const passportRow = grouped.passports?.[learnerId] || null;
+  const alertRow = grouped.alerts?.[learnerId] || null;
+  const conversationRow = grouped.conversations?.[learnerId] || null;
+  const matchRows = grouped.matches?.[learnerId] || [];
+  const outreachRows = grouped.outreach?.[learnerId] || [];
+  const progress = journeyRow?.progress_json || profile.memory_progress || {};
+  const journey = journeyRow?.journey_json || profile.memory_journey || {};
+  return {
+    ...summary,
+    profile: redactProfile(profile),
+    journey: {
+      id: journeyRow?.id || '',
+      title: journey.title || journey.route_name || '',
+      mode: journey.mode || '',
+      modules: Array.isArray(journey.modules)
+        ? journey.modules.map((module) => ({
+            id: module.id,
+            week: module.week,
+            title: module.title,
+            proof: module.proof,
+            unlock: module.unlock,
+          }))
+        : [],
+      progress,
+    },
+    passport: passportRow
+      ? {
+          id: passportRow.id,
+          qr_token: passportRow.qr_token,
+          cert_count: passportRow.certs?.length || 0,
+          informal_count: passportRow.informal?.length || 0,
+          consent: passportRow.consent_json || {},
+          updated_at: passportRow.updated_at,
+        }
+      : null,
+    alert: alertRow
+      ? {
+          id: alertRow.id,
+          risk: alertRow.risk,
+          fired_at: alertRow.fired_at,
+          worker_ack: Boolean(alertRow.worker_ack),
+          top_features_json: alertRow.top_features_json || [],
+          updated_at: alertRow.updated_at,
+        }
+      : null,
+    matches: matchRows.slice(0, 8).map((match) => ({
+      id: match.id,
+      score: match.score,
+      status: match.status,
+      reasons: match.reasons || [],
+      updated_at: match.updated_at,
+    })),
+    outreach: outreachRows.slice(0, 8).map((item) => ({
+      id: item.id,
+      channel: item.channel,
+      sent_at: item.sent_at,
+      reply_class: item.reply_class,
+      followup_at: item.followup_at,
+      updated_at: item.updated_at,
+    })),
+    conversation: Array.isArray(conversationRow?.messages)
+      ? conversationRow.messages.slice(-8).map((message) => ({
+          role: message.role,
+          content: String(message.content || '').slice(0, 420),
+        }))
+      : [],
+  };
+}
+
+function adminMetrics(users = [], rows = {}) {
+  return {
+    learners: users.length,
+    profile_complete: users.filter((user) => user.profile_complete).length,
+    active_journeys: users.filter((user) => user.journey_active).length,
+    passports_ready: users.filter((user) => user.passport_ready).length,
+    worker_alerts: users.filter((user) => user.needs_worker).length,
+    matches: rows.matches?.length || 0,
+    outreach_records: rows.outreach?.length || 0,
+    languages: new Set(users.map((user) => user.language).filter(Boolean)).size,
+  };
+}
+
+function adminStage({ profile, hasJourney, passportRow, matchRows, outreachRows }) {
+  if (outreachRows?.some((row) => row.sent_at)) return 'outreach sent';
+  if (matchRows?.length) return 'opportunity review';
+  if (passportRow?.qr_token) return 'passport ready';
+  if (hasJourney) return 'learning journey';
+  if (profile.profile_complete) return 'pathway ready';
+  return 'new';
+}
+
+function nextAdminAction({ profile, hasJourney, passportRow, matchRows, outreachRows, needsWorker }) {
+  if (needsWorker) return 'Worker should call/check this learner.';
+  if (!profile.profile_complete) return 'Counselor intake is incomplete.';
+  if (!hasJourney) return 'Generate pathway and learning journey.';
+  if (!passportRow) return 'Monitor journey proof before Skill Passport.';
+  if (!matchRows?.length) return 'Run opportunity/source review if learner consent exists.';
+  if (!outreachRows?.length) return 'Prepare consent-limited outreach draft.';
+  return 'Track reply and next follow-up.';
+}
+
+function redactProfile(profile = {}) {
+  return {
+    ...profile,
+    phone: maskAdminPhone(profile.phone || ''),
+    phone_hash: profile.phone_hash ? `${String(profile.phone_hash).slice(0, 18)}...` : '',
+    phone_account_hash: profile.phone_account_hash ? `${String(profile.phone_account_hash).slice(0, 18)}...` : '',
+  };
+}
+
+function maskAdminPhone(phone = '') {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return digits ? `******${digits.slice(-4)}` : 'not captured';
 }
