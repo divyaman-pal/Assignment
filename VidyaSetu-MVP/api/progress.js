@@ -34,20 +34,22 @@ export default async function handler(req, res) {
       lastAction: body.last_action || 'lesson_progress_saved',
     });
 
-    if (!row?.id) {
-      const learner = await selectRows('learners', { filters: { id: learnerId }, limit: 1 });
-      const profile = learner.ok ? learner.data?.[0]?.profile_json || {} : {};
-      const fallback = await patchRows('learners', { id: learnerId }, {
-        profile_json: {
-          ...profile,
-          memory_journey: Object.keys(journeyJson).length ? journeyJson : profile.memory_journey,
-          memory_progress: progress,
-          last_active_tab: body.active_tab || 'journey',
-          last_action: body.last_action || 'lesson_progress_saved',
-          updated_at: new Date().toISOString(),
-        },
+    const learner = await selectRows('learners', { filters: { id: learnerId }, limit: 1 });
+    const profile = learner.ok ? learner.data?.[0]?.profile_json || {} : {};
+    const learnerMemoryPayload = {
+      profile_json: {
+        ...profile,
+        memory_journey: Object.keys(journeyJson).length ? journeyJson : profile.memory_journey,
+        memory_progress: progress,
+        last_active_tab: body.active_tab || 'journey',
+        last_action: body.last_action || 'lesson_progress_saved',
         updated_at: new Date().toISOString(),
-      });
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    if (!row?.id) {
+      const fallback = await patchRows('learners', { id: learnerId }, learnerMemoryPayload);
       return sendJson(res, 200, {
         ok: fallback.ok,
         progress,
@@ -65,15 +67,16 @@ export default async function handler(req, res) {
       progress_json: progress,
       updated_at: new Date().toISOString(),
     });
+    const learnerMemoryPersistence = await patchRows('learners', { id: learnerId }, learnerMemoryPayload);
 
     return sendJson(res, 200, {
-      ok: persistence.ok,
+      ok: persistence.ok || learnerMemoryPersistence.ok,
       progress,
       proof: proofEnvelope({
-        ok: persistence.ok,
-        table: 'learning_journeys',
-        error: persistence.error,
-        fallback: false,
+        ok: persistence.ok || learnerMemoryPersistence.ok,
+        table: persistence.ok ? 'learning_journeys' : 'learners.profile_json',
+        error: persistence.error || learnerMemoryPersistence.error || null,
+        fallback: !persistence.ok && learnerMemoryPersistence.ok,
         progress,
       }),
     });

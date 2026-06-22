@@ -267,6 +267,14 @@ async function hydrateLearnerWorkspace({ learner, phone, accountPhoneHash, retur
   const journeyJson = journeyRow?.journey_json || profile.memory_journey || null;
   const progressJson = journeyRow?.progress_json || profile.memory_progress || journeyJson?.progress || {};
   const selectedRoute = journeyRow?.route_json || profile.memory_selected_route || pathwayRow?.routes_json?.[0] || null;
+  const memoryPathwayRoutes = Array.isArray(profile.memory_pathway?.routes) ? profile.memory_pathway.routes : [];
+  const pathwayRoutes = pathwayRow?.routes_json?.length
+    ? pathwayRow.routes_json
+    : memoryPathwayRoutes.length
+      ? memoryPathwayRoutes
+      : selectedRoute
+        ? [selectedRoute]
+        : [];
   const completedLessons = progressJson?.completed_lesson_map || progressJson?.completed_lessons_map || {};
   const proofNotes = progressJson?.proof_notes || {};
   const proofArtifacts = progressJson?.proof_artifacts || {};
@@ -292,12 +300,12 @@ async function hydrateLearnerWorkspace({ learner, phone, accountPhoneHash, retur
   const workspace = {
     profile,
     messages: workspaceMessages,
-    pathway: pathwayRow
+    pathway: pathwayRoutes.length
       ? {
-          routes: pathwayRow.routes_json || [],
-          confidence: Number(pathwayRow.confidence || 0),
-          callback_flag: Boolean(pathwayRow.callback_flag),
-          provider: 'restored_memory',
+          routes: pathwayRoutes,
+          confidence: Number(pathwayRow?.confidence || profile.memory_pathway?.confidence || 0),
+          callback_flag: Boolean(pathwayRow?.callback_flag || profile.memory_pathway?.callback_flag),
+          provider: pathwayRow ? 'restored_pathways_table' : 'restored_learner_memory',
         }
       : null,
     selectedRoute,
@@ -314,7 +322,16 @@ async function hydrateLearnerWorkspace({ learner, phone, accountPhoneHash, retur
     resumeText: profile.resume_text || '',
     resumeFileName: profile.resume_file_name || '',
     opportunityMeta: profile.opportunity_meta || null,
-    activeTab: nextActiveTab({ pathwayRow, journeyRow, passportRow, matches: hydratedMatches, outreach }),
+    activeTab: nextActiveTab({
+      profile,
+      pathwayRow,
+      pathwayRoutes,
+      journeyRow,
+      journeyJson,
+      passportRow,
+      matches: hydratedMatches,
+      outreach,
+    }),
   };
 
   return {
@@ -440,12 +457,23 @@ async function hydrateOutreach(matchRows = []) {
   return null;
 }
 
-function nextActiveTab({ pathwayRow, journeyRow, passportRow, matches, outreach }) {
+function nextActiveTab({ profile = {}, pathwayRow, pathwayRoutes = [], journeyRow, journeyJson, passportRow, matches, outreach }) {
+  const requested = String(profile.last_active_tab || '').trim();
+  const validRequestedTabs = new Set(['counselor', 'pathways', 'journey', 'passport', 'jobs', 'support', 'overview']);
+  const hasJourney = Boolean(journeyRow || (Array.isArray(journeyJson?.modules) && journeyJson.modules.length));
+  const hasPathway = Boolean(pathwayRow || pathwayRoutes.length || profile.memory_selected_route);
+  if (validRequestedTabs.has(requested)) {
+    if (requested === 'journey' && hasJourney) return requested;
+    if (requested === 'pathways' && hasPathway) return requested;
+    if (requested === 'passport' && passportRow) return requested;
+    if (requested === 'jobs' && matches?.length) return requested;
+    if (['counselor', 'support', 'overview'].includes(requested)) return requested;
+  }
   if (outreach) return 'outreach';
   if (matches?.length) return 'jobs';
   if (passportRow) return 'passport';
-  if (journeyRow) return 'journey';
-  if (pathwayRow) return 'pathways';
+  if (hasJourney) return 'journey';
+  if (hasPathway) return 'pathways';
   return 'overview';
 }
 
