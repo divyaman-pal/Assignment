@@ -1,0 +1,221 @@
+{
+  "createdAt": "2026-06-05T10:22:41+0530",
+  "model": {
+    "path": "C:\\Users\\divya\\OneDrive\\Documents\\New project\\siteid\\assets\\models\\w600k_mbf.onnx",
+    "sha256": "9CC6E4A75F0E2BF0B1AED94578F144D15175F357BDC05E815E5C4A02B319EB4F",
+    "inputShape": [
+      "None",
+      3,
+      112,
+      112
+    ],
+    "outputShape": [
+      1,
+      512
+    ]
+  },
+  "dataset": {
+    "name": "Labeled Faces in the Wild funneled",
+    "imagesUrl": "https://ndownloader.figshare.com/files/5976015",
+    "pairsUrl": "https://ndownloader.figshare.com/files/5976006",
+    "people": 5749,
+    "images": 13233,
+    "pairsEvaluated": 6000,
+    "uniqueImagesEmbedded": 7701,
+    "cropScale": 0.72,
+    "channelOrder": "rgb",
+    "note": "LFW is an unconstrained public still-image face dataset, not an Indian field-worker or liveness dataset."
+  },
+  "officialPairVerification": {
+    "aggregate": {
+      "pairs": 6000,
+      "trueAccepts": 2883,
+      "trueRejects": 2954,
+      "falseAccepts": 46,
+      "falseRejects": 117,
+      "accuracy": 0.972833,
+      "trueAcceptRate": 0.961,
+      "falseRejectRate": 0.039,
+      "trueRejectRate": 0.984667,
+      "falseAcceptRate": 0.015333,
+      "foldAccuracyMean": 0.972833,
+      "foldAccuracyStd": 0.006058,
+      "thresholdMean": 0.218976,
+      "thresholdStd": 0.006247
+    },
+    "folds": [
+      {
+        "pairs": 600,
+        "trueAccepts": 284,
+        "trueRejects": 294,
+        "falseAccepts": 6,
+        "falseRejects": 16,
+        "accuracy": 0.963333,
+        "trueAcceptRate": 0.946667,
+        "falseRejectRate": 0.053333,
+        "trueRejectRate": 0.98,
+        "falseAcceptRate": 0.02,
+        "fold": 1,
+        "threshold": 0.224083,
+        "trainAccuracy": 0.975
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 288,
+        "trueRejects": 298,
+        "falseAccepts": 2,
+        "falseRejects": 12,
+        "accuracy": 0.976667,
+        "trueAcceptRate": 0.96,
+        "falseRejectRate": 0.04,
+        "trueRejectRate": 0.993333,
+        "falseAcceptRate": 0.006667,
+        "fold": 2,
+        "threshold": 0.224065,
+        "trainAccuracy": 0.973519
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 290,
+        "trueRejects": 291,
+        "falseAccepts": 9,
+        "falseRejects": 10,
+        "accuracy": 0.968333,
+        "trueAcceptRate": 0.966667,
+        "falseRejectRate": 0.033333,
+        "trueRejectRate": 0.97,
+        "falseAcceptRate": 0.03,
+        "fold": 3,
+        "threshold": 0.211013,
+        "trainAccuracy": 0.974259
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 287,
+        "trueRejects": 296,
+        "falseAccepts": 4,
+        "falseRejects": 13,
+        "accuracy": 0.971667,
+        "trueAcceptRate": 0.956667,
+        "falseRejectRate": 0.043333,
+        "trueRejectRate": 0.986667,
+        "falseAcceptRate": 0.013333,
+        "fold": 4,
+        "threshold": 0.211013,
+        "trainAccuracy": 0.973889
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 281,
+        "trueRejects": 299,
+        "falseAccepts": 1,
+        "falseRejects": 19,
+        "accuracy": 0.966667,
+        "trueAcceptRate": 0.936667,
+        "falseRejectRate": 0.063333,
+        "trueRejectRate": 0.996667,
+        "falseAcceptRate": 0.003333,
+        "fold": 5,
+        "threshold": 0.224065,
+        "trainAccuracy": 0.97463
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 289,
+        "trueRejects": 293,
+        "falseAccepts": 7,
+        "falseRejects": 11,
+        "accuracy": 0.97,
+        "trueAcceptRate": 0.963333,
+        "falseRejectRate": 0.036667,
+        "trueRejectRate": 0.976667,
+        "falseAcceptRate": 0.023333,
+        "fold": 6,
+        "threshold": 0.224065,
+        "trainAccuracy": 0.974259
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 290,
+        "trueRejects": 299,
+        "falseAccepts": 1,
+        "falseRejects": 10,
+        "accuracy": 0.981667,
+        "trueAcceptRate": 0.966667,
+        "falseRejectRate": 0.033333,
+        "trueRejectRate": 0.996667,
+        "falseAcceptRate": 0.003333,
+        "fold": 7,
+        "threshold": 0.224065,
+        "trainAccuracy": 0.972963
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 291,
+        "trueRejects": 291,
+        "falseAccepts": 9,
+        "falseRejects": 9,
+        "accuracy": 0.97,
+        "trueAcceptRate": 0.97,
+        "falseRejectRate": 0.03,
+        "trueRejectRate": 0.97,
+        "falseAcceptRate": 0.03,
+        "fold": 8,
+        "threshold": 0.211013,
+        "trainAccuracy": 0.974074
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 289,
+        "trueRejects": 298,
+        "falseAccepts": 2,
+        "falseRejects": 11,
+        "accuracy": 0.978333,
+        "trueAcceptRate": 0.963333,
+        "falseRejectRate": 0.036667,
+        "trueRejectRate": 0.993333,
+        "falseAcceptRate": 0.006667,
+        "fold": 9,
+        "threshold": 0.224065,
+        "trainAccuracy": 0.973333
+      },
+      {
+        "pairs": 600,
+        "trueAccepts": 294,
+        "trueRejects": 295,
+        "falseAccepts": 5,
+        "falseRejects": 6,
+        "accuracy": 0.981667,
+        "trueAcceptRate": 0.98,
+        "falseRejectRate": 0.02,
+        "trueRejectRate": 0.983333,
+        "falseAcceptRate": 0.016667,
+        "fold": 10,
+        "threshold": 0.21231,
+        "trainAccuracy": 0.972778
+      }
+    ]
+  },
+  "attendanceLikeIdentification": {
+    "appSimilarityThreshold": 0.4,
+    "appMarginThreshold": 0.06,
+    "variants": []
+  },
+  "embeddingLatencyMsCpuSingleImage": {
+    "sampleImages": 200,
+    "mean": 16.836,
+    "p50": 15.358,
+    "p95": 25.024,
+    "max": 52.593,
+    "note": "Single-image CPU inference latency; closer to app verification than batched benchmark throughput."
+  },
+  "embeddingThroughputMsCpuBatched": {
+    "batchSize": 1,
+    "meanPerImage": 14.372,
+    "p50PerImage": 13.866,
+    "p95PerImage": 18.376,
+    "maxPerImage": 71.281
+  },
+  "elapsedSeconds": 176.69,
+  "caveat": "This is a model-level CPU benchmark on public still images. It does not measure camera capture, ML Kit face detection, liveness/spoof rejection, or outdoor Indian demographic robustness."
+}

@@ -1,0 +1,4 @@
+templateCount,identityCount,templateImages,probeImages,top1Correct,top1Accuracy,correctAccepted,correctAcceptedRate,wrongAccepted,wrongAcceptedRate,rejected,rejectionRate,meanBestScore,meanMargin
+1,1680,1680,7484,6465,0.863843,5631,0.752405,94,0.01256,1759,0.235035,0.516824,0.17392
+3,610,1830,4903,4682,0.954926,4386,0.894554,27,0.005507,490,0.099939,0.573744,0.22586
+5,311,1555,3870,3762,0.972093,3618,0.934884,21,0.005426,231,0.05969,0.595778,0.252296
