@@ -11,7 +11,9 @@ CITIES = {"Delhi": "delhi", "Mumbai": "mumbai", "Bengaluru": "bengaluru"}
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(ROOT / "data" / "vayu.duckdb"), read_only=True)
+    db = ROOT / "data" / "vayu.duckdb"
+    if not db.exists(): db = ROOT / "data" / "vayu_serve.duckdb"
+    con = duckdb.connect(str(db), read_only=True)
     wards = con.sql("SELECT ward_id, city, name, geojson FROM wards").df()
     for city, slug in CITIES.items():
         feats = []
@@ -50,5 +52,43 @@ def main():
     (OUT / "metrics.json").write_text(json.dumps(metrics))
     print("exported:", [p.name for p in OUT.iterdir()])
 
+
+def export_grid():
+    """1-km forecast grid: IDW of station 24h PM2.5 forecasts to 0.01-deg cells.
+    Cells >8 km from any station are masked (honesty: no fabricated coverage)."""
+    import numpy as np, sys
+    sys.path.insert(0, str(ROOT))
+    import lightgbm as lgb
+    from models.forecast import build_features, FEATURES, load_hourly
+    from models.aqi import pm_aqi
+    import duckdb
+    con = duckdb.connect(str(ROOT / "data" / ("vayu.duckdb" if (ROOT/"data/vayu.duckdb").exists() else "vayu_serve.duckdb")), read_only=True)
+    booster = lgb.Booster(model_file=str(ROOT / "models" / "lgbm_pm25_h24.txt"))
+    fdf = build_features(load_hourly(con))
+    latest = fdf[fdf.h == fdf.h.max()].dropna(subset=["pm25_lag1"]).copy()
+    latest["pred24"] = np.clip(booster.predict(latest[FEATURES]), 0, None)
+    st = con.sql("SELECT station_id, city, lat, lon FROM stations WHERE lat IS NOT NULL").df()
+    latest = latest.merge(st, on=["station_id", "city"])
+    BBOX = {"delhi": (76.84, 28.40, 77.35, 28.88), "mumbai": (72.77, 18.89, 72.99, 19.28),
+            "bengaluru": (77.46, 12.83, 77.78, 13.14)}
+    CITY = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
+    for slug, (w, s_, e, n) in BBOX.items():
+        pts = latest[latest.city == CITY[slug]]
+        if not len(pts): continue
+        xs = np.arange(w, e, 0.01); ys = np.arange(s_, n, 0.01)
+        cells = []
+        for y in ys:
+            for x in xs:
+                d2 = (pts.lat - y) ** 2 + ((pts.lon - x) * 0.88) ** 2
+                dmin_km = float(np.sqrt(d2.min())) * 111
+                if dmin_km > 8: continue
+                wgt = 1 / np.maximum(d2, 1e-6)
+                v = float((pts.pred24 * wgt).sum() / wgt.sum())
+                cells.append([round(x, 3), round(y, 3), round(v, 1), round(pm_aqi(v, None) or 0)])
+        (OUT / f"grid_{slug}.json").write_text(json.dumps({"cell_deg": 0.01, "horizon_h": 24,
+            "note": "IDW of station forecasts; cells >8km from any station masked", "cells": cells}))
+        print(slug, "grid cells:", len(cells))
+
 if __name__ == "__main__":
     main()
+    export_grid()

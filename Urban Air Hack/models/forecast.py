@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "vayu.duckdb"
 if not DB.exists():
     DB = ROOT / "data" / "vayu_serve.duckdb"
-HORIZONS = [6, 12, 24]
+HORIZONS = [6, 12, 24, 48, 72]
 LAGS = [1, 2, 3, 6, 12, 24]
 
 def load_hourly(con=None):
@@ -60,27 +60,37 @@ def run(train_frac_hours=36):
         d = df.copy()
         d["y"] = d.groupby("station_id").pm25.shift(-hz)
         d = d.dropna(subset=["y", "pm25_lag1"])
+        if len(d) < 100:
+            results[f"h{hz}"] = {"note": "insufficient data for this horizon in one-week window"}
+            continue
         tr, te = d[d.h <= split], d[d.h > split]
+        if len(te) < 50:  # long horizons: one-week dataset leaves no honest test window
+            tr = d
         m = lgb.LGBMRegressor(n_estimators=400, learning_rate=0.05, num_leaves=63,
                               min_child_samples=20, random_state=42, verbose=-1)
         m.fit(tr[FEATURES], tr.y)
         te = te.copy()
-        te["pred"] = np.clip(m.predict(te[FEATURES]), 0, None)
+        te["pred"] = np.clip(m.predict(te[FEATURES]), 0, None) if len(te) else np.array([])
         # Baselines, evaluated on identical rows as the model (fair comparison):
         # persistence: forecast for t+hz = value at t (column pm25)
         # seasonal-naive: forecast for t+hz = value at t+hz-24 (= lag(24-hz); equals persistence when hz=24)
         te["persist"] = te.pm25
         te["naive"] = te[f"pm25_lag{24 - hz}"] if 0 < (24 - hz) and (24 - hz) in LAGS else te.pm25
         te = te.dropna(subset=["y", "pred", "persist", "naive"])
-        rmse = lambda a, b: float(np.sqrt(np.mean((np.asarray(a) - np.asarray(b)) ** 2)))
-        r_m, r_p, r_n = rmse(te.y, te.pred), rmse(te.y, te.persist), rmse(te.y, te.naive)
-        results[f"h{hz}"] = {
-            "n_test": len(te),
-            "rmse_model": round(r_m, 2),
-            "rmse_persistence": round(r_p, 2),
-            "rmse_seasonal_naive": round(r_n, 2),
-            "improvement_vs_persistence_pct": round(100 * (1 - r_m / r_p), 1),
-        }
+        if len(te) < 50:
+            results[f"h{hz}"] = {"n_test": len(te),
+                "note": "model trained; no honest backtest possible on one-week dataset — "
+                        "extend history via etl/fetch_data.py for full validation"}
+        else:
+            rmse = lambda a, b: float(np.sqrt(np.mean((np.asarray(a) - np.asarray(b)) ** 2)))
+            r_m, r_p, r_n = rmse(te.y, te.pred), rmse(te.y, te.persist), rmse(te.y, te.naive)
+            results[f"h{hz}"] = {
+                "n_test": len(te),
+                "rmse_model": round(r_m, 2),
+                "rmse_persistence": round(r_p, 2),
+                "rmse_seasonal_naive": round(r_n, 2),
+                "improvement_vs_persistence_pct": round(100 * (1 - r_m / r_p), 1),
+            }
         models[hz] = m
         m.booster_.save_model(str(ROOT / "models" / f"lgbm_pm25_h{hz}.txt"))
     (ROOT / "data" / "forecast_metrics.json").write_text(json.dumps(results, indent=2))

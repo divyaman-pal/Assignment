@@ -19,5 +19,13 @@
     "rmse_persistence": 79.23,
     "rmse_seasonal_naive": 79.23,
     "improvement_vs_persistence_pct": 33.7
+  },
+  "h48": {
+    "n_test": 0,
+    "note": "model trained; no honest backtest possible on one-week dataset \u2014 extend history via etl/fetch_data.py for full validation"
+  },
+  "h72": {
+    "n_test": 0,
+    "note": "model trained; no honest backtest possible on one-week dataset \u2014 extend history via etl/fetch_data.py for full validation"
   }
 }

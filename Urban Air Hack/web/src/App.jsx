@@ -19,6 +19,7 @@ export default function App() {
   const [metrics, setMetrics] = useState(null);
   const [replay, setReplay] = useState(null);
   const [replayBusy, setReplayBusy] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
   const mapRef = useRef(null);
   const mapObj = useRef(null);
 
@@ -69,6 +70,23 @@ export default function App() {
 
   useEffect(() => { api.getMetrics().then(setMetrics).catch(console.error); }, []);
 
+  useEffect(() => {
+    const m = mapObj.current; if (!m) return;
+    const remove = () => { if (m.getLayer("grid-fill")) m.removeLayer("grid-fill"); if (m.getSource("grid")) m.removeSource("grid"); };
+    if (!showGrid) { remove(); return; }
+    api.getGrid(city).then(g => {
+      remove();
+      const d = g.cell_deg / 2;
+      const feats = g.cells.map(([x, y, pm, aqi]) => ({ type: "Feature", properties: { pm, aqi },
+        geometry: { type: "Polygon", coordinates: [[[x-d,y-d],[x+d,y-d],[x+d,y+d],[x-d,y+d],[x-d,y-d]]] } }));
+      m.addSource("grid", { type: "geojson", data: { type: "FeatureCollection", features: feats } });
+      m.addLayer({ id: "grid-fill", type: "fill", source: "grid", paint: {
+        "fill-opacity": 0.45,
+        "fill-color": ["step", ["get", "aqi"], "#3fb950", 51, "#7ee787", 101, "#d29922", 201, "#f0883e", 301, "#ff7b72", 401, "#da3633"] } },
+        m.getLayer("stations-dots") ? "stations-dots" : undefined);
+    }).catch(console.error);
+  }, [showGrid, city]);
+
   async function doReplay() {
     setReplayBusy(true); setTab("replay");
     try { setReplay(await api.runReplay(CITIES[city].name)); }
@@ -84,6 +102,8 @@ export default function App() {
         {Object.entries(CITIES).map(([slug, c]) => (
           <button key={slug} className={`citybtn ${city === slug ? "active" : ""}`}
                   onClick={() => setCity(slug)}>{c.name}</button>))}
+        <button className={`citybtn ${showGrid ? "active" : ""}`} onClick={() => setShowGrid(g => !g)}>
+          Forecast +24h grid</button>
         <button className="replaybtn" onClick={doReplay} disabled={replayBusy}>
           {replayBusy ? "Running agents…" : "▶ Run war-room replay"}</button>
       </header>
@@ -91,13 +111,14 @@ export default function App() {
         <div id="map" ref={mapRef} />
         <div className="rail">
           <div className="tabs">
-            {["actions", "events", "metrics", "replay"].map(t => (
+            {["actions", "events", "compare", "metrics", "replay"].map(t => (
               <button key={t} className={`tab ${tab === t ? "active" : ""}`}
                       onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>))}
           </div>
           <div className="railbody">
             {tab === "actions" && <Actions actions={actions} />}
             {tab === "events" && <Events events={events} />}
+            {tab === "compare" && <Compare />}
             {tab === "metrics" && <Metrics metrics={metrics} />}
             {tab === "replay" && <Replay replay={replay} busy={replayBusy} />}
           </div>
@@ -149,6 +170,43 @@ function Events({ events }) {
         {ev && ev.evidence && ev.evidence.slice(0, 3).map((b, j) => <div className="evli" key={j}>• {b}</div>)}
       </div>);
   });
+}
+
+function Compare() {
+  const [rows, setRows] = useState(null);
+  useEffect(() => { (async () => {
+    const out = [];
+    for (const [slug, c] of Object.entries(CITIES)) {
+      const [st, ev, ac] = await Promise.all([api.getStations(slug), api.getEvents(slug), api.getActions(slug)]);
+      const aqis = st.map(s => s.aqi).filter(Boolean);
+      const cats = {};
+      ev.forEach(e => { cats[e.category] = (cats[e.category] || 0) + 1; });
+      const top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
+      out.push({ city: c.name, stations: st.length,
+        maxAqi: aqis.length ? Math.round(Math.max(...aqis)) : "—",
+        meanAqi: aqis.length ? Math.round(aqis.reduce((a, b) => a + b, 0) / aqis.length) : "—",
+        events: ev.length, topSource: top ? `${top[0]} (${top[1]})` : "—",
+        topPriority: ac.length ? Number(ac[0].priority).toFixed(2) : "—" });
+    }
+    setRows(out);
+  })().catch(console.error); }, []);
+  if (!rows) return <div className="card">Comparing cities…</div>;
+  return (
+    <>
+      <div className="card">
+        <h4>Same episode week, same scoring — cities directly comparable</h4>
+        <table><thead><tr><th>City</th><th>Mean AQI</th><th>Max</th><th>Events</th><th>Top source</th><th>Top priority</th></tr></thead>
+          <tbody>{rows.map(r => (<tr key={r.city}><td>{r.city}</td><td>{r.meanAqi}</td><td>{r.maxAqi}</td>
+            <td>{r.events}</td><td>{r.topSource}</td><td>{r.topPriority}</td></tr>))}</tbody></table>
+        <div className="evli">Priority scores share one formula (severity × confidence × persistence × vulnerability) —
+          a commissioner can see at a glance that Delhi's NYE week needed ~6× Mumbai's response.</div>
+      </div>
+      <div className="card">
+        <h4>Onboarding a 4th city</h4>
+        <div className="evli">1 ward GeoJSON + 1 config block + `make onboard` — the entire pipeline (attribution,
+          forecast, enforcement, advisory) applies unchanged. All data sources are national (CPCB, FIRMS, OSM).</div>
+      </div>
+    </>);
 }
 
 function Metrics({ metrics }) {

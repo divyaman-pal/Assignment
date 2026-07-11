@@ -46,7 +46,9 @@ def rank_actions(top_n=10, con=None):
     df = con.sql("""
       SELECT a.city, s.ward_id, w.name ward_name, a.category,
              count(*) n_events, avg(a.pm25) mean_pm25, max(a.pm25) max_pm25,
-             avg(a.confidence) confidence, min(a.h) first_seen, max(a.h) last_seen
+             avg(a.confidence) confidence, min(a.h) first_seen, max(a.h) last_seen,
+             any_value(coalesce(w.n_schools,0)) n_schools, any_value(coalesce(w.n_hospitals,0)) n_hospitals,
+             any_value(coalesce(w.n_industrial,0)) n_industrial, any_value(coalesce(w.n_construction,0)) n_construction
       FROM attributions a
       JOIN stations s USING (station_id)
       LEFT JOIN wards w ON s.ward_id = w.ward_id
@@ -54,7 +56,12 @@ def rank_actions(top_n=10, con=None):
       GROUP BY 1,2,3,4""").df()
     sev = np.clip((df.mean_pm25 - 60) / 250, 0, 2)
     persist = 1 + np.log1p((df.last_seen - df.first_seen).dt.total_seconds() / 3600)
-    df["priority"] = (sev * (df.confidence / 100) * persist).round(3)
+    # Vulnerability: schools+hospitals in ward (OSM), normalised per city.
+    fac = df.n_schools + df.n_hospitals
+    fac_max = df.groupby("city")[["n_schools"]].transform(lambda s: 1)  # placeholder col
+    vuln = 1 + 0.5 * (fac / fac.groupby(df.city).transform(lambda x: max(x.max(), 1)))
+    df["vulnerability"] = vuln.round(3)
+    df["priority"] = (sev * (df.confidence / 100) * persist * vuln).round(3)
     df["action"] = df.category.map(ACTIONS)
     df["statute"] = df.category.map(STATUTES)
     df = df.sort_values("priority", ascending=False)
@@ -82,6 +89,7 @@ def evidence_pack(action_id, con=None):
     fig = plt.figure(figsize=(8.27, 11.69)); fig.suptitle("VAYU-NET Enforcement Evidence Pack", fontsize=14, y=0.98)
     ax0 = fig.add_axes([0.08, 0.78, 0.84, 0.13]); ax0.axis("off")
     ax0.text(0, 1, f"Ward: {a.ward_name} ({a.city})   Source: {a.category}   Confidence: {a.confidence:.0f}%\n"
+                   f"At-risk facilities in ward: {int(a.get('n_schools',0))} schools, {int(a.get('n_hospitals',0))} hospitals\n"
                    f"Priority score: {a.priority}   Events: {a.n_events}   Mean PM2.5: {a.mean_pm25:.0f} ug/m3 (max {a.max_pm25:.0f})\n"
                    f"Window: {a.first_seen} to {a.last_seen}\n\nRECOMMENDED ACTION: {a.action}\nLEGAL BASIS: {a.statute}",
              va="top", fontsize=9, wrap=True)
