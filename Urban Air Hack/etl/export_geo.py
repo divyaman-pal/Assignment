@@ -14,12 +14,17 @@ def main():
     db = ROOT / "data" / "vayu.duckdb"
     if not db.exists(): db = ROOT / "data" / "vayu_serve.duckdb"
     con = duckdb.connect(str(db), read_only=True)
-    wards = con.sql("SELECT ward_id, city, name, geojson FROM wards").df()
+    wards = con.sql("""SELECT ward_id, city, name, geojson,
+        coalesce(n_schools,0) n_schools, coalesce(n_hospitals,0) n_hospitals,
+        coalesce(n_industrial,0) n_industrial, coalesce(n_construction,0) n_construction
+        FROM wards""").df()
     for city, slug in CITIES.items():
         feats = []
         for _, w in wards[wards.city == city].iterrows():
             geom = shape(json.loads(w.geojson)).simplify(0.0005, preserve_topology=True)
-            feats.append({"type": "Feature", "properties": {"ward_id": w.ward_id, "name": w["name"]},
+            feats.append({"type": "Feature", "properties": {"ward_id": w.ward_id, "name": w["name"],
+                          "schools": int(w.n_schools), "hospitals": int(w.n_hospitals),
+                          "industrial": int(w.n_industrial), "construction": int(w.n_construction)},
                           "geometry": mapping(geom)})
         (OUT / f"{slug}_wards.json").write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
     # stations with latest hourly PM2.5 + AQI

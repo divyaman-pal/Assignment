@@ -20,6 +20,7 @@ export default function App() {
   const [replay, setReplay] = useState(null);
   const [replayBusy, setReplayBusy] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
+  const [mode, setMode] = useState("commissioner");
   const mapRef = useRef(null);
   const mapObj = useRef(null);
 
@@ -55,6 +56,15 @@ export default function App() {
           paint: { "circle-radius": 7, "circle-stroke-width": 1.5, "circle-stroke-color": "#0d1117",
             "circle-color": ["match", ["get", "band"],
               ...Object.entries(BAND_COLORS).flat(), "#8b949e"] } });
+        m.on("click", "wards-fill", e => {
+          if (e.features && e.features[0] && !m.queryRenderedFeatures(e.point, { layers: ["stations-dots"] }).length) {
+            const w = e.features[0].properties;
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+              `<b>${w.name}</b><br/>Schools: ${w.schools} · Hospitals: ${w.hospitals}<br/>` +
+              `Industrial zones: ${w.industrial} · Construction: ${w.construction}<br/>` +
+              `<span style="color:#888">vulnerability data: OpenStreetMap</span>`).addTo(m);
+          }
+        });
         m.on("click", "stations-dots", e => {
           const p = e.features[0].properties;
           new maplibregl.Popup().setLngLat(e.lngLat)
@@ -104,12 +114,15 @@ export default function App() {
                   onClick={() => setCity(slug)}>{c.name}</button>))}
         <button className={`citybtn ${showGrid ? "active" : ""}`} onClick={() => setShowGrid(g => !g)}>
           Forecast +24h grid</button>
+        <button className={`citybtn ${mode === "citizen" ? "active" : ""}`}
+          onClick={() => setMode(m => m === "citizen" ? "commissioner" : "citizen")}>
+          {mode === "citizen" ? "◀ War-room" : "Citizen mode"}</button>
         <button className="replaybtn" onClick={doReplay} disabled={replayBusy}>
           {replayBusy ? "Running agents…" : "▶ Run war-room replay"}</button>
       </header>
       <div className="main">
         <div id="map" ref={mapRef} />
-        <div className="rail">
+        {mode === "citizen" ? <CitizenView city={city} /> : <div className="rail">
           <div className="tabs">
             {["actions", "events", "compare", "metrics", "replay"].map(t => (
               <button key={t} className={`tab ${tab === t ? "active" : ""}`}
@@ -122,7 +135,7 @@ export default function App() {
             {tab === "metrics" && <Metrics metrics={metrics} />}
             {tab === "replay" && <Replay replay={replay} busy={replayBusy} />}
           </div>
-        </div>
+        </div>}
       </div>
       <div className="footer">
         Data: CPCB CAAQMS via Vonter/india-cpcb-aqi (ODbL) · Wards: DataMeet (CC-BY) ·
@@ -140,6 +153,104 @@ const MUMBAI_WARDS = { "A": "A — Colaba", "B": "B — Sandhurst Rd", "C": "C �
   "M/W": "M West — Chembur", "N": "N — Ghatkopar", "P/N": "P North — Malad", "P/S": "P South — Goregaon",
   "R/C": "R Central — Borivali", "R/N": "R North — Dahisar", "R/S": "R South — Kandivali", "S": "S — Bhandup", "T": "T — Mulund" };
 const wardLabel = n => MUMBAI_WARDS[n] || n;
+
+
+// ---- Citizen mode: ward-level advisory with voice (IVR/public-display channel) ----
+const CPCB_HEALTH = { Good: "Minimal impact.", Satisfactory: "Minor breathing discomfort to sensitive people.",
+  Moderate: "Breathing discomfort to people with lung disease, children and older adults.",
+  Poor: "Breathing discomfort to most people on prolonged exposure.",
+  "Very Poor": "Respiratory illness on prolonged exposure.",
+  Severe: "Affects healthy people and seriously impacts those with existing diseases." };
+const GROUP_ACTIONS = {
+  schools: { Poor: "Limit outdoor sports and assembly.", "Very Poor": "Move all activity indoors; masks for commutes.", Severe: "Recommend closure of outdoor activities; consider remote classes." },
+  outdoor_workers: { Poor: "Take breaks away from traffic; N95 recommended.", "Very Poor": "N95 required; rotate shifts to reduce exposure.", Severe: "Minimise outdoor hours; employers should reschedule work." },
+  elderly: { Poor: "Avoid morning walks near roads.", "Very Poor": "Stay indoors during peak hours; keep medication at hand.", Severe: "Remain indoors; use purifiers if available; seek help if breathless." },
+  general: { Poor: "Reduce prolonged outdoor exertion.", "Very Poor": "Avoid outdoor exercise; keep windows closed at peak hours.", Severe: "Avoid all outdoor exertion; wear N95 outdoors." } };
+const bandOf = a => a <= 50 ? "Good" : a <= 100 ? "Satisfactory" : a <= 200 ? "Moderate" : a <= 300 ? "Poor" : a <= 400 ? "Very Poor" : "Severe";
+const TTS_LANG = { en: "en-IN", hi: "hi-IN", mr: "mr-IN", kn: "kn-IN" };
+
+function CitizenView({ city }) {
+  const [wards, setWards] = useState([]);
+  const [stations, setStations] = useState([]);
+  const [ward, setWard] = useState("");
+  const [group, setGroup] = useState("general");
+  const [lang, setLang] = useState("en");
+  const [adv, setAdv] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { (async () => {
+    const [wg, st] = await Promise.all([api.getWards(city), api.getStations(city)]);
+    const list = wg.features.map(f => ({ id: f.properties.ward_id, name: f.properties.name,
+      schools: f.properties.schools, hospitals: f.properties.hospitals }));
+    list.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    setWards(list); setStations(st); setWard(list[0]?.id || ""); setAdv(null);
+  })().catch(console.error); }, [city]);
+
+  const w = wards.find(x => x.id === ward);
+  const inWard = stations.filter(s => s.ward_id === ward && s.aqi);
+  const cityAqis = stations.map(s => s.aqi).filter(Boolean);
+  const aqi = inWard.length ? Math.max(...inWard.map(s => s.aqi))
+            : cityAqis.length ? Math.round(cityAqis.reduce((a, b) => a + b, 0) / cityAqis.length) : null;
+  const band = aqi ? bandOf(aqi) : null;
+  const src = inWard.length ? `${inWard.length} sensor(s) in this ward` : "city average (no sensor in ward)";
+
+  async function getAdvice() {
+    if (!w || !aqi) return;
+    setBusy(true);
+    const fallback = `Air quality alert for ${wardLabel(w.name)}: AQI ${aqi} (${band}). ` +
+      `${CPCB_HEALTH[band]} ${(GROUP_ACTIONS[group] || {})[band] || "Follow general precautions."}`;
+    try {
+      const r = await api.getAdvisory(city, w.name, aqi, group, lang);
+      setAdv(r && r.text ? r : { text: fallback, lang: "en", source: "official CPCB template" });
+    } catch { setAdv({ text: fallback, lang: "en", source: "official CPCB template" }); }
+    setBusy(false);
+  }
+  function speak() {
+    if (!adv) return;
+    const u = new SpeechSynthesisUtterance(adv.text);
+    u.lang = TTS_LANG[adv.lang] || "en-IN"; u.rate = 0.95;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+  const bandColor = { Good: "#3fb950", Satisfactory: "#7ee787", Moderate: "#d29922", Poor: "#f0883e", "Very Poor": "#ff7b72", Severe: "#da3633" }[band] || "#8b949e";
+  return (
+    <div className="rail">
+      <div className="railbody">
+        <div className="card"><h4>My ward</h4>
+          <select value={ward} onChange={e => { setWard(e.target.value); setAdv(null); }}
+            style={{ width: "100%", padding: 6, background: "#21262d", color: "#e6edf3", border: "1px solid #30363d", borderRadius: 6 }}>
+            {wards.map(x => <option key={x.id} value={x.id}>{wardLabel(x.name)}</option>)}
+          </select>
+          <div className="evli" style={{ marginTop: 6 }}>
+            {w ? `${w.schools} schools · ${w.hospitals} hospitals in this ward (OpenStreetMap)` : ""}</div>
+        </div>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 46, fontWeight: 700, color: bandColor }}>{aqi ?? "—"}</div>
+          <div style={{ color: bandColor, fontWeight: 700 }}>{band ?? "no data"}</div>
+          <div className="evli">{src}</div>
+        </div>
+        <div className="card"><h4>Who is this for?</h4>
+          {Object.keys(GROUP_ACTIONS).map(g => (
+            <button key={g} className={`langbtn ${group === g ? "active" : ""}`}
+              style={{ margin: 3, background: group === g ? "#1f6feb" : undefined }}
+              onClick={() => { setGroup(g); setAdv(null); }}>{g.replace("_", " ")}</button>))}
+          <div style={{ marginTop: 8 }}>
+            {["en", "hi", "mr", "kn"].map(l => (
+              <button key={l} className="langbtn" style={{ margin: 3, background: lang === l ? "#1f6feb" : undefined }}
+                onClick={() => { setLang(l); setAdv(null); }}>{{ en: "English", hi: "हिंदी", mr: "मराठी", kn: "ಕನ್ನಡ" }[l]}</button>))}
+          </div>
+          <button className="replaybtn" style={{ marginTop: 10, width: "100%" }} onClick={getAdvice} disabled={busy || !aqi}>
+            {busy ? "Preparing…" : "Get my advisory"}</button>
+        </div>
+        {adv && <div className="card">
+          <div style={{ fontSize: 15, lineHeight: 1.5 }}>{adv.text}</div>
+          <div className="evli" style={{ marginTop: 6 }}>source: {adv.source}</div>
+          <button className="langbtn" style={{ marginTop: 8 }} onClick={speak}>🔊 Listen (IVR / public display)</button>
+        </div>}
+        <div className="card evli">Health guidance text is CPCB's official National AQI wording — never AI-generated.
+          Translations are AI-assisted with validation and safe fallback.</div>
+      </div>
+    </div>);
+}
 
 function Actions({ actions }) {
   if (!actions.length) return <div className="card">No enforcement actions for this city in the episode window.</div>;

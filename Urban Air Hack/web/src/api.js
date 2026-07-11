@@ -41,3 +41,9 @@ export const packUrl = id => (API ? `${API}/actions/${id}/pack.pdf` : null);
 export async function getGrid(slug) {
   return j(`/demo/grid_${slug}.json`);  // precomputed 1-km IDW forecast grid
 }
+
+export async function getAdvisory(slug, ward, aqi, group, lang) {
+  if (!API) return null; // demo mode: caller renders official CPCB template text client-side
+  const u = `${API}/cities/${slug}/advisory?ward=${encodeURIComponent(ward)}&aqi=${Math.round(aqi)}&group=${group}&lang=${lang}`;
+  return j(u);
+}
