@@ -1,0 +1,23 @@
+{
+  "h6": {
+    "n_test": 2060,
+    "rmse_model": 59.47,
+    "rmse_persistence": 101.79,
+    "rmse_seasonal_naive": 101.79,
+    "improvement_vs_persistence_pct": 41.6
+  },
+  "h12": {
+    "n_test": 1591,
+    "rmse_model": 57.83,
+    "rmse_persistence": 116.46,
+    "rmse_seasonal_naive": 80.82,
+    "improvement_vs_persistence_pct": 50.3
+  },
+  "h24": {
+    "n_test": 831,
+    "rmse_model": 52.53,
+    "rmse_persistence": 79.23,
+    "rmse_seasonal_naive": 79.23,
+    "improvement_vs_persistence_pct": 33.7
+  }
+}
