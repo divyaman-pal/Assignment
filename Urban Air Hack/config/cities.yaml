@@ -1,0 +1,22 @@
+# Adding a city = add a block here + a ward GeoJSON. Nothing else.
+cities:
+  Delhi:
+    slug: delhi
+    wards_file: data/raw/wards/delhi.geojson
+    bbox: [76.84, 28.40, 77.35, 28.88]
+    languages: [en, hi]
+  Mumbai:
+    slug: mumbai
+    wards_file: data/raw/wards/mumbai.geojson
+    bbox: [72.77, 18.89, 72.99, 19.28]
+    languages: [en, hi, mr]
+  Bengaluru:
+    slug: bengaluru
+    wards_file: data/raw/wards/bengaluru.geojson
+    bbox: [77.46, 12.83, 77.78, 13.14]
+    languages: [en, kn]
+episode:
+  name: "New Year winter inversion, Dec 2025"
+  start: "2025-12-25"
+  end: "2026-01-01"
+  city: Delhi
