@@ -112,12 +112,20 @@ export default function App() {
   );
 }
 
+const MUMBAI_WARDS = { "A": "A — Colaba", "B": "B — Sandhurst Rd", "C": "C — Marine Lines",
+  "D": "D — Grant Road", "E": "E — Byculla", "F/N": "F North — Matunga·Sion", "F/S": "F South — Parel",
+  "G/N": "G North — Dadar", "G/S": "G South — Worli", "H/E": "H East — Bandra E", "H/W": "H West — Bandra W",
+  "K/E": "K East — Andheri E", "K/W": "K West — Andheri W", "L": "L — Kurla", "M/E": "M East — Govandi·Deonar",
+  "M/W": "M West — Chembur", "N": "N — Ghatkopar", "P/N": "P North — Malad", "P/S": "P South — Goregaon",
+  "R/C": "R Central — Borivali", "R/N": "R North — Dahisar", "R/S": "R South — Kandivali", "S": "S — Bhandup", "T": "T — Mulund" };
+const wardLabel = n => MUMBAI_WARDS[n] || n;
+
 function Actions({ actions }) {
   if (!actions.length) return <div className="card">No enforcement actions for this city in the episode window.</div>;
   return actions.map(a => (
     <div className="card" key={a.action_id}>
       <span className="prio">{Number(a.priority).toFixed(2)}</span>
-      <h4>{a.ward_name || a.ward_id}</h4>
+      <h4>{wardLabel(a.ward_name) || a.ward_id}</h4>
       <span className={`badge b-${a.category}`}>{a.category}</span>
       <span className="conf">{Math.round(a.confidence)}% confidence</span>
       <div className="evli">{a.n_events} events · mean PM2.5 {Math.round(a.mean_pm25)} µg/m³ (max {Math.round(a.max_pm25)})</div>
@@ -179,7 +187,7 @@ function Replay({ replay, busy }) {
         <div className="evli">(status quo: multi-day manual coordination — CAG 2024: only 31% of cities have any response protocol)</div></div>
       {replay.log.map(l => (
         <div className="step" key={l.step}>t+{l.elapsed_s}s <b>{l.agent}</b><br />{l.output_summary}</div>))}
-      {(replay.advisories || []).map((a, i) => <div className="card" key={i}><b>{a.ward}</b>: {a.text}</div>)}
+      {(replay.advisories || []).map((a, i) => <div className="card" key={i}><b>{wardLabel(a.ward)}</b>: {a.text}</div>)}
     </div>);
 }
 
