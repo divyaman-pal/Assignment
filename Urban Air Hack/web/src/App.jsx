@@ -227,6 +227,14 @@ function Metrics({ metrics }) {
         <div className="evli">Satellite fire layer: {metrics.attribution?.fires_used ? "active (VIIRS/FIRMS)" : "pending FIRMS csv"}</div>
       </div>
       <div className="card">
+        <h4>Attribution vs ground-truth inventory (CAQM unified report, Jan 2026)</h4>
+        <table><thead><tr><th>Source</th><th>Ours*</th><th>CAQM winter</th><th>Why they differ</th></tr></thead>
+          <tbody>{(metrics.inventory_validation?.rows || []).map(r => (
+            <tr key={r.category}><td>{r.category}</td><td>{r.ours}%</td><td>{r.caqm}%</td>
+              <td style={{ color: "#8b949e", fontSize: 11 }}>{r.note}</td></tr>))}</tbody></table>
+        <div className="evli">*{metrics.inventory_validation?.caveat}</div>
+      </div>
+      <div className="card">
         <h4>Data integrity (build report)</h4>
         <div className="evli">{metrics.build?.readings_rows?.toLocaleString()} readings · {metrics.build?.stations_with_coords}/{metrics.build?.stations_total} stations geocoded</div>
         <div className="evli">{metrics.build?.verified_by_two_sources} station coordinates verified by two independent sources; {metrics.build?.coord_conflicts_dropped} conflicts dropped</div>

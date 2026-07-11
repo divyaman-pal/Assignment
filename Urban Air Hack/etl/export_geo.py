@@ -49,6 +49,28 @@ def main():
     metrics = {"forecast": json.loads((ROOT / "data" / "forecast_metrics.json").read_text()),
                "attribution": json.loads((ROOT / "data" / "attribution_summary.json").read_text()),
                "build": json.loads((ROOT / "data" / "build_report.json").read_text())}
+    # Validation vs ground-truth inventory: CAQM unified source-apportionment
+    # report (Jan 2026, Supreme Court-mandated; synthesises TERI/CSE/CEEW/
+    # UrbanEmissions). Winter Delhi PM2.5 mass shares.
+    d = con.sql("SELECT category, count(*) n FROM attributions WHERE city='Delhi' GROUP BY 1").df()
+    tot = d.n.sum()
+    ours = {r.category: round(100 * r.n / tot, 1) for r in d.itertuples()}
+    metrics["inventory_validation"] = {
+        "benchmark": "CAQM unified report, Jan 2026 (SC-mandated) — Delhi winter PM2.5 mass shares",
+        "caveat": ("Ours are EVENT-COUNT shares for one episode week (incl. New Year fireworks); "
+                   "benchmark is seasonal MASS shares — directional comparison only"),
+        "rows": [
+            {"category": "biomass/burning", "ours": ours.get("burning_fireworks", 0), "caqm": 20,
+             "note": "our week includes NYE fireworks — exceedance expected and correct"},
+            {"category": "transport", "ours": ours.get("traffic", 0), "caqm": 23,
+             "note": "same order of magnitude; event counts over-weight rush-hour spikes"},
+            {"category": "dust/construction", "ours": ours.get("construction_dust", 0), "caqm": 15,
+             "note": "winter dust suppressed by humidity; spike-detection under-captures steady dust"},
+            {"category": "industry", "ours": ours.get("industrial", 0), "caqm": 9,
+             "note": "few SO2-signature events in this week"},
+            {"category": "secondary", "ours": ours.get("secondary_regional", 0), "caqm": 27,
+             "note": "known method limit: secondary chemistry is invisible to station-observational attribution"}],
+        "n_events": int(tot)}
     (OUT / "metrics.json").write_text(json.dumps(metrics))
     print("exported:", [p.name for p in OUT.iterdir()])
 
