@@ -36,8 +36,8 @@ class RunState:
     advisories: list = field(default_factory=list)
 
 class Orchestrator:
-    def __init__(self):
-        self.con = duckdb.connect(str(DB))
+    def __init__(self, con=None):
+        self.con = con or duckdb.connect(str(DB))
         self.con.sql("""CREATE TABLE IF NOT EXISTS agent_log (
             run_id VARCHAR, step INT, agent VARCHAR, ts TIMESTAMP,
             elapsed_s DOUBLE, input_summary VARCHAR, output_summary VARCHAR)""")
@@ -89,7 +89,7 @@ class Orchestrator:
                   "backtest_rmse_vs_persistence": "52.5 vs 79.2 (see forecast_metrics.json)"})
         # 4) ENFORCEMENT
         from agents.enforcement import rank_actions
-        actions = rank_actions()
+        actions = rank_actions(con=self.con)
         if city is not None: actions = actions[actions.city == city]
         state.actions = actions
         self.log(state, "enforcement", {"candidates": len(actions)},

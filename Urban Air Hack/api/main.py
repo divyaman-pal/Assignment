@@ -4,7 +4,7 @@ Every endpoint reads from data/vayu.duckdb — the same tables the agents
 write. Nothing served here is computed ad hoc; it all joins back to the
 auditable pipeline (agent_log).
 """
-import json, sys
+import json, sys, threading
 from pathlib import Path
 
 import duckdb
@@ -23,12 +23,18 @@ CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
 app = FastAPI(title="VAYU-NET API", version="0.5")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+_CON, _LOCK = None, threading.Lock()
+
+def get_con():
+    global _CON
+    if _CON is None:
+        _CON = duckdb.connect(str(DB))
+    return _CON
+
 def q(sql, params=None):
-    con = duckdb.connect(str(DB), read_only=True)
-    try:
+    with _LOCK:
+        con = get_con()
         return con.sql(sql).df() if params is None else con.execute(sql, params).df()
-    finally:
-        con.close()
 
 @app.get("/health")
 def health():
@@ -80,7 +86,9 @@ def actions(slug: str):
 @app.get("/actions/{action_id}/pack.pdf")
 def pack(action_id: int):
     from agents.enforcement import evidence_pack
-    return FileResponse(evidence_pack(action_id), media_type="application/pdf",
+    with _LOCK:
+        path = evidence_pack(action_id, con=get_con())
+    return FileResponse(path, media_type="application/pdf",
                         filename=f"evidence_pack_{action_id}.pdf")
 
 @app.get("/cities/{slug}/advisory")
@@ -105,9 +113,10 @@ def agent_log(limit: int = 50):
 @app.post("/replay/run")
 def replay_run(start: str = "2025-12-31 18:00", end: str = "2026-01-01 02:00", city: str = "Delhi"):
     from agents.orchestrator import Orchestrator
-    o = Orchestrator()
+    with _LOCK:
+        o = Orchestrator(con=get_con())
     state, elapsed = o.run_window(start, end, city=city)
-    log = o.con.sql("SELECT step, agent, elapsed_s, input_summary, output_summary FROM agent_log WHERE run_id = ? ORDER BY step", [state.run_id]).df()
+    log = o.con.execute("SELECT step, agent, elapsed_s, input_summary, output_summary FROM agent_log WHERE run_id = ? ORDER BY step", [state.run_id]).df()
     return {"run_id": state.run_id, "elapsed_s": elapsed,
-            "events": len(state.events), "actions": len(state.actions or []),
+            "events": len(state.events), "actions": 0 if state.actions is None else len(state.actions),
             "advisories": state.advisories, "log": json.loads(log.to_json(orient="records"))}

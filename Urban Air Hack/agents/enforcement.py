@@ -41,8 +41,8 @@ ACTIONS = {
     "secondary_regional": "Escalate to regional coordination; issue city-wide advisory; no local enforcement lever",
 }
 
-def rank_actions(top_n=10):
-    con = duckdb.connect(str(DB))
+def rank_actions(top_n=10, con=None):
+    con = con or duckdb.connect(str(DB))
     df = con.sql("""
       SELECT a.city, s.ward_id, w.name ward_name, a.category,
              count(*) n_events, avg(a.pm25) mean_pm25, max(a.pm25) max_pm25,
@@ -63,13 +63,13 @@ def rank_actions(top_n=10):
     con.sql("CREATE OR REPLACE TABLE actions AS SELECT row_number() OVER () action_id, * FROM actions_df")
     return out
 
-def evidence_pack(action_id):
+def evidence_pack(action_id, con=None):
     """One-page PDF: header, priority breakdown, PM2.5 timeseries of the ward's
     stations, pollution rose, evidence bullets from top event, statute."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    con = duckdb.connect(str(DB), read_only=True)
+    con = con or duckdb.connect(str(DB), read_only=True)
     a = con.sql(f"SELECT * FROM actions WHERE action_id={int(action_id)}").df().iloc[0]
     ts = con.sql(f"""SELECT date_trunc('hour', r.ts) h, avg(r.pm25) pm25, avg(r.wd) wd, avg(r.ws) ws
         FROM readings r JOIN stations s USING (station_id)
