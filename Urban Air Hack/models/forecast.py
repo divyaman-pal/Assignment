@@ -21,8 +21,8 @@ DB = ROOT / "data" / "vayu.duckdb"
 HORIZONS = [6, 12, 24]
 LAGS = [1, 2, 3, 6, 12, 24]
 
-def load_hourly():
-    con = duckdb.connect(str(DB), read_only=True)
+def load_hourly(con=None):
+    con = con or duckdb.connect(str(DB), read_only=True)
     df = con.sql("""
       SELECT station_id, city, date_trunc('hour', ts) h,
              avg(pm25) pm25, avg(pm10) pm10, avg(ws) ws, avg(wd) wd,
