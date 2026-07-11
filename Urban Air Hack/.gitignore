@@ -1,0 +1,14 @@
+.env
+*.env.local
+__pycache__/
+*.pyc
+node_modules/
+dist/
+data/raw/
+data/snapshot/
+*.parquet
+*.duckdb
+.vercel
+models/*.pkl
+models/*.txt
+.DS_Store
