@@ -1,0 +1,34 @@
+flowchart TB
+  subgraph SOURCES["OPEN DATA SOURCES (no proprietary feeds)"]
+    S1["CPCB CAAQMS<br/>15-min pollutants + met<br/>543 stations (Vonter/india-cpcb-aqi, ODbL)"]
+    S2["NASA FIRMS<br/>VIIRS fire detections<br/>16,298 pts, Dec 25-Jan 3"]
+    S3["data.gov.in AQI snapshots<br/>station coords x2 sources<br/>cross-validated"]
+    S4["DataMeet ward GeoJSONs<br/>Delhi 290 / Mumbai 24 / Bengaluru 243"]
+    S5["Open-Meteo forecast API<br/>(runtime, live mode)"]
+  end
+  subgraph BACKBONE["GEOSPATIAL BACKBONE — DuckDB"]
+    B1["ETL: fetch_data.py / build_backbone.py<br/>readings - aqi_history - stations - wards<br/>build_report.json (every match rate logged)"]
+  end
+  subgraph AGENTS["MULTI-AGENT PIPELINE (auditable: agent_log)"]
+    A1["SENTINEL<br/>robust z-score spikes +<br/>GRAP absolute crossings"]
+    A2["ATTRIBUTION<br/>wind CPF - PM ratios - gas fingerprints<br/>diurnal - calendar - fire anomaly<br/>-> source + confidence + evidence"]
+    A3["FORECAST<br/>LightGBM 6/12/24h<br/>RMSE 52.5 vs persistence 79.2"]
+    A4["ENFORCEMENT<br/>priority = exposure x confidence x persistence<br/>statute mapping -> PDF evidence pack"]
+    A5["ADVISORY<br/>CPCB official health text<br/>LLM translate-only + validation<br/>EN-HI-MR-KN ($10 budget guard)"]
+  end
+  subgraph SERVE["SERVING"]
+    P1["FastAPI - 12 endpoints<br/>replay runner - packs - metrics"]
+    P2["React + MapLibre war-room<br/>actions - events - metrics - replay<br/>demo-snapshot fallback mode"]
+  end
+  S1 --> B1
+  S2 --> B1
+  S3 --> B1
+  S4 --> B1
+  B1 --> A1 --> A2 --> A4 --> A5
+  A1 --> A3 --> A4
+  S5 -.-> A3
+  A2 --> P1
+  A3 --> P1
+  A4 --> P1
+  A5 --> P1
+  P1 --> P2
