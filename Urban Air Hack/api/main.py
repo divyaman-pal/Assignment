@@ -15,6 +15,8 @@ from fastapi.responses import FileResponse, JSONResponse
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 DB = ROOT / "data" / "vayu.duckdb"
+if not DB.exists():
+    DB = ROOT / "data" / "vayu_serve.duckdb"
 DEMO = ROOT / "web" / "public" / "demo"
 CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
 

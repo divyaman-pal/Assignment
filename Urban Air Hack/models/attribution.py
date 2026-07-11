@@ -32,6 +32,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "vayu.duckdb"
+if not DB.exists():
+    DB = ROOT / "data" / "vayu_serve.duckdb"
 
 CATEGORIES = ["traffic", "construction_dust", "industrial", "burning_fireworks", "secondary_regional"]
 

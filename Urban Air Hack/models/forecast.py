@@ -18,6 +18,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "vayu.duckdb"
+if not DB.exists():
+    DB = ROOT / "data" / "vayu_serve.duckdb"
 HORIZONS = [6, 12, 24]
 LAGS = [1, 2, 3, 6, 12, 24]
 

@@ -12,3 +12,9 @@ data/snapshot/
 models/*.pkl
 models/*.txt
 .DS_Store
+
+# deploy artifacts (committed intentionally)
+!data/vayu_serve.duckdb
+!models/lgbm_pm25_h*.txt
+!data/raw/firms.csv
+!data/*.json

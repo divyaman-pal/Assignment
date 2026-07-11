@@ -22,6 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "vayu.duckdb"
+if not DB.exists():
+    DB = ROOT / "data" / "vayu_serve.duckdb"
 
 @dataclass
 class RunState:
