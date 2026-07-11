@@ -89,7 +89,7 @@ def cpf(g, threshold_q=0.75):
             out[int(s)] = round(float((sg.pm25 > thr).mean()), 2)
     return out
 
-def attribute_event(e, hist, fires=None):
+def attribute_event(e, hist, fires=None, station_coords=None):
     """Return evidence dict + log-odds per category for one event."""
     P = EVIDENCE_PARAMS
     lo = {c: 0.0 for c in CATEGORIES}
@@ -145,12 +145,28 @@ def attribute_event(e, hist, fires=None):
         lo["secondary_regional"] += cap * 0.4
         evidence.append(f"Calm winds ({ws_now:.1f} m/s) — accumulation/inversion conditions")
 
-    # S6: fires
-    if fires is not None and len(fires):
-        n = len(fires[(fires.h >= e.h - pd.Timedelta(hours=24)) & (fires.h <= e.h)])
-        if n > 0:
-            lo["burning_fireworks"] += min(cap, 0.3 * n)
-            evidence.append(f"{n} satellite fire detections within region in prior 24h (VIIRS/FIRMS)")
+    # S6: fires (spatial: within ~50 km of the event's station, prior 24h)
+    if fires is not None and len(fires) and station_coords is not None:
+        c = station_coords.get(e.station_id)
+        if c:
+            lat0, lon0 = c
+            near = fires[(fires.h >= e.h.tz_localize(None) - pd.Timedelta(hours=24)) &
+                         (fires.h <= e.h.tz_localize(None)) &
+                         (fires.latitude.between(lat0 - 0.45, lat0 + 0.45)) &
+                         (fires.longitude.between(lon0 - 0.5, lon0 + 0.5))]
+            n = len(near)
+            # Baseline: average detections per 24h in the SAME box over the whole
+            # FIRMS window. In NCR winter fires are always present, so only
+            # ABOVE-BASELINE fire activity is treated as evidence (anti-overcount).
+            box = fires[(fires.latitude.between(lat0 - 0.45, lat0 + 0.45)) &
+                        (fires.longitude.between(lon0 - 0.5, lon0 + 0.5))]
+            days = max((fires.h.max() - fires.h.min()).total_seconds() / 86400, 1)
+            baseline = len(box) / days
+            ratio = n / max(baseline, 1.0)
+            if ratio > 1.3:
+                lo["burning_fireworks"] += min(1.0, 0.5 * (ratio - 1))
+                evidence.append(f"VIIRS fire activity {ratio:.1f}x the period average within ~50 km "
+                                f"({n} detections vs {baseline:.0f}/day baseline, NASA FIRMS)")
 
     # softmax -> confidence
     x = np.array([lo[c] for c in CATEGORIES])
@@ -166,9 +182,11 @@ def run():
     events = detect_events(df)
     fires_path = ROOT / "data" / "raw" / "firms.csv"
     fires = pd.read_csv(fires_path, parse_dates=["h"]) if fires_path.exists() else None
+    coords = {r[0]: (r[1], r[2]) for r in con.sql(
+        "SELECT station_id, lat, lon FROM stations WHERE lat IS NOT NULL").fetchall()}
     rows = []
     for _, e in events.iterrows():
-        a = attribute_event(e, df, fires)
+        a = attribute_event(e, df, fires, coords)
         rows.append({**e.to_dict(), **{k: a[k] for k in ["category", "confidence", "n_signals"]},
                      "evidence_json": json.dumps(a)})
     out = pd.DataFrame(rows)

@@ -65,8 +65,10 @@ class Orchestrator:
         # 2) ATTRIBUTION
         fires_path = ROOT / "data" / "raw" / "firms.csv"
         fires = pd.read_csv(fires_path, parse_dates=["h"]) if fires_path.exists() else None
+        coords = {r[0]: (r[1], r[2]) for r in con.sql(
+            "SELECT station_id, lat, lon FROM stations WHERE lat IS NOT NULL").fetchall()}
         for _, e in events.iterrows():
-            a = attr_mod.attribute_event(e, hist, fires)
+            a = attr_mod.attribute_event(e, hist, fires, coords)
             state.attributions.append({"station_id": e.station_id, "h": str(e.h), **a})
         cats = pd.Series([a["category"] for a in state.attributions])
         self.log(state, "attribution", {"n_events": len(events)},
