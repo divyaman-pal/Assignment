@@ -1,33 +1,37 @@
 # SiteID
 
-**Offline-First Worker Identity & Wage Protection for Indian Construction Sites**
+**AI-Powered Offline Worker Identity & Wage Protection for Indian Construction Sites**
 
-A React Native mobile application that authenticates construction workers using
-offline facial recognition and liveness detection on standard mid-range mobile
-devices. SiteID is positioned for remote or rural job sites where paper muster
-rolls, unreliable connectivity, and unverifiable attendance records create wage
-leakage for contractors and workers.
+A React Native edge-AI mobile application that authenticates construction
+workers using offline facial recognition and video-based liveness detection on
+standard mid-range mobile devices. SiteID is positioned for remote or rural job
+sites where paper muster rolls, unreliable connectivity, and unverifiable
+attendance records create wage leakage for contractors and workers.
 
 Built for **Hackathon 7.0** - SiteID Construction Identity.
 
-## Key Features
+## AI Key Features
 
-- **Offline-first**: All ML inference and data storage happens on-device
-- **Fast**: Face embedding latency averages `16.84 ms`; end-to-end verification targets <1 second
-- **Lightweight**: Combined detector + recognition model assets are ~16.14 MB (target was <20 MB)
+- **Offline edge AI**: Face recognition inference runs on-device without cloud APIs
+- **Fast inference**: Face embedding latency averages `16.84 ms`; end-to-end verification targets <1 second
+- **Lightweight model footprint**: Combined detector + recognition model assets are ~16.14 MB (target was <20 MB)
+- **Embedding-based recognition**: MobileFaceNet ONNX generates compact 512-dimensional face embeddings
+- **AI liveness signals**: Blink, smile, head movement, and frame-quality signals are fused before attendance approval
 - **Multi-worker**: Enroll and verify construction-site personnel locally
-- **Anti-spoofing**: Liveness detection via blink/smile/head movement signals
 - **Sync-ready**: Queue-based sync with AWS-compatible backend
 - **Privacy-first**: Biometric data never leaves the device
 
-## Architecture
+## Edge AI Architecture
 
 ```
-Camera -> Face Detection -> Embedding -> Matching -> Result
-                |                              |
-          Liveness Signals ------------------> Liveness Score
-                                               |
-                                              SQLite + Sync Queue
+Video Capture -> Face Detection -> Face Crop -> MobileFaceNet Embedding
+                         |                         |
+                         |                         v
+                         |                  Cosine Matching
+                         v                         |
+                 Liveness Signals ----------------> Decision
+                                                   |
+                                            SQLite + Sync Queue
 ```
 
 | Component | Technology | Size/Speed |
