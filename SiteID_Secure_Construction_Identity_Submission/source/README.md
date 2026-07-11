@@ -50,8 +50,8 @@ Camera -> Face Detection -> Embedding -> Matching -> Result
 ### Setup
 
 ```bash
-# Clone the repository
-cd SiteID
+# Open the app source folder
+cd source
 
 # Install dependencies
 npm install

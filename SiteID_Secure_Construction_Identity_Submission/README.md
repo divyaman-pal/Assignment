@@ -1,27 +1,52 @@
-# SiteID Secure Construction Identity Submission
+# SiteID
 
-This folder, SiteID working prototype package for offline-first worker identity and wage protection on Indian construction sites.
+**Offline-first worker identity and wage protection for Indian construction sites.**
 
-Contents:
+SiteID is a React Native working prototype for verifying construction workers in remote or rural job sites where internet access is unreliable. The app uses on-device face recognition, basic liveness checks, local storage, and delayed cloud sync so attendance records can be captured even when the site is offline.
 
-- `source/` - React Native source code, Android project files, iOS scaffold, app docs, scripts, and bundled model assets.
-- `apk/SiteID-aws-sync-release.apk` - Android release APK for the working offline facial recognition and liveness prototype.
-- `benchmarks/` - LFW benchmark report for the current `w600k_mbf.onnx` MobileFaceNet model used by this app.
-- `presentation_and_docs/SiteID_Secure_Construction_Identity.pdf` - final SiteID presentation deck.
-- `presentation_and_docs/SiteID_Verification_Video.mp4` - verification demo video for the final Android workflow.
+## Why SiteID
 
-Build notes:
+Paper muster rolls and manual attendance records can create two problems at once: ghost workers can increase contractor costs, and real workers can lose wages when their attendance is not recorded correctly. SiteID replaces that weak paper checkpoint with video-based worker enrollment, face verification, and auditable sync records.
 
-- Target branch: `main`
-- APK SHA-256: `16DB822E1A9CD4B1C32984799E333AC79EB62B202CF88DF35789A6269163B63B`
-- Main product flow: offline in-app video enrollment, worker face verification, basic liveness checks, local SQLite storage, sync queue, and AWS sync to API Gateway/Lambda/DynamoDB.
-- SiteID use case: replace paper muster-roll dependency with on-device biometric verification for rural construction sites where connectivity is unreliable.
+## What Is Included
+
+- `source/` - React Native source code with Android project files, iOS scaffold, app documentation, scripts, and bundled model assets.
+- `apk/SiteID-aws-sync-release.apk` - Android APK for the working prototype.
+- `presentation_and_docs/SiteID_Secure_Construction_Identity.pdf` - SiteID presentation deck.
+- `presentation_and_docs/SiteID_Verification_Video.mp4` - Android verification demo video.
+- `benchmarks/` - benchmark files for the MobileFaceNet model used by the app.
+
+## Core Workflow
+
+1. Enroll a worker using a short in-app camera video.
+2. Extract face frames and generate local face embeddings.
+3. Verify the worker later with another in-app video.
+4. Run basic liveness checks such as blink, smile, or head movement signals.
+5. Save attendance and verification logs locally in SQLite.
+6. Sync queued records to AWS when network connectivity returns.
+
+## Tech Stack
+
+- React Native mobile app
+- Android native camera bridge
+- MobileFaceNet ONNX face-recognition model
+- Face detection and liveness signal extraction
+- SQLite local database
+- Offline sync queue
+- AWS API Gateway, Lambda, CloudWatch, and DynamoDB validation path
+
+## Validation Summary
+
+- Android prototype validated.
+- Face-recognition benchmark: `97.28%` LFW pair verification accuracy.
+- Mean CPU embedding latency: `16.84 ms`.
+- Combined detector and recognition model assets: about `16.14 MB`.
+- AWS sync validated through CloudWatch logs and DynamoDB records.
+
+## Build Notes
+
+- Android is the validated platform for the included APK.
+- The iOS scaffold is included in the React Native project, but iOS camera/liveness validation requires macOS, Xcode, and an iPhone.
 - AWS endpoint configured in source: `https://v8ihgcm30b.execute-api.ap-southeast-2.amazonaws.com/v1`
 - DynamoDB validation table: `SiteIDSyncRecords`
-- Benchmark summary: `97.28%` LFW pair verification accuracy; CPU embedding latency mean `16.84 ms`.
-
-Notes:
-
-- Android is the validated platform for this final APK.
-- The React Native iOS scaffold is included, but iOS native camera/video validation requires macOS/Xcode work.
-- The APK is tracked with Git LFS because it is larger than GitHub's normal 100 MB file limit.
+- APK SHA-256: `16DB822E1A9CD4B1C32984799E333AC79EB62B202CF88DF35789A6269163B63B`
