@@ -1,12 +1,12 @@
 {
-  "events": 1049,
+  "events": 1098,
   "by_category": {
-    "burning_fireworks": 546,
-    "traffic": 388,
-    "construction_dust": 56,
-    "industrial": 39,
-    "secondary_regional": 20
+    "burning_fireworks": 593,
+    "traffic": 378,
+    "construction_dust": 57,
+    "industrial": 53,
+    "secondary_regional": 17
   },
-  "mean_confidence": 47.3,
+  "mean_confidence": 49.6,
   "fires_used": true
 }
