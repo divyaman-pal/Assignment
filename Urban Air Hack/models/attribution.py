@@ -192,7 +192,10 @@ def run():
         rows.append({**e.to_dict(), **{k: a[k] for k in ["category", "confidence", "n_signals"]},
                      "evidence_json": json.dumps(a)})
     out = pd.DataFrame(rows)
-    con.register("attr_df", out.assign(h=out.h.astype(str)))
+    if len(out):
+        # store naive-IST timestamps (portable: avoids string-typed h downstream)
+        out["h"] = pd.to_datetime(out.h, utc=True).dt.tz_convert("Asia/Kolkata").dt.tz_localize(None)
+    con.register("attr_df", out)
     con.sql("CREATE OR REPLACE TABLE attributions AS SELECT * FROM attr_df")
     summary = {"events": len(out),
                "by_category": out.category.value_counts().to_dict() if len(out) else {},

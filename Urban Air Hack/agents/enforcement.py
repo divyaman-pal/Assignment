@@ -54,6 +54,8 @@ def rank_actions(top_n=10, con=None):
       LEFT JOIN wards w ON s.ward_id = w.ward_id
       WHERE s.ward_id IS NOT NULL
       GROUP BY 1,2,3,4""").df()
+    df["first_seen"] = pd.to_datetime(df.first_seen)
+    df["last_seen"] = pd.to_datetime(df.last_seen)
     sev = np.clip((df.mean_pm25 - 60) / 250, 0, 2)
     persist = 1 + np.log1p((df.last_seen - df.first_seen).dt.total_seconds() / 3600)
     # Vulnerability: schools+hospitals in ward (OSM), normalised per city.
