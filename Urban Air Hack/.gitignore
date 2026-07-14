@@ -4,7 +4,7 @@ __pycache__/
 *.pyc
 node_modules/
 dist/
-data/raw/
+data/raw/*
 data/snapshot/
 *.parquet
 *.duckdb
@@ -17,4 +17,5 @@ models/*.txt
 !data/vayu_serve.duckdb
 !models/lgbm_pm25_h*.txt
 !data/raw/firms.csv
+!data/raw/osm_pois.json
 !data/*.json

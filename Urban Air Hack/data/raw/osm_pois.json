@@ -1,0 +1,3349 @@
+{
+ "delhi": {
+  "delhi_CANT_1": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_CANT_2": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_CANT_4": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 1,
+   "construction": 4
+  },
+  "delhi_CANT_5": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_CANT_6": {
+   "schools": 6,
+   "hospitals": 3,
+   "industrial": 3,
+   "construction": 2
+  },
+  "delhi_CANT_7": {
+   "schools": 4,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_CANT_8": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 3,
+   "construction": 0
+  },
+  "delhi_CANT_3": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_NDMC_1": {
+   "schools": 5,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_NDMC_2": {
+   "schools": 6,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_NDMC_3": {
+   "schools": 7,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 2
+  },
+  "delhi_NDMC_4": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 3
+  },
+  "delhi_NDMC_5": {
+   "schools": 8,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 3
+  },
+  "delhi_NDMC_7": {
+   "schools": 0,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_NDMC_8": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 10
+  },
+  "delhi_NDMC_9": {
+   "schools": 11,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 4
+  },
+  "delhi_NDMC_6": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_80": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_81": {
+   "schools": 2,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_82": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_83": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_85": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_108": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_109": {
+   "schools": 8,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_11": {
+   "schools": 4,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_117": {
+   "schools": 3,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_118": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_119": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_120": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_133": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_134": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_135": {
+   "schools": 7,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 2
+  },
+  "delhi_140": {
+   "schools": 10,
+   "hospitals": 5,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_241": {
+   "schools": 4,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_242": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_243": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_244": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_245": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_246": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_247": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_248": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_249": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_250": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_252": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_255": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_256": {
+   "schools": 0,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_257": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_258": {
+   "schools": 4,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_259": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_260": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_261": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_262": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_263": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_264": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_265": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_266": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_268": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_269": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_271": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_272": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_154": {
+   "schools": 8,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 3
+  },
+  "delhi_156": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_157": {
+   "schools": 9,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 1
+  },
+  "delhi_160": {
+   "schools": 6,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_161": {
+   "schools": 5,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_162": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_159": {
+   "schools": 12,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_165": {
+   "schools": 6,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_166": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_168": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_171": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_180": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_181": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_182": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_183": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_184": {
+   "schools": 7,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_185": {
+   "schools": 0,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_187": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_188": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_189": {
+   "schools": 5,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_190": {
+   "schools": 11,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_191": {
+   "schools": 11,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_192": {
+   "schools": 8,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_193": {
+   "schools": 3,
+   "hospitals": 5,
+   "industrial": 6,
+   "construction": 0
+  },
+  "delhi_194": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_195": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_196": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_197": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 3,
+   "construction": 1
+  },
+  "delhi_198": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_199": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_200": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 13,
+   "construction": 0
+  },
+  "delhi_201": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_202": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_203": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_204": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_206": {
+   "schools": 5,
+   "hospitals": 6,
+   "industrial": 1,
+   "construction": 2
+  },
+  "delhi_84": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_86": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_87": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_88": {
+   "schools": 4,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_89": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_146": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_150": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_151": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_152": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_173": {
+   "schools": 7,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_174": {
+   "schools": 3,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_175": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_176": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 3,
+   "construction": 0
+  },
+  "delhi_207": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_208": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_231": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_232": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_234": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_235": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_236": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_237": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_238": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_239": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_240": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_103": {
+   "schools": 4,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_96": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_97": {
+   "schools": 12,
+   "hospitals": 3,
+   "industrial": 3,
+   "construction": 0
+  },
+  "delhi_98": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_122": {
+   "schools": 5,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_71": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_72": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_69": {
+   "schools": 9,
+   "hospitals": 7,
+   "industrial": 4,
+   "construction": 0
+  },
+  "delhi_74": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_75": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_76": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_77": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_78": {
+   "schools": 5,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_79": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_114": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_115": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_116": {
+   "schools": 4,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_125": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_126": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_127": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_128": {
+   "schools": 4,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_129": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_136": {
+   "schools": 38,
+   "hospitals": 13,
+   "industrial": 0,
+   "construction": 2
+  },
+  "delhi_137": {
+   "schools": 16,
+   "hospitals": 15,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_209": {
+   "schools": 4,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_21": {
+   "schools": 15,
+   "hospitals": 3,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_210": {
+   "schools": 5,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_211": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_212": {
+   "schools": 5,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_213": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_214": {
+   "schools": 10,
+   "hospitals": 3,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_215": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_216": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_217": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_68": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_67": {
+   "schools": 6,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_66": {
+   "schools": 5,
+   "hospitals": 6,
+   "industrial": 1,
+   "construction": 1
+  },
+  "delhi_65": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_64": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 3
+  },
+  "delhi_63": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_62": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_61": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_60": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_59": {
+   "schools": 4,
+   "hospitals": 4,
+   "industrial": 3,
+   "construction": 0
+  },
+  "delhi_58": {
+   "schools": 12,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_57": {
+   "schools": 7,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_56": {
+   "schools": 7,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_55": {
+   "schools": 3,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_54": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_53": {
+   "schools": 9,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_52": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_51": {
+   "schools": 10,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_50": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_48": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_46": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_45": {
+   "schools": 8,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_44": {
+   "schools": 2,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_43": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_42": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_41": {
+   "schools": 9,
+   "hospitals": 11,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_40": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_37": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_35": {
+   "schools": 0,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_29": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_27": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_25": {
+   "schools": 15,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_24": {
+   "schools": 5,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_230": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_229": {
+   "schools": 3,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_228": {
+   "schools": 20,
+   "hospitals": 11,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_227": {
+   "schools": 9,
+   "hospitals": 1,
+   "industrial": 5,
+   "construction": 0
+  },
+  "delhi_225": {
+   "schools": 7,
+   "hospitals": 4,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_223": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_222": {
+   "schools": 4,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_22": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_219": {
+   "schools": 13,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_218": {
+   "schools": 10,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_100": {
+   "schools": 3,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_147": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_131": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_132": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_30": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 9,
+   "construction": 0
+  },
+  "delhi_95": {
+   "schools": 7,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_94": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_92": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_91": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_90": {
+   "schools": 5,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_70": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_4": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 7,
+   "construction": 0
+  },
+  "delhi_3": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 19,
+   "construction": 1
+  },
+  "delhi_26": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 4,
+   "construction": 0
+  },
+  "delhi_2": {
+   "schools": 1,
+   "hospitals": 10,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_9": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_8": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_6": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_28": {
+   "schools": 11,
+   "hospitals": 8,
+   "industrial": 6,
+   "construction": 0
+  },
+  "delhi_19": {
+   "schools": 16,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_17": {
+   "schools": 0,
+   "hospitals": 9,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_16": {
+   "schools": 9,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_15": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_144": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_143": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 11,
+   "construction": 9
+  },
+  "delhi_141": {
+   "schools": 12,
+   "hospitals": 3,
+   "industrial": 6,
+   "construction": 7
+  },
+  "delhi_14": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_13": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 4,
+   "construction": 2
+  },
+  "delhi_12": {
+   "schools": 2,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_10": {
+   "schools": 8,
+   "hospitals": 2,
+   "industrial": 1,
+   "construction": 6
+  },
+  "delhi_101": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_102": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_105": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_110": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_111": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_112": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_148": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_23": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_31": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_34": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 1
+  },
+  "delhi_39": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_49": {
+   "schools": 8,
+   "hospitals": 5,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_18": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_254": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_139": {
+   "schools": 3,
+   "hospitals": 6,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_99": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_47": {
+   "schools": 8,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_155": {
+   "schools": 5,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_145": {
+   "schools": 5,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_172": {
+   "schools": 12,
+   "hospitals": 2,
+   "industrial": 1,
+   "construction": 3
+  },
+  "delhi_226": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_104": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_149": {
+   "schools": 18,
+   "hospitals": 6,
+   "industrial": 1,
+   "construction": 1
+  },
+  "delhi_167": {
+   "schools": 7,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_163": {
+   "schools": 10,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 2
+  },
+  "delhi_164": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_158": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_130": {
+   "schools": 4,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_38": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_106": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_169": {
+   "schools": 12,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_1": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 2,
+   "construction": 4
+  },
+  "delhi_5": {
+   "schools": 9,
+   "hospitals": 1,
+   "industrial": 4,
+   "construction": 0
+  },
+  "delhi_7": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 6,
+   "construction": 0
+  },
+  "delhi_220": {
+   "schools": 17,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_224": {
+   "schools": 5,
+   "hospitals": 4,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_221": {
+   "schools": 5,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_233": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_251": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_253": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_267": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_177": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_178": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_170": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_186": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_179": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_205": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_138": {
+   "schools": 4,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_20": {
+   "schools": 6,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_121": {
+   "schools": 8,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_124": {
+   "schools": 10,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_123": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 1
+  },
+  "delhi_113": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_153": {
+   "schools": 12,
+   "hospitals": 7,
+   "industrial": 6,
+   "construction": 0
+  },
+  "delhi_93": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 1,
+   "construction": 0
+  },
+  "delhi_32": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 2,
+   "construction": 0
+  },
+  "delhi_36": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_33": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_73": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_107": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_270": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "delhi_142": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  }
+ },
+ "mumbai": {
+  "mumbai_1": {
+   "schools": 24,
+   "hospitals": 21,
+   "industrial": 10,
+   "construction": 23
+  },
+  "mumbai_2": {
+   "schools": 2,
+   "hospitals": 9,
+   "industrial": 12,
+   "construction": 0
+  },
+  "mumbai_3": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 3
+  },
+  "mumbai_4": {
+   "schools": 39,
+   "hospitals": 33,
+   "industrial": 2,
+   "construction": 46
+  },
+  "mumbai_5": {
+   "schools": 19,
+   "hospitals": 26,
+   "industrial": 29,
+   "construction": 5
+  },
+  "mumbai_6": {
+   "schools": 14,
+   "hospitals": 22,
+   "industrial": 40,
+   "construction": 4
+  },
+  "mumbai_7": {
+   "schools": 23,
+   "hospitals": 16,
+   "industrial": 14,
+   "construction": 10
+  },
+  "mumbai_8": {
+   "schools": 36,
+   "hospitals": 25,
+   "industrial": 18,
+   "construction": 3
+  },
+  "mumbai_9": {
+   "schools": 36,
+   "hospitals": 40,
+   "industrial": 14,
+   "construction": 7
+  },
+  "mumbai_10": {
+   "schools": 11,
+   "hospitals": 60,
+   "industrial": 14,
+   "construction": 10
+  },
+  "mumbai_11": {
+   "schools": 21,
+   "hospitals": 72,
+   "industrial": 6,
+   "construction": 2
+  },
+  "mumbai_12": {
+   "schools": 33,
+   "hospitals": 47,
+   "industrial": 82,
+   "construction": 22
+  },
+  "mumbai_13": {
+   "schools": 38,
+   "hospitals": 57,
+   "industrial": 42,
+   "construction": 100
+  },
+  "mumbai_14": {
+   "schools": 42,
+   "hospitals": 74,
+   "industrial": 14,
+   "construction": 40
+  },
+  "mumbai_15": {
+   "schools": 7,
+   "hospitals": 29,
+   "industrial": 9,
+   "construction": 6
+  },
+  "mumbai_16": {
+   "schools": 38,
+   "hospitals": 22,
+   "industrial": 30,
+   "construction": 7
+  },
+  "mumbai_17": {
+   "schools": 19,
+   "hospitals": 54,
+   "industrial": 14,
+   "construction": 2
+  },
+  "mumbai_18": {
+   "schools": 16,
+   "hospitals": 21,
+   "industrial": 4,
+   "construction": 19
+  },
+  "mumbai_19": {
+   "schools": 27,
+   "hospitals": 61,
+   "industrial": 19,
+   "construction": 7
+  },
+  "mumbai_20": {
+   "schools": 16,
+   "hospitals": 31,
+   "industrial": 10,
+   "construction": 6
+  },
+  "mumbai_21": {
+   "schools": 25,
+   "hospitals": 66,
+   "industrial": 8,
+   "construction": 1
+  },
+  "mumbai_22": {
+   "schools": 7,
+   "hospitals": 45,
+   "industrial": 5,
+   "construction": 0
+  },
+  "mumbai_23": {
+   "schools": 31,
+   "hospitals": 34,
+   "industrial": 3,
+   "construction": 54
+  },
+  "mumbai_24": {
+   "schools": 14,
+   "hospitals": 50,
+   "industrial": 26,
+   "construction": 6
+  }
+ },
+ "bengaluru": {
+  "bengaluru_1": {
+   "schools": 6,
+   "hospitals": 15,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_2": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_3": {
+   "schools": 5,
+   "hospitals": 12,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_4": {
+   "schools": 9,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_5": {
+   "schools": 14,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_17": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_20": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_59": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_60": {
+   "schools": 7,
+   "hospitals": 14,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_61": {
+   "schools": 8,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_37": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_41": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_23": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_53": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_50": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_62": {
+   "schools": 2,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_64": {
+   "schools": 15,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_65": {
+   "schools": 0,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_119": {
+   "schools": 3,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_132": {
+   "schools": 2,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_134": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_63": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_26": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_27": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_45": {
+   "schools": 3,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_56": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_57": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_58": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_145": {
+   "schools": 3,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_144": {
+   "schools": 7,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_143": {
+   "schools": 4,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_141": {
+   "schools": 2,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_142": {
+   "schools": 8,
+   "hospitals": 11,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_140": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_139": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_135": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_133": {
+   "schools": 3,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_130": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_131": {
+   "schools": 8,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_120": {
+   "schools": 19,
+   "hospitals": 15,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_125": {
+   "schools": 3,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_138": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_137": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_136": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_33": {
+   "schools": 4,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_210": {
+   "schools": 4,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_212": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_213": {
+   "schools": 6,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_214": {
+   "schools": 7,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_34": {
+   "schools": 4,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_243": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_106": {
+   "schools": 12,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_115": {
+   "schools": 10,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_114": {
+   "schools": 8,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_107": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_122": {
+   "schools": 10,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_123": {
+   "schools": 8,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_51": {
+   "schools": 13,
+   "hospitals": 23,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_54": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_55": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_129": {
+   "schools": 7,
+   "hospitals": 13,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_121": {
+   "schools": 13,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_124": {
+   "schools": 7,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_40": {
+   "schools": 7,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_93": {
+   "schools": 5,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_42": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_31": {
+   "schools": 6,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_32": {
+   "schools": 9,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_21": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_22": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_24": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_25": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_43": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_44": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_46": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_47": {
+   "schools": 1,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_36": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_48": {
+   "schools": 9,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_49": {
+   "schools": 6,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_117": {
+   "schools": 7,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_118": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_211": {
+   "schools": 1,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_52": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_216": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_215": {
+   "schools": 0,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_224": {
+   "schools": 15,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_181": {
+   "schools": 30,
+   "hospitals": 12,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_200": {
+   "schools": 3,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_167": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_218": {
+   "schools": 10,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_229": {
+   "schools": 7,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_228": {
+   "schools": 12,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_71": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_239": {
+   "schools": 19,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_169": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_241": {
+   "schools": 7,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_179": {
+   "schools": 16,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_178": {
+   "schools": 9,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_222": {
+   "schools": 7,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_161": {
+   "schools": 5,
+   "hospitals": 12,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_160": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_39": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_168": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_220": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_38": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_166": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_236": {
+   "schools": 10,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_157": {
+   "schools": 4,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_231": {
+   "schools": 8,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_221": {
+   "schools": 10,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_238": {
+   "schools": 7,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_242": {
+   "schools": 7,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_223": {
+   "schools": 16,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_230": {
+   "schools": 15,
+   "hospitals": 11,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_205": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_225": {
+   "schools": 15,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_201": {
+   "schools": 7,
+   "hospitals": 14,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_204": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_156": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_187": {
+   "schools": 9,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_98": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_185": {
+   "schools": 8,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_99": {
+   "schools": 7,
+   "hospitals": 13,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_74": {
+   "schools": 3,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_176": {
+   "schools": 5,
+   "hospitals": 15,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_175": {
+   "schools": 13,
+   "hospitals": 13,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_188": {
+   "schools": 11,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_177": {
+   "schools": 11,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_174": {
+   "schools": 11,
+   "hospitals": 12,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_100": {
+   "schools": 9,
+   "hospitals": 17,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_94": {
+   "schools": 8,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_80": {
+   "schools": 17,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_12": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_8": {
+   "schools": 12,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_7": {
+   "schools": 5,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_10": {
+   "schools": 11,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_9": {
+   "schools": 9,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_103": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_197": {
+   "schools": 5,
+   "hospitals": 14,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_79": {
+   "schools": 3,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_101": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_75": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_102": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_97": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_77": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_76": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_78": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_195": {
+   "schools": 6,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_194": {
+   "schools": 4,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_196": {
+   "schools": 17,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_191": {
+   "schools": 10,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_189": {
+   "schools": 12,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_173": {
+   "schools": 11,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_186": {
+   "schools": 14,
+   "hospitals": 12,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_6": {
+   "schools": 17,
+   "hospitals": 13,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_170": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_165": {
+   "schools": 8,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_96": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_110": {
+   "schools": 20,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_30": {
+   "schools": 0,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_28": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_219": {
+   "schools": 5,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_232": {
+   "schools": 8,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_116": {
+   "schools": 15,
+   "hospitals": 21,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_159": {
+   "schools": 5,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_158": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_164": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_162": {
+   "schools": 1,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_163": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_172": {
+   "schools": 5,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_171": {
+   "schools": 1,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_180": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_109": {
+   "schools": 10,
+   "hospitals": 11,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_108": {
+   "schools": 6,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_104": {
+   "schools": 5,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_105": {
+   "schools": 8,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_235": {
+   "schools": 10,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_234": {
+   "schools": 5,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_233": {
+   "schools": 4,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_237": {
+   "schools": 11,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_240": {
+   "schools": 5,
+   "hospitals": 7,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_209": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_207": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_208": {
+   "schools": 1,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_95": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_16": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_126": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_127": {
+   "schools": 6,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_128": {
+   "schools": 13,
+   "hospitals": 13,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_190": {
+   "schools": 7,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_192": {
+   "schools": 13,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_193": {
+   "schools": 11,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_66": {
+   "schools": 3,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_67": {
+   "schools": 10,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_68": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_70": {
+   "schools": 1,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_72": {
+   "schools": 1,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_73": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_69": {
+   "schools": 2,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_15": {
+   "schools": 6,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_13": {
+   "schools": 8,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_11": {
+   "schools": 5,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_14": {
+   "schools": 8,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_18": {
+   "schools": 2,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_111": {
+   "schools": 10,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_112": {
+   "schools": 19,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_113": {
+   "schools": 11,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_199": {
+   "schools": 10,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_198": {
+   "schools": 11,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_81": {
+   "schools": 23,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_82": {
+   "schools": 8,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_83": {
+   "schools": 14,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_87": {
+   "schools": 6,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_84": {
+   "schools": 3,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_85": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_86": {
+   "schools": 6,
+   "hospitals": 17,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_88": {
+   "schools": 9,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_89": {
+   "schools": 4,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_91": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_90": {
+   "schools": 5,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_92": {
+   "schools": 4,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_227": {
+   "schools": 19,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_226": {
+   "schools": 14,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_217": {
+   "schools": 2,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_206": {
+   "schools": 5,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_202": {
+   "schools": 2,
+   "hospitals": 6,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_203": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_146": {
+   "schools": 0,
+   "hospitals": 10,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_147": {
+   "schools": 2,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_149": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_148": {
+   "schools": 2,
+   "hospitals": 8,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_150": {
+   "schools": 4,
+   "hospitals": 9,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_151": {
+   "schools": 1,
+   "hospitals": 4,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_152": {
+   "schools": 0,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_153": {
+   "schools": 2,
+   "hospitals": 5,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_154": {
+   "schools": 1,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_155": {
+   "schools": 0,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_19": {
+   "schools": 3,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_35": {
+   "schools": 17,
+   "hospitals": 3,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_182": {
+   "schools": 13,
+   "hospitals": 0,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_183": {
+   "schools": 11,
+   "hospitals": 2,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_184": {
+   "schools": 14,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  },
+  "bengaluru_29": {
+   "schools": 2,
+   "hospitals": 1,
+   "industrial": 0,
+   "construction": 0
+  }
+ },
+ "meta": {
+  "source": "OpenStreetMap via Overpass API",
+  "fetched": "2026-07-11T09:46:34.286Z",
+  "method": "point-in-polygon into official ward boundaries, computed client-side"
+ }
+}
