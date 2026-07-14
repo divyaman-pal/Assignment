@@ -1,0 +1,41 @@
+name: Refresh air quality data
+# Real-time integration: re-pulls the latest CPCB CAAQMS data (via the
+# Vonter/india-cpcb-aqi mirror), reruns the full agent pipeline, and commits
+# the refreshed serving DB + demo exports. Vercel and Railway auto-redeploy
+# on push, so the deployed platform updates with no human in the loop.
+on:
+  schedule:
+    - cron: "30 2 * * 1"   # weekly, Mon 02:30 UTC (08:00 IST)
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Urban Air Hack"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Rebuild pipeline on fresh data
+        run: |
+          python etl/fetch_data.py
+          python etl/build_backbone.py
+          python etl/apply_pois.py
+          python models/forecast.py
+          python models/attribution.py
+          python agents/enforcement.py
+          python etl/make_serve.py
+          python etl/export_geo.py
+      - name: Commit refreshed artifacts
+        run: |
+          cd ..
+          git config user.name "vayu-net-bot"
+          git config user.email "actions@github.com"
+          git add "Urban Air Hack/data/vayu_serve.duckdb" "Urban Air Hack/data/"*.json \
+                  "Urban Air Hack/models/lgbm_pm25_h"*.txt "Urban Air Hack/web/public/demo/"
+          git diff --cached --quiet || git commit -m "data: automated weekly CPCB refresh + pipeline rerun"
+          git push
