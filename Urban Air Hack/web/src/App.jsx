@@ -153,8 +153,8 @@ export default function App() {
                       onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>))}
           </div>
           <div className="railbody">
-            {tab === "actions" && <Actions actions={actions} />}
-            {tab === "events" && <Events events={events} />}
+            {tab === "actions" && <Actions actions={actions} era={era} live={live} city={city} />}
+            {tab === "events" && <Events events={events} era={era} live={live} city={city} />}
             {tab === "compare" && <Compare />}
             {tab === "metrics" && <Metrics metrics={metrics} />}
             {tab === "replay" && <Replay replay={replay} busy={replayBusy} />}
@@ -276,9 +276,38 @@ function CitizenView({ city }) {
     </div>);
 }
 
-function Actions({ actions }) {
-  if (!actions.length) return <div className="card">No enforcement actions for this city in the episode window.</div>;
-  return actions.map(a => (
+function LiveNote({ live, what }) {
+  const d = live && live.history_days_accumulated;
+  return (
+    <div className="card" style={{ borderLeft: "3px solid #1f6feb" }}>
+      <b style={{ color: "#58a6ff" }}>You're in LIVE mode.</b> {what} needs accumulated history —
+      the live feed has {d ?? 0} of 7 days so far (fills automatically every 6h).
+      Until then, the entries below are from the <b>Dec 2025 crisis episode</b>, our fully-analysed demonstration week.
+    </div>);
+}
+
+function LiveHotspots({ live, city }) {
+  const cityName = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[city];
+  const hot = (live && live.available ? live.stations : [])
+    .filter(s => s.city === cityName && s.aqi >= 201)
+    .sort((a, b) => b.aqi - a.aqi);
+  if (!hot.length) return (
+    <div className="card"><b style={{ color: "#3fb950" }}>No live hotspots right now</b> — no station in
+      {" "}{cityName} is above AQI 200 in the latest government snapshot.</div>);
+  return (
+    <div className="card">
+      <h4 style={{ color: "#ff7b72" }}>⚡ Current hotspots — live snapshot ({live.as_of})</h4>
+      <table><thead><tr><th>Station</th><th>AQI</th><th>Band</th><th>PM2.5</th></tr></thead>
+        <tbody>{hot.map(h => (<tr key={h.station}><td>{h.station.split(",")[0]}</td>
+          <td style={{ fontWeight: 700 }}>{h.aqi}</td><td>{h.band}</td><td>{h.pm25 ?? "—"}</td></tr>))}</tbody></table>
+      <div className="evli">Severity crossings need no history — these are actionable now. Source attribution joins in once 7 days accumulate.</div>
+    </div>);
+}
+
+function Actions({ actions, era, live, city }) {
+  const note = era === "live" ? <LiveNote live={live} what="Enforcement ranking" /> : null;
+  if (!actions.length) return <>{note}<div className="card">No enforcement actions for this city in the episode window.</div></>;
+  return <>{note}{actions.map(a => (
     <div className="card" key={a.action_id}>
       <span className="prio">{Number(a.priority).toFixed(2)}</span>
       <h4>{wardLabel(a.ward_name) || a.ward_id}</h4>
@@ -288,13 +317,14 @@ function Actions({ actions }) {
       <div className="evli">→ {a.action}</div>
       <div className="evli">Legal basis: {a.statute}</div>
       {api.packUrl(a.action_id) && <a href={api.packUrl(a.action_id)} target="_blank" rel="noreferrer">Evidence pack (PDF)</a>}
-    </div>));
+    </div>))}</>;
 }
 
-function Events({ events }) {
+function Events({ events, era, live, city }) {
   const recent = events.slice(-80).reverse();
-  if (!recent.length) return <div className="card">No events.</div>;
-  return recent.map((e, i) => {
+  const liveTop = era === "live" ? (<><LiveHotspots live={live} city={city} /><LiveNote live={live} what="Event attribution" /></>) : null;
+  if (!recent.length) return <>{liveTop}<div className="card">No events.</div></>;
+  return <>{liveTop}{recent.map((e, i) => {
     const ev = safeParse(e.evidence_json);
     return (
       <div className="card" key={i}>
@@ -304,7 +334,7 @@ function Events({ events }) {
         <div className="evli">station {e.station_id} · PM2.5 {e.pm25} · {e.event_type}</div>
         {ev && ev.evidence && ev.evidence.slice(0, 3).map((b, j) => <div className="evli" key={j}>• {b}</div>)}
       </div>);
-  });
+  })}</>;
 }
 
 function Compare() {
