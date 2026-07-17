@@ -5,7 +5,7 @@ name: Refresh air quality data
 # on push, so the deployed platform updates with no human in the loop.
 on:
   schedule:
-    - cron: "30 2 * * 1"   # weekly, Mon 02:30 UTC (08:00 IST)
+    - cron: "15 */6 * * *"   # every 6h: accumulates live government snapshots
   workflow_dispatch: {}
 
 jobs:
@@ -21,8 +21,12 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - name: Rebuild pipeline on fresh data
+        env:
+          DATA_GOV_IN_KEY: ${{ secrets.DATA_GOV_IN_KEY }}
         run: |
           python etl/fetch_data.py
+          python etl/fetch_live.py
+          python etl/build_live_view.py
           python etl/build_backbone.py
           python etl/apply_pois.py
           python models/forecast.py
@@ -35,7 +39,9 @@ jobs:
           cd ..
           git config user.name "vayu-net-bot"
           git config user.email "actions@github.com"
-          git add "Urban Air Hack/data/vayu_serve.duckdb" "Urban Air Hack/data/"*.json \
-                  "Urban Air Hack/models/lgbm_pm25_h"*.txt "Urban Air Hack/web/public/demo/"
+          git add -f "Urban Air Hack/data/vayu_serve.duckdb" "Urban Air Hack/data/"*.json \
+                  "Urban Air Hack/models/lgbm_pm25_h"*.txt "Urban Air Hack/web/public/demo/" \
+                  "Urban Air Hack/data/raw/live_snapshots.parquet" 2>/dev/null || true
+          git add "Urban Air Hack/data/vayu_serve.duckdb" "Urban Air Hack/web/public/demo/"
           git diff --cached --quiet || git commit -m "data: automated weekly CPCB refresh + pipeline rerun"
           git push
