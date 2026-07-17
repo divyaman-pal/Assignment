@@ -21,17 +21,27 @@ def main():
     if not key:
         print("DATA_GOV_IN_KEY not set - skipping live snapshot (pipeline continues on archive data)")
         return 0
-    rows, offset = [], 0
+    import time
+    rows, offset, page = [], 0, 500
     while True:
         url = (f"https://api.data.gov.in/resource/{RESOURCE}?api-key={urllib.parse.quote(key)}"
-               f"&format=json&limit=1000&offset={offset}")
-        with urllib.request.urlopen(url, timeout=60) as r:
-            payload = json.load(r)
-        recs = payload.get("records", [])
-        rows.extend(recs)
-        if len(recs) < 1000 or offset > 20000:
+               f"&format=json&limit={page}&offset={offset}")
+        recs = None
+        for attempt in range(3):  # the API is slow/flaky; retry with backoff
+            try:
+                with urllib.request.urlopen(url, timeout=120) as r:
+                    recs = json.load(r).get("records", [])
+                break
+            except Exception as e:
+                print(f"  page offset={offset} attempt {attempt+1} failed: {e}")
+                time.sleep(5 * (attempt + 1))
+        if recs is None:
+            print("  giving up on this page; continuing with what we have")
             break
-        offset += 1000
+        rows.extend(recs)
+        if len(recs) < page or offset > 8000:
+            break
+        offset += page
     if not rows:
         print("API returned no records - skipping append"); return 0
     df = pd.DataFrame(rows)
@@ -56,4 +66,10 @@ def main():
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:
+        # A flaky government API must never break the pipeline; the next
+        # 6-hourly cycle will pick the snapshot up.
+        print(f"live fetch failed non-fatally: {e}")
+        sys.exit(0)
