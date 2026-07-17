@@ -29,7 +29,10 @@ def main():
         recs = None
         for attempt in range(3):  # the API is slow/flaky; retry with backoff
             try:
-                with urllib.request.urlopen(url, timeout=120) as r:
+                req = urllib.request.Request(url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+                    "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=120) as r:
                     recs = json.load(r).get("records", [])
                 break
             except Exception as e:
