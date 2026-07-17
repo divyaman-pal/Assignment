@@ -18,4 +18,5 @@ models/*.txt
 !models/lgbm_pm25_h*.txt
 !data/raw/firms.csv
 !data/raw/osm_pois.json
+!data/raw/live_snapshots.parquet
 !data/*.json

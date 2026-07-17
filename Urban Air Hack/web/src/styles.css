@@ -32,3 +32,10 @@ td, th { padding: 4px 6px; border-bottom: 1px solid #21262d; text-align: left; }
 .replaylog .step { padding: 6px 8px; border-left: 3px solid #1f6feb; margin: 6px 0; background: #161b22; }
 .footer { padding: 6px 18px; font-size: 11px; color: #8b949e; border-top: 1px solid #30363d; }
 a { color: #58a6ff; }
+
+/* MapLibre popups: match dark theme (was unreadable white-on-white) */
+.maplibregl-popup-content { background: #161b22 !important; color: #e6edf3 !important;
+  border: 1px solid #30363d; border-radius: 8px; font-size: 13px; padding: 10px 14px; }
+.maplibregl-popup-tip { border-top-color: #161b22 !important; border-bottom-color: #161b22 !important; }
+.maplibregl-popup-close-button { color: #8b949e !important; font-size: 18px; right: 4px; top: 2px; }
+.era-banner { padding: 6px 18px; font-size: 12.5px; background: #10233d; color: #9db1c5; border-bottom: 1px solid #1f6feb44; }

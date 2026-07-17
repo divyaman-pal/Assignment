@@ -21,6 +21,8 @@ export default function App() {
   const [replayBusy, setReplayBusy] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [mode, setMode] = useState("commissioner");
+  const [era, setEra] = useState("episode");   // "live" | "episode"
+  const [live, setLive] = useState(null);
   const mapRef = useRef(null);
   const mapObj = useRef(null);
 
@@ -34,9 +36,15 @@ export default function App() {
   useEffect(() => {
     let dead = false;
     (async () => {
-      const [st, ev, ac, wards] = await Promise.all([
-        api.getStations(city), api.getEvents(city), api.getActions(city), api.getWards(city)]);
+      const [st0, ev, ac, wards, lv] = await Promise.all([
+        api.getStations(city), api.getEvents(city), api.getActions(city), api.getWards(city), api.getLive()]);
       if (dead) return;
+      const cityName = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[city];
+      const st = (era === "live" && lv && lv.available)
+        ? lv.stations.filter(s => s.city === cityName).map(s => ({ station_id: s.station,
+            station_name: s.station, lat: s.lat, lon: s.lon, pm25: s.pm25, pm10: s.pm10,
+            aqi: s.aqi, band: s.band }))
+        : st0;
       setStations(st); setEvents(ev); setActions(ac);
       const m = mapObj.current;
       const draw = () => {
@@ -68,7 +76,7 @@ export default function App() {
         m.on("click", "stations-dots", e => {
           const p = e.features[0].properties;
           new maplibregl.Popup().setLngLat(e.lngLat)
-            .setHTML(`<b>${p.name}</b><br/>PM2.5: ${p.pm25} µg/m³<br/>AQI: ${p.aqi} (${p.band})`)
+            .setHTML(`<b>${p.name}</b><br/>PM2.5: ${Math.round(p.pm25)} µg/m³<br/>AQI: <b>${Math.round(p.aqi)}</b> (${p.band})`)
             .addTo(m);
         });
         m.flyTo({ center: CITIES[city].center, zoom: CITIES[city].zoom });
@@ -76,9 +84,14 @@ export default function App() {
       if (m.isStyleLoaded()) draw(); else m.once("load", draw);
     })().catch(console.error);
     return () => { dead = true; };
-  }, [city]);
+  }, [city, era]);
 
   useEffect(() => { api.getMetrics().then(setMetrics).catch(console.error); }, []);
+
+  useEffect(() => { api.getLive().then(l => {
+    setLive(l);
+    if (l && l.available) setEra("live");
+  }).catch(console.error); }, []);
 
   useEffect(() => {
     const m = mapObj.current; if (!m) return;
@@ -114,12 +127,23 @@ export default function App() {
                   onClick={() => setCity(slug)}>{c.name}</button>))}
         <button className={`citybtn ${showGrid ? "active" : ""}`} onClick={() => setShowGrid(g => !g)}>
           Forecast +24h grid</button>
+        <button className={`citybtn ${era === "live" ? "active" : ""}`}
+          onClick={() => setEra(e => e === "live" ? "episode" : "live")}
+          title={live && live.available ? "" : "Live feed activates once DATA_GOV_IN_KEY is configured"}>
+          {era === "live" ? "● LIVE" : "Crisis episode"}</button>
         <button className={`citybtn ${mode === "citizen" ? "active" : ""}`}
           onClick={() => setMode(m => m === "citizen" ? "commissioner" : "citizen")}>
           {mode === "citizen" ? "◀ War-room" : "Citizen mode"}</button>
         <button className="replaybtn" onClick={doReplay} disabled={replayBusy}>
           {replayBusy ? "Running agents…" : "▶ Run war-room replay"}</button>
       </header>
+      <div className="era-banner">
+        {era === "live"
+          ? (live && live.available
+              ? `LIVE — official data.gov.in feed as of ${live.as_of} · ${live.history_days_accumulated} day(s) of history accumulated · ${live.analytics_ready ? "full analytics active" : "forecast/attribution unlock at 7 days of history"}`
+              : "Live mode: waiting for first government snapshot (runs every 6h once the data.gov.in key is configured) — showing crisis episode meanwhile")
+          : "CRISIS EPISODE — real CPCB data, Dec 25 2025 – Jan 1 2026 (New Year smog crisis) · every number from government sensors + NASA satellites"}
+      </div>
       <div className="main">
         <div id="map" ref={mapRef} />
         {mode === "citizen" ? <CitizenView city={city} /> : <div className="rail">

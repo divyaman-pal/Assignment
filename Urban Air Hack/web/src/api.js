@@ -47,3 +47,7 @@ export async function getAdvisory(slug, ward, aqi, group, lang) {
   const u = `${API}/cities/${slug}/advisory?ward=${encodeURIComponent(ward)}&aqi=${Math.round(aqi)}&group=${group}&lang=${lang}`;
   return j(u);
 }
+
+export async function getLive() {
+  try { return await j("/demo/live.json"); } catch { return { available: false }; }
+}
