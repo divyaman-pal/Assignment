@@ -35,6 +35,9 @@ def main():
     if not rows:
         print("API returned no records - skipping append"); return 0
     df = pd.DataFrame(rows)
+    # JSON API uses min_value/max_value/avg_value; normalise to the CSV-style names
+    df = df.rename(columns={"min_value": "pollutant_min", "max_value": "pollutant_max",
+                            "avg_value": "pollutant_avg"})
     keep = ["country", "state", "city", "station", "last_update", "latitude", "longitude",
             "pollutant_id", "pollutant_min", "pollutant_max", "pollutant_avg"]
     df = df[[c for c in keep if c in df.columns]]
