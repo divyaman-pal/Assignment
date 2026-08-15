@@ -75,20 +75,41 @@ def rank_actions(top_n=10, con=None):
     con.sql("CREATE OR REPLACE TABLE actions AS SELECT row_number() OVER () action_id, * FROM actions_df")
     return out
 
+def _is_pg(con):
+    return con.__class__.__module__.startswith("psycopg2")
+
+def _query(con, sql, pg_sql=None):
+    """Run a query against either the DuckDB file store or Supabase Postgres."""
+    import pandas as pd
+    if _is_pg(con):
+        return pd.read_sql(pg_sql or sql, con)
+    return con.sql(sql).df()
+
 def evidence_pack(action_id, con=None):
     """One-page PDF: header, priority breakdown, PM2.5 timeseries of the ward's
-    stations, pollution rose, evidence bullets from top event, statute."""
+    stations, pollution rose, evidence bullets from top event, statute.
+
+    Works against both stores: the bundled DuckDB file (episode mode) and the
+    live Supabase database (deployed mode), which use different reading tables.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     con = con or duckdb.connect(str(DB), read_only=True)
-    a = con.sql(f"SELECT * FROM actions WHERE action_id={int(action_id)}").df().iloc[0]
-    ts = con.sql(f"""SELECT date_trunc('hour', r.ts) h, avg(r.pm25) pm25, avg(r.wd) wd, avg(r.ws) ws
-        FROM readings r JOIN stations s USING (station_id)
-        WHERE s.ward_id='{a.ward_id}' GROUP BY 1 ORDER BY 1""").df()
-    ev = con.sql(f"""SELECT evidence_json FROM attributions a JOIN stations s USING (station_id)
-        WHERE s.ward_id='{a.ward_id}' AND a.category='{a.category}'
-        ORDER BY a.confidence DESC LIMIT 1""").fetchone()
+    pg = _is_pg(con)
+    a = _query(con, f"SELECT * FROM actions WHERE action_id={int(action_id)}").iloc[0]
+    ts = _query(con,
+        f"""SELECT date_trunc('hour', r.ts) h, avg(r.pm25) pm25, avg(r.wd) wd, avg(r.ws) ws
+            FROM readings r JOIN stations s USING (station_id)
+            WHERE s.ward_id='{a.ward_id}' GROUP BY 1 ORDER BY 1""",
+        pg_sql=f"""SELECT r.h, avg(r.pm25) pm25, avg(r.wd) wd, avg(r.ws) ws
+            FROM readings_hourly r JOIN stations s USING (station_id)
+            WHERE s.ward_id='{a.ward_id}' GROUP BY 1 ORDER BY 1""")
+    ev_df = _query(con,
+        f"""SELECT evidence_json FROM attributions a JOIN stations s USING (station_id)
+            WHERE s.ward_id='{a.ward_id}' AND a.category='{a.category}'
+            ORDER BY a.confidence DESC LIMIT 1""")
+    ev = (ev_df.evidence_json.iloc[0],) if len(ev_df) else None
     evidence = json.loads(ev[0])["evidence"] if ev else []
     PACK_DIR.mkdir(exist_ok=True)
     fig = plt.figure(figsize=(8.27, 11.69)); fig.suptitle("VAYU-NET Enforcement Evidence Pack", fontsize=14, y=0.98)
