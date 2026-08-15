@@ -1,7 +1,7 @@
 name: Live ingest and agent run
-# TRUE live operation: hourly, pulls current government readings into Supabase,
-# runs the agent chain on accumulated live data, writes events / attributions /
-# ranked actions back to the database the deployed API serves.
+# TRUE live operation: hourly, pulls current government readings + satellite
+# fire detections, runs the agent chain on live data in Supabase, then verifies
+# every API endpoint end to end.
 on:
   schedule:
     - cron: "10 * * * *"
@@ -28,7 +28,16 @@ jobs:
           DATA_GOV_IN_KEY: ${{ secrets.DATA_GOV_IN_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python etl/ingest_live.py
+      - name: Refresh satellite fire detections (NASA FIRMS)
+        env:
+          NASA_FIRMS_API_KEY: ${{ secrets.NASA_FIRMS_API_KEY }}
+        run: python etl/fetch_fires_live.py
       - name: Run agent chain on live data
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python agents/live_pipeline.py
+      - name: Verify live API end to end
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python deploy/verify_live.py
