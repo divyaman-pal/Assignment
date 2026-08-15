@@ -20,3 +20,6 @@ models/*.txt
 !data/raw/osm_pois.json
 !data/raw/live_snapshots.parquet
 !data/*.json
+
+!data/supabase_load/
+!data/supabase_load/*.json
