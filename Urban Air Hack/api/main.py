@@ -14,9 +14,24 @@ from fastapi.responses import FileResponse, JSONResponse
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-DB = ROOT / "data" / "vayu.duckdb"
-if not DB.exists():
-    DB = ROOT / "data" / "vayu_serve.duckdb"
+import os, shutil, tempfile
+
+_SRC_DB = ROOT / "data" / "vayu.duckdb"
+if not _SRC_DB.exists():
+    _SRC_DB = ROOT / "data" / "vayu_serve.duckdb"
+
+def _resolve_db():
+    """On read-only serverless filesystems (Vercel/Lambda), work on a writable
+    copy in the ephemeral tmp dir so the orchestrator can append to agent_log.
+    Locally, use the repository copy directly."""
+    if os.environ.get("VERCEL") or not os.access(_SRC_DB.parent, os.W_OK):
+        tmp = Path(tempfile.gettempdir()) / "vayu_serve.duckdb"
+        if not tmp.exists():
+            shutil.copy(_SRC_DB, tmp)
+        return tmp
+    return _SRC_DB
+
+DB = _resolve_db()
 DEMO = ROOT / "web" / "public" / "demo"
 CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
 
@@ -82,6 +97,14 @@ def events(slug: str, start: str | None = None, end: str | None = None):
 def actions(slug: str):
     city = CITIES.get(slug) or slug
     return json.loads(q("SELECT * FROM actions WHERE city = ? ORDER BY priority DESC", [city]).to_json(orient="records"))
+
+@app.get("/")
+def root():
+    return {"service": "VAYU-NET API", "status": "running",
+            "endpoints": ["/health", "/cities", "/cities/{slug}/stations",
+                          "/cities/{slug}/events", "/cities/{slug}/actions",
+                          "/actions/{id}/pack.pdf", "/cities/{slug}/advisory",
+                          "/metrics", "/agent_log", "/replay/run"]}
 
 @app.get("/actions/{action_id}/pack.pdf")
 def pack(action_id: int):

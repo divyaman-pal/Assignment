@@ -1,0 +1,36 @@
+name: Live ingest and agent run
+
+# TRUE live operation: every hour this pulls the current government readings
+# into Supabase, runs the agent chain on the accumulated live data, and writes
+# events / attributions / ranked actions straight back to the database that
+# the deployed API serves. No human in the loop, no pre-computed artefacts.
+on:
+  schedule:
+    - cron: "10 * * * *"     # hourly, 10 minutes past
+  workflow_dispatch: {}
+
+concurrency:
+  group: live-ingest
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Urban Air Hack"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Ingest current government readings into Supabase
+        env:
+          DATA_GOV_IN_KEY: ${{ secrets.DATA_GOV_IN_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python etl/ingest_live.py
+      - name: Run agent chain on live data
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python agents/live_pipeline.py

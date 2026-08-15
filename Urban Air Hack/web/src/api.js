@@ -32,11 +32,22 @@ export async function getMetrics() {
   return j(API ? `${API}/metrics` : "/demo/metrics.json");
 }
 export async function runReplay(city) {
-  if (!API) return null; // replay requires live API
-  const r = await fetch(`${API}/replay/run?city=${city}`, { method: "POST" });
-  return r.json();
+  // Prefer a live agent run when an API is configured; otherwise serve the
+  // pre-computed timeline from a real run (same numbers, no backend needed).
+  if (API) {
+    try {
+      const r = await fetch(`${API}/replay/run?city=${city}`, { method: "POST" });
+      if (r.ok) return { ...(await r.json()), mode: "live" };
+    } catch (e) { /* fall through to static */ }
+  }
+  const slug = String(city).toLowerCase();
+  return { ...(await j(`/demo/replay_${slug}.json`)), mode: "precomputed" };
 }
-export const packUrl = id => (API ? `${API}/actions/${id}/pack.pdf` : null);
+
+export async function getAdvisories() {
+  try { return await j("/demo/advisories.json"); } catch { return {}; }
+}
+export const packUrl = id => (API ? `${API}/actions/${id}/pack.pdf` : `/demo/packs/pack_${id}.pdf`);
 
 export async function getGrid(slug) {
   return j(`/demo/grid_${slug}.json`);  // precomputed 1-km IDW forecast grid

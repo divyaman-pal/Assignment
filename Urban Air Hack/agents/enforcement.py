@@ -24,7 +24,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "vayu.duckdb"
 if not DB.exists():
     DB = ROOT / "data" / "vayu_serve.duckdb"
+import os as _os, tempfile as _tf
 PACK_DIR = ROOT / "data" / "packs"
+if _os.environ.get("VERCEL") or not _os.access(ROOT / "data", _os.W_OK):
+    PACK_DIR = Path(_tf.gettempdir()) / "vayu_packs"
 
 STATUTES = {
     "traffic": "Motor Vehicles Act 1988 s.190(2); GRAP traffic measures (Stage III/IV)",

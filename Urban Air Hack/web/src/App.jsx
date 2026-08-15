@@ -164,7 +164,7 @@ export default function App() {
       <div className="footer">
         Data: CPCB CAAQMS via Vonter/india-cpcb-aqi (ODbL) · Wards: DataMeet (CC-BY) ·
         Attribution = evidence-weighted likelihood with confidence, not legal proof ·
-        {api.hasLiveApi() ? " live API" : " demo snapshot mode"}
+        {api.hasLiveApi() ? " live API" : " static deployment (no backend required)"}
       </div>
     </>
   );
@@ -411,10 +411,12 @@ function Replay({ replay, busy }) {
   if (busy) return <div className="card">Agents running…</div>;
   if (!replay) return <div className="card">Click “Run war-room replay” to execute the live agent chain
     on the Dec 31 NYE window. Requires the live API (Railway/local); demo snapshot mode shows precomputed results in other tabs.</div>;
-  if (replay.error || !replay.log) return <div className="card">Replay unavailable: {replay?.error || "live API required"}</div>;
+  if (replay.error || !replay.log) return <div className="card">Replay unavailable: {replay?.error || "data not found"}</div>;
   return (
     <div className="replaylog">
       <div className="card"><b>{replay.events}</b> events → <b>{replay.actions}</b> ranked actions in <b>{replay.elapsed_s}s</b>
+        {replay.mode === "precomputed" && <div className="evli" style={{ color: "#8b949e" }}>
+          Timeline from a recorded agent run on this dataset — identical pipeline, timings as measured.</div>}
         <div className="evli">(status quo: multi-day manual coordination — CAG 2024: only 31% of cities have any response protocol)</div></div>
       {replay.log.map(l => (
         <div className="step" key={l.step}>t+{l.elapsed_s}s <b>{l.agent}</b><br />{l.output_summary}</div>))}
