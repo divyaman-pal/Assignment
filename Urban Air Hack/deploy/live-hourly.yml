@@ -30,6 +30,10 @@ jobs:
           DATA_GOV_IN_KEY: ${{ secrets.DATA_GOV_IN_KEY }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python etl/ingest_live.py
+      - name: Refresh satellite fire detections (NASA FIRMS)
+        env:
+          NASA_FIRMS_API_KEY: ${{ secrets.NASA_FIRMS_API_KEY }}
+        run: python etl/fetch_fires_live.py
       - name: Run agent chain on live data
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

@@ -58,6 +58,12 @@ def run(conn, verbose=True):
                           conn).itertuples(index=False, name=None)}
     fires_path = ROOT / "data" / "raw" / "firms.csv"
     fires = pd.read_csv(fires_path, parse_dates=["h"]) if fires_path.exists() else None
+    fires_fresh = False
+    if fires is not None and len(fires):
+        # the satellite signal is only meaningful if detections overlap the
+        # events being attributed; say so rather than degrade silently
+        fires_fresh = bool(fires.h.max() >= (newest.tz_localize(None) if newest.tzinfo else newest)
+                           - timedelta(days=2))
     attrs = []
     for _, e in events.iterrows():
         a = attribute_event(e, df, fires, coords)
@@ -68,7 +74,8 @@ def run(conn, verbose=True):
     cats = pd.Series([r[6] for r in attrs])
     step("attribution", {"events": len(attrs)},
          {"by_category": cats.value_counts().to_dict() if len(cats) else {},
-          "fires_layer": fires is not None})
+          "fires_layer": "live" if fires_fresh else ("archive-only" if fires is not None else "absent"),
+          "fires_newest": str(fires.h.max()) if fires is not None and len(fires) else None})
 
     cur = conn.cursor()
     if attrs:
