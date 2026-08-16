@@ -36,7 +36,8 @@ export default function App() {
       new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
         `<b>${p.name}</b><br/>PM2.5: ${p.pm25 == null ? "—" : Math.round(p.pm25)} µg/m³<br/>` +
         `AQI: <b>${p.aqi == null ? "—" : Math.round(p.aqi)}</b> (${p.band})` +
-        (p.as_of ? `<br/><span style="color:#8b949e">as of ${p.as_of}</span>` : "")).addTo(m);
+        (p.as_of ? `<br/><span style="color:#8b949e">as of ${p.as_of}` +
+          (p.stale ? " — no current reading from this station" : "") + `</span>` : "")).addTo(m);
     });
     m.on("click", "wards-fill", e => {
       if (!e.features || !e.features[0]) return;
@@ -84,12 +85,18 @@ export default function App() {
           type: "FeatureCollection",
           features: st.filter(s => s.lat).map(s => ({ type: "Feature",
             properties: { name: s.station_name, aqi: s.aqi, band: s.band || "NA", pm25: s.pm25,
-                          as_of: s.as_of || "" },
+                          as_of: s.as_of || "",
+                          // a station in the archive but absent from the current
+                          // government feed must not be drawn as if it were live
+                          stale: (era === "live" && s.as_of &&
+                                  (Date.now() - new Date(s.as_of.replace(" ", "T")).getTime()) > 36e5 * 24) ? 1 : 0 },
             geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) } });
         m.addLayer({ id: "stations-dots", type: "circle", source: "stations",
-          paint: { "circle-radius": 7, "circle-stroke-width": 1.5, "circle-stroke-color": "#0d1117",
-            "circle-color": ["match", ["get", "band"],
-              ...Object.entries(BAND_COLORS).flat(), "#8b949e"] } });
+          paint: { "circle-radius": ["case", ["==", ["get", "stale"], 1], 4, 7],
+            "circle-opacity": ["case", ["==", ["get", "stale"], 1], 0.35, 1],
+            "circle-stroke-width": 1.5, "circle-stroke-color": "#0d1117",
+            "circle-color": ["case", ["==", ["get", "stale"], 1], "#8b949e",
+              ["match", ["get", "band"], ...Object.entries(BAND_COLORS).flat(), "#8b949e"]] } });
         m.flyTo({ center: CITIES[city].center, zoom: CITIES[city].zoom });
       };
       // The map style may still be loading on the first pass; `load` fires only
