@@ -50,6 +50,9 @@ export default function App() {
     });
     m.on("mouseenter", "stations-dots", () => { m.getCanvas().style.cursor = "pointer"; });
     m.on("mouseleave", "stations-dots", () => { m.getCanvas().style.cursor = ""; });
+    // Dark-matter renders land at near-black; lift it so roads and place names
+    // are legible against the app chrome.
+    m.on("load", () => { try { m.setPaintProperty("background", "background-color", "#101720"); } catch (e) {} });
     return () => m.remove();
   }, []);
 
@@ -101,10 +104,12 @@ export default function App() {
               ["match", ["get", "band"], ...Object.entries(BAND_COLORS).flat(), "#8b949e"]] } });
         m.flyTo({ center: CITIES[city].center, zoom: CITIES[city].zoom });
       };
-      // The map style may still be loading on the first pass; `load` fires only
-      // once per map, so wait on `idle` (repeatable) for later redraws.
-      if (m.isStyleLoaded()) draw();
-      else m.once("idle", () => { if (!dead) draw(); });
+      // Draw as soon as the style JSON is parsed (that is all addSource/addLayer
+      // need). Do NOT gate on isStyleLoaded()/"idle" — with vector basemaps those
+      // can stay false indefinitely, which silently leaves the map empty.
+      const styleReady = () => { try { return !!(m.style && m.getStyle() && m.getStyle().layers.length); } catch (e) { return false; } };
+      if (styleReady()) draw();
+      else m.once("load", () => { if (!dead) draw(); });
     })().catch(console.error);
     return () => { dead = true; };
   }, [city, era]);
