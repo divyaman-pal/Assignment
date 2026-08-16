@@ -30,6 +30,25 @@ export default function App() {
     const m = new maplibregl.Map({ container: mapRef.current, style: MAP_STYLE,
       center: CITIES[city].center, zoom: CITIES[city].zoom, attributionControl: true });
     mapObj.current = m;
+    // Popups: bound once for the map's lifetime (layers come and go beneath them)
+    m.on("click", "stations-dots", e => {
+      const p = e.features[0].properties;
+      new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+        `<b>${p.name}</b><br/>PM2.5: ${p.pm25 == null ? "—" : Math.round(p.pm25)} µg/m³<br/>` +
+        `AQI: <b>${p.aqi == null ? "—" : Math.round(p.aqi)}</b> (${p.band})` +
+        (p.as_of ? `<br/><span style="color:#8b949e">as of ${p.as_of}</span>` : "")).addTo(m);
+    });
+    m.on("click", "wards-fill", e => {
+      if (!e.features || !e.features[0]) return;
+      if (m.queryRenderedFeatures(e.point, { layers: ["stations-dots"] }).length) return;
+      const w = e.features[0].properties;
+      new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+        `<b>${w.name}</b><br/>Schools: ${w.schools} · Hospitals: ${w.hospitals}<br/>` +
+        `Industrial zones: ${w.industrial} · Construction: ${w.construction}<br/>` +
+        `<span style="color:#8b949e">vulnerability data: OpenStreetMap</span>`).addTo(m);
+    });
+    m.on("mouseenter", "stations-dots", () => { m.getCanvas().style.cursor = "pointer"; });
+    m.on("mouseleave", "stations-dots", () => { m.getCanvas().style.cursor = ""; });
     return () => m.remove();
   }, []);
 
@@ -42,11 +61,15 @@ export default function App() {
         safe(api.getWards(city), { type: "FeatureCollection", features: [] }), safe(api.getLive(), null)]);
       if (dead) return;
       const cityName = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[city];
-      const st = (era === "live" && lv && lv.available)
-        ? lv.stations.filter(s => s.city === cityName).map(s => ({ station_id: s.station,
-            station_name: s.station, lat: s.lat, lon: s.lon, pm25: s.pm25, pm10: s.pm10,
-            aqi: s.aqi, band: s.band }))
-        : st0;
+      // With the live API configured, /stations already returns the newest
+      // government reading per station. The bundled snapshot is only a
+      // fallback for backend-free operation.
+      const st = (st0 && st0.length) ? st0
+        : (era === "live" && lv && lv.available)
+          ? lv.stations.filter(s => s.city === cityName).map(s => ({ station_id: s.station,
+              station_name: s.station, lat: s.lat, lon: s.lon, pm25: s.pm25, pm10: s.pm10,
+              aqi: s.aqi, band: s.band }))
+          : [];
       setStations(st); setEvents(ev); setActions(ac);
       const m = mapObj.current;
       const draw = () => {
@@ -60,30 +83,19 @@ export default function App() {
         m.addSource("stations", { type: "geojson", data: {
           type: "FeatureCollection",
           features: st.filter(s => s.lat).map(s => ({ type: "Feature",
-            properties: { name: s.station_name, aqi: s.aqi, band: s.band || "NA", pm25: s.pm25 },
+            properties: { name: s.station_name, aqi: s.aqi, band: s.band || "NA", pm25: s.pm25,
+                          as_of: s.as_of || "" },
             geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) } });
         m.addLayer({ id: "stations-dots", type: "circle", source: "stations",
           paint: { "circle-radius": 7, "circle-stroke-width": 1.5, "circle-stroke-color": "#0d1117",
             "circle-color": ["match", ["get", "band"],
               ...Object.entries(BAND_COLORS).flat(), "#8b949e"] } });
-        m.on("click", "wards-fill", e => {
-          if (e.features && e.features[0] && !m.queryRenderedFeatures(e.point, { layers: ["stations-dots"] }).length) {
-            const w = e.features[0].properties;
-            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
-              `<b>${w.name}</b><br/>Schools: ${w.schools} · Hospitals: ${w.hospitals}<br/>` +
-              `Industrial zones: ${w.industrial} · Construction: ${w.construction}<br/>` +
-              `<span style="color:#888">vulnerability data: OpenStreetMap</span>`).addTo(m);
-          }
-        });
-        m.on("click", "stations-dots", e => {
-          const p = e.features[0].properties;
-          new maplibregl.Popup().setLngLat(e.lngLat)
-            .setHTML(`<b>${p.name}</b><br/>PM2.5: ${Math.round(p.pm25)} µg/m³<br/>AQI: <b>${Math.round(p.aqi)}</b> (${p.band})`)
-            .addTo(m);
-        });
         m.flyTo({ center: CITIES[city].center, zoom: CITIES[city].zoom });
       };
-      if (m.isStyleLoaded()) draw(); else m.once("load", draw);
+      // The map style may still be loading on the first pass; `load` fires only
+      // once per map, so wait on `idle` (repeatable) for later redraws.
+      if (m.isStyleLoaded()) draw();
+      else m.once("idle", () => { if (!dead) draw(); });
     })().catch(console.error);
     return () => { dead = true; };
   }, [city, era]);
