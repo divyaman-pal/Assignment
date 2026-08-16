@@ -20,13 +20,33 @@ CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
 app = FastAPI(title="VAYU-NET API (live)", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+_CONN = None
+
+def _conn():
+    """One connection per warm serverless instance (reconnect if it dropped)."""
+    global _CONN
+    if _CONN is not None:
+        try:
+            if _CONN.closed == 0:
+                with _CONN.cursor() as c:
+                    c.execute("select 1")
+                return _CONN
+        except Exception:
+            pass
+        try: _CONN.close()
+        except Exception: pass
+        _CONN = None
+    _CONN = connect()
+    return _CONN
+
 def q(sql, params=None):
     import pandas as pd
-    conn = connect()
+    conn = _conn()
     try:
         return pd.read_sql(sql, conn, params=params)
-    finally:
-        conn.close()
+    except Exception:
+        conn.rollback()
+        raise
 
 def rows(df):
     return json.loads(df.to_json(orient="records"))
@@ -52,11 +72,13 @@ def cities():
 @app.get("/cities/{slug}/stations")
 def stations(slug: str):
     city = CITIES.get(slug, slug)
-    df = q("""select s.station_id, s.station_name, s.lat, s.lon, s.ward_id,
-                     r.pm25, r.pm10, r.h::text as as_of
-              from stations s
-              join lateral (select pm25, pm10, h from readings_hourly r
-                            where r.station_id = s.station_id order by h desc limit 1) r on true
+    df = q("""with latest as (
+                 select distinct on (station_id) station_id, pm25, pm10, h
+                 from readings_hourly where city = %(c)s
+                 order by station_id, h desc)
+              select s.station_id, s.station_name, s.lat, s.lon, s.ward_id,
+                     l.pm25, l.pm10, l.h::text as as_of
+              from stations s join latest l using (station_id)
               where s.city = %(c)s and s.lat is not null""", {"c": city})
     df["aqi"] = [pm_aqi(a, b) for a, b in zip(df.pm25, df.pm10)]
     df["band"] = df.aqi.map(band)
@@ -104,20 +126,12 @@ def agent_log(limit: int = 50):
 def replay_run(city: str = "Delhi"):
     """Run the agent chain live against Supabase and return the timed log."""
     from agents.live_pipeline import run
-    conn = connect()
-    try:
-        return run(conn, verbose=False)
-    finally:
-        conn.close()
+    return run(_conn(), verbose=False)
 
 @app.get("/actions/{action_id}/pack.pdf")
 def pack(action_id: int):
     from agents.enforcement import evidence_pack
-    conn = connect()
-    try:
-        path = evidence_pack(action_id, con=conn)
-    finally:
-        conn.close()
+    path = evidence_pack(action_id, con=_conn())
     return FileResponse(path, media_type="application/pdf", filename=f"evidence_pack_{action_id}.pdf")
 
 @app.get("/cities/{slug}/advisory")
