@@ -36,8 +36,10 @@ export default function App() {
   useEffect(() => {
     let dead = false;
     (async () => {
+      const safe = (p, fallback) => p.catch(e => { console.warn("source failed:", e && e.message); return fallback; });
       const [st0, ev, ac, wards, lv] = await Promise.all([
-        api.getStations(city), api.getEvents(city), api.getActions(city), api.getWards(city), api.getLive()]);
+        safe(api.getStations(city), []), safe(api.getEvents(city), []), safe(api.getActions(city), []),
+        safe(api.getWards(city), { type: "FeatureCollection", features: [] }), safe(api.getLive(), null)]);
       if (dead) return;
       const cityName = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[city];
       const st = (era === "live" && lv && lv.available)

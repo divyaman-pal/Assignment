@@ -8,7 +8,9 @@ async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(u
 export const hasLiveApi = () => Boolean(API);
 
 export async function getWards(slug) {
-  return j(API ? `${API}/cities/${slug}/wards.geojson` : `/demo/${slug}_wards.json`);
+  // Ward geometry is static (official boundary files) and ships with the app —
+  // never fetched from the API, which serves live measurements only.
+  return j(`/demo/${slug}_wards.json`);
 }
 export async function getStations(slug) {
   if (API) return j(`${API}/cities/${slug}/stations`);
