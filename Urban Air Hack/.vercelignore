@@ -1,0 +1,11 @@
+# keep the serverless bundle small — the API reads from Supabase, not files
+data/vayu.duckdb
+data/vayu_serve.duckdb
+data/supabase_load/
+data/packs/
+data/raw/*.parquet
+data/raw/wards/
+data/raw/station_coords_*.csv
+web/
+docs/
+models/*.txt
