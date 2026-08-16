@@ -85,16 +85,25 @@ def stations(slug: str):
     return rows(df)
 
 @app.get("/cities/{slug}/events")
-def events(slug: str, limit: int = 300):
+def events(slug: str, limit: int = 300, since_days: int | None = None):
     city = CITIES.get(slug, slug)
-    return rows(q("""select a.station_id, s.ward_id, a.h::text h, a.event_type, a.pm25, a.zscore,
-                            a.category, a.confidence, a.evidence_json
-                     from attributions a left join stations s using (station_id)
-                     where a.city = %(c)s order by a.h desc limit %(l)s""", {"c": city, "l": limit}))
+    where = "a.city = %(c)s" + (" and a.h > now() - (%(d)s || ' days')::interval" if since_days else "")
+    return rows(q(f"""select a.station_id, s.ward_id, a.h::text h, a.event_type, a.pm25, a.zscore,
+                             a.category, a.confidence, a.evidence_json
+                      from attributions a left join stations s using (station_id)
+                      where {where} order by a.h desc limit %(l)s""",
+                  {"c": city, "l": limit, "d": since_days}))
 
 @app.get("/cities/{slug}/actions")
-def actions(slug: str):
+def actions(slug: str, since_days: int | None = None):
+    """Ranked enforcement actions. `since_days` restricts to actions whose most
+    recent supporting event falls inside that window — used by LIVE mode so it
+    never presents historical rankings as current."""
     city = CITIES.get(slug, slug)
+    if since_days:
+        return rows(q("""select * from actions where city = %(c)s
+                         and last_seen > now() - (%(d)s || ' days')::interval
+                         order by priority desc""", {"c": city, "d": since_days}))
     return rows(q("select * from actions where city = %(c)s order by priority desc", {"c": city}))
 
 @app.get("/metrics")
@@ -108,7 +117,10 @@ def metrics():
             m[name] = json.loads(p.read_text())
     live = q("""select count(*) readings, max(h)::text newest, min(h)::text oldest,
                        count(distinct station_id) stations,
-                       count(*) filter (where h > now() - interval '2 days') last_48h
+                       count(*) filter (where h > now() - interval '2 days') last_48h,
+                       count(distinct date_trunc('day', h))
+                         filter (where h > now() - interval '30 days') live_days,
+                       count(*) filter (where h > now() - interval '30 days') live_rows
                 from readings_hourly""")
     m["live_store"] = rows(live)[0]
     demo = ROOT / "web" / "public" / "demo" / "metrics.json"

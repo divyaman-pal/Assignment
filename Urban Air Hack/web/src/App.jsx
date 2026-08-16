@@ -58,7 +58,9 @@ export default function App() {
     (async () => {
       const safe = (p, fallback) => p.catch(e => { console.warn("source failed:", e && e.message); return fallback; });
       const [st0, ev, ac, wards, lv] = await Promise.all([
-        safe(api.getStations(city), []), safe(api.getEvents(city), []), safe(api.getActions(city), []),
+        safe(api.getStations(city), []),
+        safe(api.getEvents(city, era === "live" ? 3 : null), []),
+        safe(api.getActions(city, era === "live" ? 3 : null), []),
         safe(api.getWards(city), { type: "FeatureCollection", features: [] }), safe(api.getLive(), null)]);
       if (dead) return;
       const cityName = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[city];
@@ -161,8 +163,9 @@ export default function App() {
       <div className="era-banner">
         {era === "live"
           ? (live && live.available
-              ? `LIVE — official data.gov.in feed as of ${live.as_of} · ${live.history_days_accumulated} day(s) of history accumulated · ${live.analytics_ready ? "full analytics active" : "forecast/attribution unlock at 7 days of history"}`
-              : "Live mode: waiting for first government snapshot (runs every 6h once the data.gov.in key is configured) — showing crisis episode meanwhile")
+              ? `LIVE — official data.gov.in feed, latest reading ${live.as_of} · ` +
+                `refreshed hourly · analytics run on the last 72 hours`
+              : "LIVE — awaiting the first government snapshot of this cycle")
           : "CRISIS EPISODE — real CPCB data, Dec 25 2025 – Jan 1 2026 (New Year smog crisis) · every number from government sensors + NASA satellites"}
       </div>
       <div className="main">
@@ -297,13 +300,16 @@ function CitizenView({ city }) {
     </div>);
 }
 
-function LiveNote({ live, what }) {
-  const d = live && live.history_days_accumulated;
+function LiveNote({ what }) {
   return (
-    <div className="card" style={{ borderLeft: "3px solid #1f6feb" }}>
-      <b style={{ color: "#58a6ff" }}>You're in LIVE mode.</b> {what} needs accumulated history —
-      the live feed has {d ?? 0} of 7 days so far (fills automatically every 6h).
-      Until then, the entries below are from the <b>Dec 2025 crisis episode</b>, our fully-analysed demonstration week.
+    <div className="card" style={{ borderLeft: "3px solid #3fb950" }}>
+      <b style={{ color: "#3fb950" }}>No {what} in the last 72 hours.</b> The agents ran on the current
+      government feed and found no pollution event meeting the trigger thresholds — monsoon-season air
+      across these cities is within limits right now, so no enforcement is warranted.
+      <div className="evli" style={{ marginTop: 6 }}>
+        Switch to <b>Crisis episode</b> to see the full chain on the December smog week, or open
+        <b> Replay</b> to run the agents live against the current data.
+      </div>
     </div>);
 }
 
@@ -326,9 +332,10 @@ function LiveHotspots({ live, city }) {
 }
 
 function Actions({ actions, era, live, city }) {
-  const note = era === "live" ? <LiveNote live={live} what="Enforcement ranking" /> : null;
-  if (!actions.length) return <>{note}<div className="card">No enforcement actions for this city in the episode window.</div></>;
-  return <>{note}{actions.map(a => (
+  if (!actions.length) return era === "live"
+    ? <LiveNote what="enforcement action" />
+    : <div className="card">No enforcement actions for this city in the episode window.</div>;
+  return <>{actions.map(a => (
     <div className="card" key={a.action_id}>
       <span className="prio">{Number(a.priority).toFixed(2)}</span>
       <h4>{wardLabel(a.ward_name) || a.ward_id}</h4>
@@ -343,8 +350,10 @@ function Actions({ actions, era, live, city }) {
 
 function Events({ events, era, live, city }) {
   const recent = events.slice(-80).reverse();
-  const liveTop = era === "live" ? (<><LiveHotspots live={live} city={city} /><LiveNote live={live} what="Event attribution" /></>) : null;
-  if (!recent.length) return <>{liveTop}<div className="card">No events.</div></>;
+  const liveTop = era === "live" ? <LiveHotspots live={live} city={city} /> : null;
+  if (!recent.length) return <>{liveTop}{era === "live"
+    ? <LiveNote what="attributed pollution event" />
+    : <div className="card">No events.</div>}</>;
   return <>{liveTop}{recent.map((e, i) => {
     const ev = safeParse(e.evidence_json);
     return (

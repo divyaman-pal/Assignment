@@ -18,14 +18,14 @@ export async function getStations(slug) {
   const city = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[slug];
   return all.filter(s => s.city === city);
 }
-export async function getEvents(slug) {
-  if (API) return j(`${API}/cities/${slug}/events`);
+export async function getEvents(slug, sinceDays) {
+  if (API) return j(`${API}/cities/${slug}/events` + (sinceDays ? `?since_days=${sinceDays}` : ""));
   const all = await j("/demo/events.json");
   const city = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[slug];
   return all.filter(e => e.city === city);
 }
-export async function getActions(slug) {
-  if (API) return j(`${API}/cities/${slug}/actions`);
+export async function getActions(slug, sinceDays) {
+  if (API) return j(`${API}/cities/${slug}/actions` + (sinceDays ? `?since_days=${sinceDays}` : ""));
   const all = await j("/demo/actions.json");
   const city = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" }[slug];
   return all.filter(a => a.city === city);
