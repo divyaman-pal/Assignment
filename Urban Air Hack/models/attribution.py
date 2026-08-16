@@ -26,7 +26,10 @@ in EVIDENCE_PARAMS so judges can inspect every number.
 import json
 from pathlib import Path
 
-import duckdb
+try:
+    import duckdb  # optional: only used for the local file store
+except ImportError:  # serverless API runs against Supabase
+    duckdb = None
 import numpy as np
 import pandas as pd
 
