@@ -50,9 +50,6 @@ export default function App() {
     });
     m.on("mouseenter", "stations-dots", () => { m.getCanvas().style.cursor = "pointer"; });
     m.on("mouseleave", "stations-dots", () => { m.getCanvas().style.cursor = ""; });
-    // Dark-matter renders land at near-black; lift it so roads and place names
-    // are legible against the app chrome.
-    m.on("load", () => { try { m.setPaintProperty("background", "background-color", "#101720"); } catch (e) {} });
     return () => m.remove();
   }, []);
 
@@ -102,7 +99,10 @@ export default function App() {
             "circle-stroke-width": 1.5, "circle-stroke-color": "#0d1117",
             "circle-color": ["case", ["==", ["get", "stale"], 1], "#8b949e",
               ["match", ["get", "band"], ...Object.entries(BAND_COLORS).flat(), "#8b949e"]] } });
-        m.flyTo({ center: CITIES[city].center, zoom: CITIES[city].zoom });
+        // Dark-matter renders land at near-black; lift it so roads and place
+        // names read against the app chrome.
+        try { m.setPaintProperty("background", "background-color", "#101720"); } catch (e) {}
+        m.flyTo({ center: CITIES[city].center, zoom: CITIES[city].zoom, duration: 900, essential: true });
       };
       // Draw as soon as the style JSON is parsed (that is all addSource/addLayer
       // need). Do NOT gate on isStyleLoaded()/"idle" — with vector basemaps those
