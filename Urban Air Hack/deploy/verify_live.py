@@ -122,17 +122,45 @@ check("evidence pack", pack_ok)
 
 
 def advisory_ok():
+    """Exercises the translation path without paying for a model call.
+
+    Both failures this guards against were in our own code, not the model:
+    the spend tracker wrote to a read-only bundle and raised *after* the call
+    was billed, and the validator rejected Devanagari numerals. Both are
+    checkable offline, so the hourly run costs nothing. A real round trip runs
+    only on demand (VAYU_VERIFY_LLM=1) — asserting it every hour would burn the
+    $10 cap on CI and then break advisories for actual users.
+    """
+    import os
+    from agents import advisory, budget
+
     en = c.get("/cities/delhi/advisory?ward=Rohini&aqi=340&group=elderly").json()
     assert en["source"] == "template", f"english advisory source={en['source']}"
-    hi = c.get("/cities/delhi/advisory?ward=Rohini&aqi=340&group=elderly&lang=hi").json()
-    # a fallback here means the translation path is broken (it was: the spend
-    # tracker wrote to a read-only bundle and threw the paid result away)
-    assert hi["source"] == "llm_translated", f"hindi fell back: source={hi['source']}"
-    assert hi["lang"] == "hi", "hindi advisory came back tagged as another language"
-    return f"en=template hi={hi['source']}"
+
+    # spend bookkeeping must persist and must never raise
+    class _U:
+        input_tokens = out = 0
+        output_tokens = 0
+    before = budget._load()["calls"]
+    state, _warn = budget.record(_U())
+    assert state["calls"] == before + 1, "spend tracker did not persist a call"
+
+    # a correct Hindi/Marathi translation must survive validation
+    sample = "रोहिणी के लिए वायु गुणवत्ता सतर्कता: AQI ३४० (बहुत खराब)।"
+    assert advisory.validate(sample, "Rohini", 340, "hi"), \
+        "validator rejects a correct Devanagari translation"
+    assert not advisory.validate("रोहिणी: AQI ९९९।", "Rohini", 340, "hi"), \
+        "validator accepts a translation with the wrong AQI"
+
+    if os.environ.get("VAYU_VERIFY_LLM") == "1":
+        hi = c.get("/cities/delhi/advisory?ward=Rohini&aqi=340&group=elderly&lang=hi").json()
+        assert hi["source"] == "llm_translated", f"hindi fell back: source={hi['source']}"
+        assert hi["lang"] == "hi", "hindi advisory came back tagged as another language"
+        return f"en=template hi={hi['source']} (live round trip)"
+    return f"en=template, spend tracker + validator OK (spent ${state['usd']:.4f} to date)"
 
 
-check("advisory (en + hi)", advisory_ok)
+check("advisory", advisory_ok)
 
 warn("feed freshness", lambda: (
     f"newest reading is {c.get('/health').json().get('age_hours')}h old"
