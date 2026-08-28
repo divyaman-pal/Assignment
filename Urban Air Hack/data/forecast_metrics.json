@@ -1,24 +1,24 @@
 {
   "h6": {
-    "n_test": 2060,
-    "rmse_model": 59.47,
-    "rmse_persistence": 101.79,
-    "rmse_seasonal_naive": 101.79,
-    "improvement_vs_persistence_pct": 41.6
+    "n_test": 2020,
+    "rmse_model": 68.04,
+    "rmse_persistence": 105.76,
+    "rmse_seasonal_naive": 105.76,
+    "improvement_vs_persistence_pct": 35.7
   },
   "h12": {
-    "n_test": 1591,
-    "rmse_model": 57.83,
-    "rmse_persistence": 116.46,
-    "rmse_seasonal_naive": 80.82,
-    "improvement_vs_persistence_pct": 50.3
+    "n_test": 1555,
+    "rmse_model": 61.38,
+    "rmse_persistence": 119.14,
+    "rmse_seasonal_naive": 83.17,
+    "improvement_vs_persistence_pct": 48.5
   },
   "h24": {
-    "n_test": 831,
-    "rmse_model": 52.53,
-    "rmse_persistence": 79.23,
-    "rmse_seasonal_naive": 79.23,
-    "improvement_vs_persistence_pct": 33.7
+    "n_test": 819,
+    "rmse_model": 47.09,
+    "rmse_persistence": 81.78,
+    "rmse_seasonal_naive": 81.78,
+    "improvement_vs_persistence_pct": 42.4
   },
   "h48": {
     "n_test": 0,
