@@ -4,6 +4,7 @@ Signal → Attribution → Forecast → Enforcement → Advisory, in under 60 se
 Multi-agent geospatial intelligence over India's CAAQMS network (Delhi · Bengaluru · Mumbai).
 
 ## Docs
+- [Operations runbook](docs/OPERATIONS.md) — deploy, keep the feed alive, health checks, onboarding a city
 - [Winning Plan](docs/00_WINNING_PLAN.md)
 - [PRD](docs/01_PRD.md)
 - [TRD](docs/02_TRD.md)
@@ -46,7 +47,8 @@ always-on server is involved.
 
 - **Frontend (Vercel):** project `vayu-net` → Root Directory `web` → framework auto-detects Vite. Set env `VITE_API_URL` to the API deployment URL. Without it the app runs in demo-snapshot mode (fully functional replay data, precomputed).
 - **API (Vercel):** project `vayu-net-api` → repo root → `vercel.json` routes every path to `api/index.py`, which re-exports the FastAPI app from `service/live_api.py`. Set env `SUPABASE_DB_URL` and `ANTHROPIC_API_KEY` (advisory translations; budget-guarded at $10).
-- **Hourly ingest:** `.github/workflows/live-hourly.yml` (cron `10 * * * *`) pulls CPCB + Open-Meteo + NASA FIRMS into Supabase and reruns the agent chain, then runs `deploy/verify_live.py` end to end.
+- **Hourly ingest (primary):** Supabase `pg_cron` calls `POST /ingest` every hour. data.gov.in serves only the current hour and nothing can backfill a missed one, so cadence is the thing that decides whether the platform works. See [OPERATIONS.md](docs/OPERATIONS.md).
+- **Hourly ingest (secondary):** `.github/workflows/live-hourly.yml` (cron `10 * * * *`) pulls CPCB + Open-Meteo + NASA FIRMS into Supabase and reruns the agent chain, then runs `deploy/verify_live.py` end to end.
 - **Weekly rebuild:** `.github/workflows/main.yml` retrains the forecast models and refreshes the bundled demo snapshot. It is a batch job — the live platform does not depend on it.
 
 Both workflow files live at the **repository root**, not inside this directory:
@@ -91,6 +93,9 @@ already accumulated duplicates. It is idempotent; run it with `--dry-run` first.
 python deploy/verify_live.py    # asserts, not just smoke tests; runs in CI hourly
 ```
 
-It fails the build on: a band assigned to a null AQI, duplicate sensors across
-id schemes, a missing live/episode action split, absent freshness reporting,
-a missing inventory table, or a non-English advisory falling back to English.
+It fails the build on: a band assigned to a null AQI, the same sensor under two
+id schemes, a missing live/episode action split, an action published at priority
+zero, absent freshness reporting, a missing inventory table, or spend
+bookkeeping and translation validation that would silently discard a paid
+result. The hourly run costs nothing — set `VAYU_VERIFY_LLM=1` for a real
+translation round trip on demand.

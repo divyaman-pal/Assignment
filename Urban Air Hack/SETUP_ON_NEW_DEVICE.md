@@ -32,6 +32,7 @@ the only thing the clone will not give you.
 - `SUPABASE_SERVICE_KEY` and `SUPABASE_DB_URL` (full database access)
 - `VERCEL_API_TOKEN`, `VERCEL_TOKEN`
 - `DATA_GOV_IN_KEY`, `NASA_FIRMS_API_KEY`
+- `INGEST_TOKEN` (bearer token for `POST /ingest`; also stored in Supabase `ops_config`)
 
 **Delete `.env` before putting this folder on a shared drive, Google Drive,
 WhatsApp, email, or a USB stick that leaves your hands.** Anyone holding that
