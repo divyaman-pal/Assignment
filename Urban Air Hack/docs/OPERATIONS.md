@@ -125,8 +125,32 @@ Roughly 15s: pulls the hour, upserts, reruns the agent chain, returns a summary.
 | `ANTHROPIC_API_KEY` | API | Advisory translation only |
 | `NASA_FIRMS_API_KEY` | CI | Satellite fire detections |
 
-`INGEST_TOKEN` unset ⇒ `/ingest` returns 503 and is inert. Rotate by updating
-the Vercel env var and `ops_config.ingest_token` together.
+### Where the API reads secrets from
+
+`INGEST_TOKEN` and `DATA_GOV_IN_KEY` resolve **environment first, then the
+`ops_config` table** (`etl/ops.py`). Everything else is environment-only.
+
+That fallback exists because a Vercel environment variable is applied only at
+build time and only to the project that owns the deployment, so a value saved
+against the wrong project reads exactly like a value never set — the function
+sees an empty string and the dashboard still shows the variable present. Both
+of these secrets were lost that way, each costing days to attribute.
+
+**Rotating either one is now a single statement**, and the cron reads the same
+row, so the two ends cannot drift apart:
+
+```sql
+update ops_config set value = '<new value>' where key = 'ingest_token';
+```
+
+No redeploy is needed — the value is cached per warm instance and re-read on the
+next cold start. If you also set the Vercel env var, that wins; keep the two in
+sync or set only the table.
+
+`GET /health` reports `ingest_token_source` (`env` | `ops_config` | `unset` |
+`unavailable`), so "saved in the dashboard" and "visible to the running code"
+stay distinguishable. `ingest_configured: false` ⇒ `/ingest` returns 503 and is
+inert.
 
 LLM spend is capped at $10 (`agents/budget.py`) and tracked in the `llm_spend`
 table. Only non-English advisories call the model; English is pure template. The
@@ -149,6 +173,9 @@ prints the same age, so a starved feed is visible rather than hidden.
 | No live actions, clean air | correct behaviour | wards below 60 µg/m³ PM2.5 are not enforcement matters |
 | Advisory returns English | budget cap or validation | check `select * from llm_spend` |
 | Fire layer `archive-only` | FIRMS pull not running | run `etl/fetch_fires_live.py`; it syncs to the store |
+| `/ingest` returns 503 | token resolves nowhere | `select key from ops_config` — see `ingest_token_source` in `/health` |
+| `/ingest` 200 with `reason: ... missing (source=unset)` | secret absent from env **and** `ops_config` | insert the row; no redeploy needed |
+| A secret is set in Vercel but the function cannot see it | saved to the wrong project, or saved without a rebuild | put it in `ops_config` instead — that path is verifiable from SQL |
 
 ## Onboarding a city
 
