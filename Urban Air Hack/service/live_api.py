@@ -4,7 +4,7 @@ Same endpoints as the file-backed API, but every read hits the live Postgres
 database that the hourly pipeline writes into — so the deployed platform shows
 current government readings, not a bundled snapshot.
 """
-import json, sys, time
+import json, os, sys, time
 from pathlib import Path
 
 from fastapi import FastAPI, Header
@@ -56,6 +56,47 @@ def q(sql, params=None):
 def rows(df):
     return json.loads(df.to_json(orient="records"))
 
+_INGEST_TOKEN = None          # remembered across warm invocations
+
+def expected_ingest_token():
+    """The token `POST /ingest` must be presented, and where it came from.
+
+    Prefers the INGEST_TOKEN env var, then falls back to the `ops_config` row
+    that the Supabase cron job already reads its own copy from.
+
+    The fallback exists because a Vercel env var is applied only at build time
+    and only to the project that owns the deployment, so a variable saved
+    against the wrong project — or saved without triggering a rebuild — leaves
+    this endpoint permanently inert, and the only symptom is a 503 that looks
+    identical to never having set it. Reading it from the database removes that
+    whole failure mode: it crosses no new trust boundary (the function already
+    holds the service-role DSN, or it could not answer any request at all) and
+    it makes the token single-sourced, so a rotation is one UPDATE instead of
+    two systems that can silently disagree.
+    """
+    global _INGEST_TOKEN
+    env = os.environ.get("INGEST_TOKEN", "").strip()
+    if env:
+        return env, "env"
+    if _INGEST_TOKEN:
+        return _INGEST_TOKEN, "ops_config"
+    try:
+        conn = _conn()
+        with conn.cursor() as c:
+            c.execute("select value from ops_config where key = 'ingest_token'")
+            row = c.fetchone()
+    except Exception:
+        # A missing table or a dead connection must not take /health down with
+        # it; an unresolved token simply reports as unconfigured.
+        try: _conn().rollback()
+        except Exception: pass
+        return "", "unavailable"
+    tok = (row[0] or "").strip() if row else ""
+    if tok:
+        _INGEST_TOKEN = tok
+        return tok, "ops_config"
+    return "", "unset"
+
 @app.get("/")
 def root():
     return {"service": "VAYU-NET API", "store": "supabase", "status": "running"}
@@ -66,16 +107,18 @@ def health():
         df = q(f"""select count(*) n, max(h)::text newest,
                           round(extract(epoch from ({IST_NOW_SQL} - max(h))) / 3600.0, 2) age_hours
                    from readings_hourly""")
-        import os
         age = float(df.age_hours[0])
+        token, source = expected_ingest_token()
         return {"ok": True, "store": "supabase", "readings": int(df.n[0]),
                 "newest_reading": df.newest[0], "age_hours": age,
                 "feed": "current" if age <= 6 else ("lagging" if age <= 24 else "stale"),
-                # whether the scheduled ingest path is armed on THIS deployment.
-                # Vercel applies env vars only to new deployments, so setting
-                # INGEST_TOKEN without redeploying leaves the running function
-                # rejecting every call — worth being able to see, not guess.
-                "ingest_configured": bool(os.environ.get("INGEST_TOKEN", "").strip())}
+                # Whether the scheduled ingest path is armed on THIS deployment,
+                # and which source armed it. Worth reporting rather than
+                # guessing: a Vercel env var reaches a function only on a fresh
+                # build of the owning project, so "I saved it in the dashboard"
+                # and "the running code can see it" are different claims.
+                "ingest_configured": bool(token),
+                "ingest_token_source": source}
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"{type(e).__name__}: {e}"}, status_code=503)
 
@@ -257,15 +300,16 @@ def ingest(authorization: str = Header(None), x_ingest_token: str = Header(None)
 
     Auth: send `Authorization: Bearer <INGEST_TOKEN>` (or `X-Ingest-Token`).
     Never pass the token in the query string — it would be logged by every
-    proxy in between. Disabled entirely when INGEST_TOKEN is unset.
+    proxy in between. Disabled entirely when the token resolves to nothing
+    (neither the INGEST_TOKEN env var nor an `ops_config.ingest_token` row).
     """
-    import os
     from hmac import compare_digest
 
-    expected = os.environ.get("INGEST_TOKEN", "").strip()
+    expected, source = expected_ingest_token()
     if not expected:
-        return JSONResponse({"ok": False, "error": "ingest disabled: INGEST_TOKEN not configured"},
-                            status_code=503)
+        return JSONResponse({"ok": False, "error": "ingest disabled: no INGEST_TOKEN env var "
+                                                   "and no ops_config.ingest_token row",
+                             "token_source": source}, status_code=503)
     supplied = x_ingest_token or ""
     if authorization and authorization.lower().startswith("bearer "):
         supplied = authorization[7:]
