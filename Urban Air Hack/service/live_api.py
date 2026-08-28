@@ -4,10 +4,10 @@ Same endpoints as the file-backed API, but every read hits the live Postgres
 database that the hourly pipeline writes into — so the deployed platform shows
 current government readings, not a bundled snapshot.
 """
-import json, sys
+import json, sys, time
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -237,6 +237,56 @@ def metrics():
 def agent_log(limit: int = 50):
     return rows(q("""select run_id, step, agent, ts::text ts, elapsed_s, input_summary, output_summary
                      from agent_log order by ts desc, step desc limit %(l)s""", {"l": limit}))
+
+@app.post("/ingest")
+def ingest(authorization: str = Header(None), x_ingest_token: str = Header(None),
+           run_agents: bool = True):
+    """Pull the current hour and rerun the agent chain. Token-protected.
+
+    Exists because GitHub's scheduled runner is best-effort: on bad days it
+    captured 1-3 of 24 hours, and a missed hour is gone for good — data.gov.in
+    serves only the present hour and the CPCB archive mirror lags by months.
+    An external cron calling this hourly is what keeps the feed dense enough
+    for the sentinel to have a baseline to detect against.
+
+    Auth: send `Authorization: Bearer <INGEST_TOKEN>` (or `X-Ingest-Token`).
+    Never pass the token in the query string — it would be logged by every
+    proxy in between. Disabled entirely when INGEST_TOKEN is unset.
+    """
+    import os
+    from hmac import compare_digest
+
+    expected = os.environ.get("INGEST_TOKEN", "").strip()
+    if not expected:
+        return JSONResponse({"ok": False, "error": "ingest disabled: INGEST_TOKEN not configured"},
+                            status_code=503)
+    supplied = x_ingest_token or ""
+    if authorization and authorization.lower().startswith("bearer "):
+        supplied = authorization[7:]
+    if not supplied or not compare_digest(supplied.strip(), expected):
+        return JSONResponse({"ok": False, "error": "unauthorized"}, status_code=401)
+
+    from etl import ingest_live
+    started = time.time()
+    conn = _conn()
+    try:
+        out = ingest_live.run(conn)
+    except Exception as e:
+        conn.rollback()
+        return JSONResponse({"ok": False, "stage": "ingest", "error": f"{type(e).__name__}: {e}"},
+                            status_code=500)
+    if run_agents and out.get("ok"):
+        try:
+            from agents.live_pipeline import run as agents_run
+            chain = agents_run(conn, verbose=False)
+            out["agents"] = {k: chain.get(k) for k in
+                             ("run_id", "events", "attributions", "actions", "elapsed_s")}
+        except Exception as e:
+            conn.rollback()
+            out["agents"] = {"error": f"{type(e).__name__}: {e}"}
+    out["elapsed_s"] = round(time.time() - started, 2)
+    return out
+
 
 @app.post("/replay/run")
 def replay_run(city: str = "Delhi"):

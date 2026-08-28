@@ -14,7 +14,10 @@ import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WARD_DIR = ROOT / "web" / "public" / "demo"
+# data/ ships with the serverless bundle; web/ is excluded from it by
+# .vercelignore, so the API can only reach the copy under data/. CI and local
+# runs have both — whichever is found first wins.
+WARD_DIRS = [ROOT / "data" / "wards_geo", ROOT / "web" / "public" / "demo"]
 CITY_SLUG = {"Delhi": "delhi", "Mumbai": "mumbai", "Bengaluru": "bengaluru"}
 NEAREST_MAX_KM = 3.0          # same bound the original backbone used
 
@@ -54,8 +57,9 @@ def load_city(city):
     if city in _cache:
         return _cache[city]
     slug = CITY_SLUG.get(city, str(city).lower())
-    path = WARD_DIR / f"{slug}_wards.json"
-    if not path.exists():
+    path = next((d / f"{slug}_wards.json" for d in WARD_DIRS
+                 if (d / f"{slug}_wards.json").exists()), None)
+    if path is None:
         _cache[city] = []
         return []
     gj = json.loads(path.read_text(encoding="utf-8"))

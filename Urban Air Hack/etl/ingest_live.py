@@ -64,15 +64,22 @@ def fetch_weather():
                          c.get("temperature_2m"), c.get("relative_humidity_2m"))
     return out
 
-def main():
+def run(conn=None):
+    """Pull the current hour and upsert it. Returns a summary dict.
+
+    Callable from the API as well as the CLI: the scheduled GitHub run has been
+    unreliable enough (1-3 of 24 hours captured on bad days) that the platform
+    needs a second, externally-triggered path. Missed hours are unrecoverable —
+    data.gov.in serves only the current hour — so cadence is the whole game.
+    """
     key = os.environ.get("DATA_GOV_IN_KEY", "").strip()
     if not key:
-        print("DATA_GOV_IN_KEY missing — skipping live ingest"); return 0
+        return {"ok": False, "reason": "DATA_GOV_IN_KEY missing", "ingested": 0}
     recs = fetch_cpcb(key)
     if not recs:
-        print("no records from CPCB feed — skipping (next cycle will retry)"); return 0
+        return {"ok": False, "reason": "no records from CPCB feed", "ingested": 0}
     wx = fetch_weather()
-    print(f"CPCB records for served cities: {len(recs)} | weather cities: {len(wx)}")
+    notes = [f"CPCB records for served cities: {len(recs)} | weather cities: {len(wx)}"]
 
     # pivot pollutant rows -> one row per (station, hour)
     by_station = {}
@@ -99,7 +106,9 @@ def main():
         rows.append((st, d["city"], ts, d.get("pm25"), d.get("pm10"), d.get("no2"), d.get("co"),
                      d.get("so2"), d.get("nh3"), d.get("o3"), w[0], w[1], w[2], w[3]))
 
-    conn = connect(); cur = conn.cursor()
+    owned = conn is None
+    conn = conn or connect()
+    cur = conn.cursor()
 
     # The feed identifies a station only by name; the archive keys the same
     # sensor as site_NNN. Resolve to the canonical id so live readings extend
@@ -133,7 +142,7 @@ def main():
                              "lon=coalesce(stations.lon, excluded.lon), "
                              "ward_id=coalesce(stations.ward_id, excluded.ward_id), "
                              "ward_method=coalesce(stations.ward_method, excluded.ward_method)")
-        print(f"registered {len(st_rows)} new station(s): {', '.join(sorted(fresh))[:160]}")
+        notes.append(f"registered {len(st_rows)} new station(s): {', '.join(sorted(fresh))[:160]}")
 
     # Self-healing: any station still without a ward is invisible to
     # enforcement, so resolve it every cycle rather than only at migration time.
@@ -146,7 +155,7 @@ def main():
                         (wid, method, sid))
             backfilled += 1
     if backfilled:
-        print(f"ward backfill: mapped {backfilled} previously unmapped station(s)")
+        notes.append(f"ward backfill: mapped {backfilled} previously unmapped station(s)")
 
     rows = [(canon.get(r[0], r[0]),) + r[1:] for r in rows]
     insert_rows(cur, "readings_hourly", cols, rows,
@@ -155,11 +164,27 @@ def main():
                          "so2=excluded.so2, nh3=excluded.nh3, o3=excluded.o3, ws=excluded.ws, "
                          "wd=excluded.wd, at_c=excluded.at_c, rh=excluded.rh")
     conn.commit()
-    cur.execute("select count(*), max(h) from readings_hourly")
-    n, latest = cur.fetchone()
-    print(f"ingested {len(rows)} station-hours | table now {n} rows | latest {latest}")
-    conn.close()
+    cur.execute("""select count(*), max(h)::text,
+                          round(extract(epoch from ((now() at time zone 'Asia/Kolkata')
+                                                    - max(h))) / 3600.0, 2)
+                   from readings_hourly""")
+    n, latest, age = cur.fetchone()
+    notes.append(f"ingested {len(rows)} station-hours | table now {n} rows | latest {latest}")
+    if owned:
+        conn.close()
+    return {"ok": True, "ingested": len(rows), "new_stations": len(st_rows),
+            "wards_backfilled": backfilled, "readings": int(n), "newest_reading": latest,
+            "age_hours": float(age) if age is not None else None, "notes": notes}
+
+
+def main():
+    out = run()
+    for line in out.get("notes", []):
+        print(line)
+    if not out["ok"]:
+        print(f"skipped: {out.get('reason')}")
     return 0
+
 
 if __name__ == "__main__":
     try:

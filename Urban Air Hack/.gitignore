@@ -26,3 +26,7 @@ models/*.txt
 
 # local backups of the live store (never commit)
 _backup/
+
+# ward polygons the serverless API needs (web/ is excluded from that bundle)
+!data/wards_geo/
+!data/wards_geo/*.json
