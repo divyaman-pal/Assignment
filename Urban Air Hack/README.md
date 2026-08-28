@@ -72,7 +72,7 @@ already accumulated duplicates. It is idempotent; run it with `--dry-run` first.
 ## Honesty & data integrity
 
 - Station coordinates: accepted only when two independent data.gov.in snapshots agree (444 verified; 0 conflicts; see `data/build_report.json`).
-- Forecast accuracy: strict time-split backtest, test window contains the NYE spike (hardest case). Model RMSE 47.1 vs persistence 81.8 at 24h; 48h/72h are trained but not backtested and the UI says so rather than showing blank cells. See `data/forecast_metrics.json`.
+- Forecast accuracy: strict time-split backtest, test window contains the NYE spike (hardest case). The 6/12/24h horizons beat persistence by 30-50%; 48h and 72h are trained but have no honest test window on a one-week dataset, and the UI prints that instead of blank cells. Exact figures move with each retrain — read them from `data/forecast_metrics.json` (served at `/metrics`) rather than from prose.
 - Attribution: evidence-weighted likelihood with confidence scores and visible evidence bullets; the LLM never chooses categories, only narrates/translates, with output validation + template fallback.
 - Freshness is measured, not asserted. `/live` and `/health` report `age_hours`
   computed against the database clock, and the UI prints that age. The banner

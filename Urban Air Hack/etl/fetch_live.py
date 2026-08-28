@@ -12,6 +12,9 @@ import os, sys, json, urllib.request, urllib.parse
 from pathlib import Path
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from etl import env as _env  # noqa: E402,F401  (loads .env for local runs)
+
 RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 OUT = RAW / "live_snapshots.parquet"
 RESOURCE = "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69"  # "Real time AQI from various locations"
