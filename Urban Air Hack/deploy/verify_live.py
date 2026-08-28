@@ -72,15 +72,25 @@ check("events(delhi)", lambda: f"{len(c.get('/cities/delhi/events').json())} eve
 
 
 def actions_ok():
-    live = c.get("/cities/delhi/actions?era=live").json()
-    ep = c.get("/cities/delhi/actions?era=episode").json()
-    assert isinstance(live, list) and isinstance(ep, list), "actions endpoint did not return lists"
-    # the live pool must be answerable independently of the episode pool
-    assert all(a.get("era") == "live" for a in live), "era=live returned non-live rows"
-    return f"{len(live)} live, {len(ep)} episode"
+    counts = {}
+    for slug in ("delhi", "mumbai", "bengaluru"):
+        live = c.get(f"/cities/{slug}/actions?era=live").json()
+        ep = c.get(f"/cities/{slug}/actions?era=episode").json()
+        assert isinstance(live, list) and isinstance(ep, list), "actions endpoint did not return lists"
+        # the live pool must be answerable independently of the episode pool
+        assert all(a.get("era") == "live" for a in live), f"{slug}: era=live returned non-live rows"
+        # A zero priority means severity clipped to zero — the ward's air did not
+        # warrant enforcement at all. Publishing it as a ranked action with a
+        # statutory citation is a claim we cannot stand behind, and a whole city
+        # of them tied at 0.00 sorts arbitrarily.
+        zeros = [a for a in live + ep if not a.get("priority")]
+        assert not zeros, (f"{slug}: {len(zeros)} action(s) at priority 0, "
+                           f"e.g. {zeros[0]['ward_name']} at {zeros[0]['mean_pm25']} ug/m3")
+        counts[slug] = f"{len(live)}L/{len(ep)}E"
+    return counts
 
 
-check("actions(delhi) live/episode split", actions_ok)
+check("actions: live/episode split, no zero-priority", actions_ok)
 
 
 def live_ok():

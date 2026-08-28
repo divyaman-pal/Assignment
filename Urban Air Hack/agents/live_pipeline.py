@@ -25,6 +25,13 @@ from agents.enforcement import STATUTES, ACTIONS  # noqa: E402
 LOOKBACK_DAYS = 10          # window of history used for baselines
 LIVE_CUTOFF_DAYS = 3        # "live" = events within this many days of the newest reading
 
+# CPCB PM2.5 breakpoint between "Satisfactory" and "Moderate". Below it the air
+# is officially fine and there is nothing to enforce, so a ward never becomes an
+# enforcement action — the severity term is zero there anyway, which previously
+# emitted whole cities of actions all tied at priority 0.00, each carrying a
+# statutory citation over air that was measuring 21 µg/m³.
+ENFORCEMENT_FLOOR_PM25 = 60
+
 
 def load_hourly(conn):
     df = pd.read_sql(
@@ -36,8 +43,18 @@ def load_hourly(conn):
 
 
 def _rank(agg):
-    """severity x confidence x persistence x vulnerability, top 10 per city."""
-    sev = np.clip((agg.mean_pm25 - 60) / 250, 0, 2)
+    """severity x confidence x persistence x vulnerability, top 10 per city.
+
+    Wards below the enforcement floor are dropped rather than ranked. Severity
+    clips to zero there, so every one of them scored exactly 0.00 — they sorted
+    arbitrarily against each other and read as "act on this, at zero priority".
+    Detection still reports them under Events; only the enforcement claim needs
+    the air to actually warrant enforcement.
+    """
+    agg = agg[agg.mean_pm25 > ENFORCEMENT_FLOOR_PM25]
+    if not len(agg):
+        return agg
+    sev = np.clip((agg.mean_pm25 - ENFORCEMENT_FLOOR_PM25) / 250, 0, 2)
     persist = 1 + np.log1p((pd.to_datetime(agg.last_seen) - pd.to_datetime(agg.first_seen))
                            .dt.total_seconds() / 3600)
     fac = agg.n_schools + agg.n_hospitals
@@ -141,6 +158,8 @@ def run(conn, verbose=True):
         if not len(agg):
             continue
         top = _rank(agg)
+        if not len(top):
+            continue          # nothing cleared the enforcement floor in this window
         top.insert(0, "action_id", range(next_id, next_id + len(top)))
         top.insert(1, "era", era)
         next_id += len(top)
