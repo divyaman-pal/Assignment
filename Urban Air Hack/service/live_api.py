@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from etl.sb import connect                      # noqa: E402
+from etl import ops                             # noqa: E402
 from models.aqi import pm_aqi, band             # noqa: E402
 
 CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
@@ -56,46 +57,14 @@ def q(sql, params=None):
 def rows(df):
     return json.loads(df.to_json(orient="records"))
 
-_INGEST_TOKEN = None          # remembered across warm invocations
-
 def expected_ingest_token():
-    """The token `POST /ingest` must be presented, and where it came from.
+    """The token `POST /ingest` must be presented, and where it resolved from.
 
-    Prefers the INGEST_TOKEN env var, then falls back to the `ops_config` row
-    that the Supabase cron job already reads its own copy from.
-
-    The fallback exists because a Vercel env var is applied only at build time
-    and only to the project that owns the deployment, so a variable saved
-    against the wrong project — or saved without triggering a rebuild — leaves
-    this endpoint permanently inert, and the only symptom is a 503 that looks
-    identical to never having set it. Reading it from the database removes that
-    whole failure mode: it crosses no new trust boundary (the function already
-    holds the service-role DSN, or it could not answer any request at all) and
-    it makes the token single-sourced, so a rotation is one UPDATE instead of
-    two systems that can silently disagree.
+    Environment first, then the `ops_config` row the Supabase cron already
+    reads its own copy from, so both ends of the call agree by construction.
+    See etl/ops.py for why the database fallback exists.
     """
-    global _INGEST_TOKEN
-    env = os.environ.get("INGEST_TOKEN", "").strip()
-    if env:
-        return env, "env"
-    if _INGEST_TOKEN:
-        return _INGEST_TOKEN, "ops_config"
-    try:
-        conn = _conn()
-        with conn.cursor() as c:
-            c.execute("select value from ops_config where key = 'ingest_token'")
-            row = c.fetchone()
-    except Exception:
-        # A missing table or a dead connection must not take /health down with
-        # it; an unresolved token simply reports as unconfigured.
-        try: _conn().rollback()
-        except Exception: pass
-        return "", "unavailable"
-    tok = (row[0] or "").strip() if row else ""
-    if tok:
-        _INGEST_TOKEN = tok
-        return tok, "ops_config"
-    return "", "unset"
+    return ops.secret("INGEST_TOKEN", "ingest_token", conn=_conn())
 
 @app.get("/")
 def root():

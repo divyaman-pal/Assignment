@@ -172,6 +172,47 @@ def advisory_ok():
 
 check("advisory", advisory_ok)
 
+def ingest_armed():
+    """The scheduled ingest path must be armed, and armed by the source
+    production actually uses.
+
+    This is the check that would have caught the outage it was written for:
+    the token was set in a Vercel dashboard and /ingest still 503'd for days,
+    because a variable saved against the wrong project reads identically to no
+    variable at all. Asserting only that *some* token resolves would have
+    passed locally the whole time, so the ops_config path is exercised with the
+    env var explicitly removed -- that is the code path the deployment runs.
+    """
+    import os as _os
+    from service import live_api
+    from etl import ops
+
+    h = c.get("/health").json()
+    assert h.get("ingest_configured"), f"ingest not armed: source={h.get('ingest_token_source')}"
+
+    saved = _os.environ.pop("INGEST_TOKEN", None)
+    ops._CACHE.pop('ingest_token', None)
+    try:
+        tok, src = live_api.expected_ingest_token()
+        assert src == "ops_config", f"no ops_config fallback: source={src}"
+        assert tok, "ops_config.ingest_token resolved empty"
+        # the cron sends the ops_config value, so the two must be the same row
+        with live_api._conn().cursor() as cur:
+            cur.execute("select value from ops_config where key = 'ingest_token'")
+            assert cur.fetchone()[0].strip() == tok, "resolved token is not the ops_config row"
+    finally:
+        if saved is not None:
+            _os.environ["INGEST_TOKEN"] = saved
+        ops._CACHE.pop('ingest_token', None)
+
+    # a wrong token must be rejected, and never with the 503 that means "off"
+    r = c.post("/ingest", headers={"Authorization": "Bearer not-the-token"})
+    assert r.status_code == 401, f"bad token got {r.status_code}, expected 401"
+    return f"armed via {h.get('ingest_token_source')}, ops_config fallback OK, bad token -> 401"
+
+
+check("ingest armed", ingest_armed)
+
 warn("feed freshness", lambda: (
     f"newest reading is {c.get('/health').json().get('age_hours')}h old"
     if (c.get("/health").json().get("age_hours") or 0) > 6 else None))

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from etl import env as _env  # noqa: E402,F401  (loads .env for local runs)
 from etl.sb import connect, insert_rows
 from etl.station_identity import Resolver
-from etl import wards_geo
+from etl import ops, wards_geo
 
 RESOURCE = "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69"
 CITIES = {"Delhi": (28.61, 77.21), "Mumbai": (19.08, 72.88), "Bengaluru": (12.97, 77.59)}
@@ -72,9 +72,12 @@ def run(conn=None):
     needs a second, externally-triggered path. Missed hours are unrecoverable —
     data.gov.in serves only the current hour — so cadence is the whole game.
     """
-    key = os.environ.get("DATA_GOV_IN_KEY", "").strip()
+    # env first, then ops_config: the serverless deployment never received this
+    # variable even with the dashboard showing it set. See etl/ops.py.
+    key, key_source = ops.secret("DATA_GOV_IN_KEY", conn=conn)
     if not key:
-        return {"ok": False, "reason": "DATA_GOV_IN_KEY missing", "ingested": 0}
+        return {"ok": False, "reason": f"DATA_GOV_IN_KEY missing (source={key_source})",
+                "ingested": 0}
     recs = fetch_cpcb(key)
     if not recs:
         return {"ok": False, "reason": "no records from CPCB feed", "ingested": 0}
