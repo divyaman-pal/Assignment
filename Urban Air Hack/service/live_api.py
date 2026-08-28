@@ -251,11 +251,12 @@ def pack(action_id: int):
     return FileResponse(path, media_type="application/pdf", filename=f"evidence_pack_{action_id}.pdf")
 
 @app.get("/cities/{slug}/advisory")
-def advisory_ep(slug: str, ward: str, aqi: int = 300, group: str = "general", lang: str = "en"):
+def advisory_ep(slug: str, ward: str, aqi: int = 300, group: str = "general", lang: str = "en",
+                basis: str = "current"):
     from agents import advisory
     b = band(aqi) or "Poor"
     try:
-        return advisory.generate(ward, b, aqi, group=group, lang=lang)
+        return advisory.generate(ward, b, aqi, group=group, lang=lang, basis=basis)
     except Exception as e:
-        return {"text": advisory.english_template(ward, b, aqi, group, 24),
+        return {"text": advisory.english_template(ward, b, aqi, group, 24, basis),
                 "lang": "en", "source": f"fallback ({type(e).__name__})"}

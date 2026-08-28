@@ -166,7 +166,7 @@ def run(conn, verbose=True):
         aqi = _ward_aqi(conn, a["ward_name"])
         b = band(aqi) or "Poor"
         advisories.append({"ward": a["ward_name"], "aqi": aqi, "band": b,
-                           "text": english_template(a["ward_name"], b, aqi or 0, "general", 24)})
+                           "text": english_template(a["ward_name"], b, aqi or 0, "general", 24, "current")})
     step("advisory", {"wards": len(advisories)}, {"issued": [a["ward"] for a in advisories]})
 
     elapsed = round(time.time() - t0, 2)

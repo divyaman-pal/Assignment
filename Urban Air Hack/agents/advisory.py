@@ -43,8 +43,14 @@ GROUP_ACTIONS = {
 }
 LANG_NAMES = {"en": "English", "hi": "Hindi", "mr": "Marathi", "kn": "Kannada", "ta": "Tamil"}
 
-def english_template(ward, band, aqi, group, horizon_h):
-    return (f"Air quality alert for {ward}: forecast AQI {aqi} ({band}) in the next {horizon_h} hours. "
+def english_template(ward, band, aqi, group, horizon_h, basis="current"):
+    """`basis` must match where the number came from. Calling an observed
+    reading a forecast is a factual claim the system cannot support: the live
+    agent chain reports measured ward AQI, and the citizen view asks about
+    conditions now — only the batch forecast produces a genuine prediction."""
+    lead = (f"forecast AQI {aqi} ({band}) in the next {horizon_h} hours"
+            if basis == "forecast" else f"AQI {aqi} ({band}) measured now")
+    return (f"Air quality alert for {ward}: {lead}. "
             f"{CPCB_HEALTH[band]} {GROUP_ACTIONS[group].get(band, 'Follow general precautions.')}")
 
 # Targets that do not use the Latin alphabet: the ward name is legitimately
@@ -89,8 +95,8 @@ def client():
         _client = Anthropic()  # ANTHROPIC_API_KEY from env
     return _client
 
-def generate(ward, band, aqi, group="general", lang="en", horizon_h=24):
-    base = english_template(ward, band, aqi, group, horizon_h)
+def generate(ward, band, aqi, group="general", lang="en", horizon_h=24, basis="current"):
+    base = english_template(ward, band, aqi, group, horizon_h, basis)
     if lang == "en":
         return {"text": base, "lang": "en", "source": "template"}
     budget.check()
