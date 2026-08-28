@@ -1,0 +1,37 @@
+{
+  "benchmark": "CAQM unified report, Jan 2026 (SC-mandated) — Delhi winter PM2.5 mass shares",
+  "caveat": "Ours are EVENT-COUNT shares for one episode week (incl. New Year fireworks); benchmark is seasonal MASS shares — directional comparison only",
+  "rows": [
+    {
+      "category": "biomass/burning",
+      "ours": 58.9,
+      "caqm": 20,
+      "note": "our week includes NYE fireworks — exceedance expected and correct"
+    },
+    {
+      "category": "transport",
+      "ours": 35.9,
+      "caqm": 23,
+      "note": "same order of magnitude; event counts over-weight rush-hour spikes"
+    },
+    {
+      "category": "dust/construction",
+      "ours": 0.5,
+      "caqm": 15,
+      "note": "winter dust suppressed by humidity; spike-detection under-captures steady dust"
+    },
+    {
+      "category": "industry",
+      "ours": 3.7,
+      "caqm": 9,
+      "note": "few SO2-signature events in this week"
+    },
+    {
+      "category": "secondary",
+      "ours": 1.1,
+      "caqm": 27,
+      "note": "known method limit: secondary chemistry is invisible to station-observational attribution"
+    }
+  ],
+  "n_events": 846
+}

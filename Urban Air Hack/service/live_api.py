@@ -17,6 +17,11 @@ from etl.sb import connect                      # noqa: E402
 from models.aqi import pm_aqi, band             # noqa: E402
 
 CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
+
+# readings_hourly.h is IST wall-clock stored without a zone, while the database
+# clock is UTC. Comparing h against a bare now() therefore skewed every window
+# by 5h30m and put the newest reading 3 hours in the "future".
+IST_NOW_SQL = "(now() at time zone 'Asia/Kolkata')"
 app = FastAPI(title="VAYU-NET API (live)", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -58,8 +63,13 @@ def root():
 @app.get("/health")
 def health():
     try:
-        df = q("select count(*) n, max(h)::text newest from readings_hourly")
-        return {"ok": True, "store": "supabase", "readings": int(df.n[0]), "newest_reading": df.newest[0]}
+        df = q(f"""select count(*) n, max(h)::text newest,
+                          round(extract(epoch from ({IST_NOW_SQL} - max(h))) / 3600.0, 2) age_hours
+                   from readings_hourly""")
+        age = float(df.age_hours[0])
+        return {"ok": True, "store": "supabase", "readings": int(df.n[0]),
+                "newest_reading": df.newest[0], "age_hours": age,
+                "feed": "current" if age <= 6 else ("lagging" if age <= 24 else "stale")}
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"{type(e).__name__}: {e}"}, status_code=503)
 
@@ -87,7 +97,7 @@ def stations(slug: str):
 @app.get("/cities/{slug}/events")
 def events(slug: str, limit: int = 300, since_days: int | None = None):
     city = CITIES.get(slug, slug)
-    where = "a.city = %(c)s" + (" and a.h > now() - (%(d)s || ' days')::interval" if since_days else "")
+    where = "a.city = %(c)s" + (f" and a.h > {IST_NOW_SQL} - (%(d)s || ' days')::interval" if since_days else "")
     return rows(q(f"""select a.station_id, s.ward_id, a.h::text h, a.event_type, a.pm25, a.zscore,
                              a.category, a.confidence, a.evidence_json
                       from attributions a left join stations s using (station_id)
@@ -95,37 +105,130 @@ def events(slug: str, limit: int = 300, since_days: int | None = None):
                   {"c": city, "l": limit, "d": since_days}))
 
 @app.get("/cities/{slug}/actions")
-def actions(slug: str, since_days: int | None = None):
-    """Ranked enforcement actions. `since_days` restricts to actions whose most
-    recent supporting event falls inside that window — used by LIVE mode so it
-    never presents historical rankings as current."""
+def actions(slug: str, since_days: int | None = None, era: str | None = None):
+    """Ranked enforcement actions.
+
+    The agent ranks the live window and the historical episode into two separate
+    pools (`era`), because one shared pool let December's crisis permanently
+    outrank every current event — the live view could then never show an action.
+    `since_days` is kept for older clients and now selects the live pool.
+    """
     city = CITIES.get(slug, slug)
-    if since_days:
-        return rows(q("""select * from actions where city = %(c)s
-                         and last_seen > now() - (%(d)s || ' days')::interval
-                         order by priority desc""", {"c": city, "d": since_days}))
+    want = era or ("live" if since_days else None)
+    if want:
+        return rows(q("""select * from actions where city = %(c)s and era = %(e)s
+                         order by priority desc""", {"c": city, "e": want}))
     return rows(q("select * from actions where city = %(c)s order by priority desc", {"c": city}))
+
+
+@app.get("/live")
+def live():
+    """Real freshness and current hotspots, straight from the store.
+
+    The UI used to read a build-time snapshot for this, so its "LIVE" banner
+    showed whenever the last successful build ran rather than how current the
+    data actually is — it read 12 days stale while the store was 2 hours old.
+    """
+    df = q("""with latest as (
+                 select distinct on (station_id) station_id, city, pm25, pm10, h
+                 from readings_hourly
+                 where h > (select max(h) from readings_hourly) - interval '24 hours'
+                 order by station_id, h desc)
+              select s.station_id as station, l.city, s.lat, s.lon, l.pm25, l.pm10,
+                     l.h::text as as_of
+              from latest l join stations s using (station_id)
+              where s.lat is not null""")
+    df["aqi"] = [pm_aqi(a, b) for a, b in zip(df.pm25, df.pm10)]
+    df["band"] = df.aqi.map(band)
+    # age is computed against the database clock so the client never has to
+    # guess the timezone of a naive timestamp
+    newest = q(f"""select max(h)::text newest, count(*) n,
+                          round(extract(epoch from ({IST_NOW_SQL} - max(h))) / 3600.0, 2) age_hours
+                   from readings_hourly""")
+    recs = [r for r in rows(df) if r["aqi"] is not None]
+    return {"available": bool(recs), "as_of": newest.newest[0],
+            "age_hours": float(newest.age_hours[0]),
+            "stations": sorted(recs, key=lambda r: -r["aqi"]),
+            "fresh_stations": len(recs), "total_readings": int(newest.n[0])}
+
+
+@app.get("/compare")
+def compare():
+    """Cross-city summary computed in SQL.
+
+    The UI used to derive this from three paged endpoints, so every city hit the
+    300-row event cap and Delhi reported exactly 300 events — a cap artefact
+    presented as a count.
+    """
+    st = q("""with latest as (
+                 select distinct on (station_id) station_id, pm25, pm10
+                 from readings_hourly
+                 where h > (select max(h) from readings_hourly) - interval '24 hours'
+                 order by station_id, h desc)
+              select s.city, l.pm25, l.pm10 from latest l join stations s using (station_id)""")
+    st["aqi"] = [pm_aqi(a, b) for a, b in zip(st.pm25, st.pm10)]
+    ev = q("""select city, count(*) events, count(distinct station_id) stations
+              from attributions group by 1""")
+    top = q("""select distinct on (city) city, category, count(*) n
+               from attributions group by city, category order by city, n desc""")
+    pri = q("""select distinct on (city) city, priority, era
+               from actions order by city, priority desc""")
+    out = []
+    for city in ("Delhi", "Mumbai", "Bengaluru"):
+        a = [v for v in st[st.city == city].aqi if v is not None and v == v]
+        e = ev[ev.city == city]
+        t = top[top.city == city]
+        p = pri[pri.city == city]
+        out.append({
+            "city": city,
+            "stations": int(len(st[st.city == city])),
+            "meanAqi": round(sum(a) / len(a)) if a else None,
+            "maxAqi": round(max(a)) if a else None,
+            "events": int(e.events.iloc[0]) if len(e) else 0,
+            "topSource": f"{t.category.iloc[0]} ({int(t.n.iloc[0])})" if len(t) else None,
+            "topPriority": round(float(p.priority.iloc[0]), 2) if len(p) else None})
+    return out
 
 @app.get("/metrics")
 def metrics():
     m = {}
+    # All four live under data/, which ships with the function. The inventory
+    # table used to be read from web/public/demo/metrics.json — excluded from
+    # the serverless bundle by .vercelignore, so it silently never arrived and
+    # the UI rendered an empty table.
     for name, path in [("forecast", "data/forecast_metrics.json"),
                        ("attribution", "data/attribution_summary.json"),
-                       ("build", "data/build_report.json")]:
+                       ("build", "data/build_report.json"),
+                       ("inventory_validation", "data/inventory_validation.json")]:
         p = ROOT / path
         if p.exists():
-            m[name] = json.loads(p.read_text())
-    live = q("""select count(*) readings, max(h)::text newest, min(h)::text oldest,
+            m[name] = json.loads(p.read_text(encoding="utf-8"))
+    live = q(f"""select count(*) readings, max(h)::text newest, min(h)::text oldest,
                        count(distinct station_id) stations,
-                       count(*) filter (where h > now() - interval '2 days') last_48h,
+                       count(*) filter (where h > {IST_NOW_SQL} - interval '2 days') last_48h,
                        count(distinct date_trunc('day', h))
-                         filter (where h > now() - interval '30 days') live_days,
-                       count(*) filter (where h > now() - interval '30 days') live_rows
+                         filter (where h > {IST_NOW_SQL} - interval '30 days') live_days,
+                       count(*) filter (where h > {IST_NOW_SQL} - interval '30 days') live_rows
                 from readings_hourly""")
     m["live_store"] = rows(live)[0]
+    # report what the satellite layer is actually doing rather than asserting it
+    # is active: a CI-written CSV never reached the deployed function, so this
+    # read "active" for months while attribution was using December detections
+    try:
+        f = q(f"""select count(*) n, max(h)::text newest,
+                         round(extract(epoch from ({IST_NOW_SQL} - max(h))) / 3600.0, 2) age_hours
+                  from fires""")
+        age = f.age_hours[0]
+        m["fires"] = {"detections": int(f.n[0]), "newest": f.newest[0],
+                      "age_hours": float(age) if age is not None else None,
+                      "status": "live" if age is not None and float(age) <= 48 else "archive-only"}
+    except Exception:
+        m["fires"] = {"detections": 0, "newest": None, "age_hours": None, "status": "absent"}
+    # kept only for local runs, where web/ is present; on Vercel it is excluded
+    # from the bundle and every key above already comes from data/
     demo = ROOT / "web" / "public" / "demo" / "metrics.json"
     if demo.exists():
-        for k, v in json.loads(demo.read_text()).items():
+        for k, v in json.loads(demo.read_text(encoding="utf-8")).items():
             m.setdefault(k, v)
     return m
 

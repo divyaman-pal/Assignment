@@ -9,6 +9,18 @@ const CITIES = { delhi: { name: "Delhi", center: [77.1, 28.65], zoom: 9.6 },
 const BAND_COLORS = { Good: "#3fb950", Satisfactory: "#7ee787", Moderate: "#d29922",
                       Poor: "#f0883e", "Very Poor": "#ff7b72", Severe: "#da3633" };
 const MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const STALE_AFTER_H = 24;
+
+// Reading timestamps are IST wall-clock without a zone, so the browser clock is
+// not a safe reference. Both sides of this comparison come from the store.
+function isStale(asOf, newestAsOf) {
+  if (!asOf) return false;
+  if (!newestAsOf) return false;
+  const t = Date.parse(String(asOf).replace(" ", "T") + "Z");
+  const n = Date.parse(String(newestAsOf).replace(" ", "T") + "Z");
+  if (!isFinite(t) || !isFinite(n)) return false;
+  return (n - t) > 36e5 * STALE_AFTER_H;
+}
 
 export default function App() {
   const [city, setCity] = useState("delhi");
@@ -74,6 +86,9 @@ export default function App() {
               aqi: s.aqi, band: s.band }))
           : [];
       setStations(st); setEvents(ev); setActions(ac);
+      // reference point for staleness: the freshest reading anywhere in the store
+      const newestAsOf = (lv && lv.as_of) ||
+        st.map(s => s.as_of).filter(Boolean).sort().pop() || null;
       const m = mapObj.current;
       const draw = () => {
         ["wards-fill", "wards-line", "stations-dots"].forEach(id => { if (m.getLayer(id)) m.removeLayer(id); });
@@ -89,9 +104,10 @@ export default function App() {
             properties: { name: s.station_name, aqi: s.aqi, band: s.band || "NA", pm25: s.pm25,
                           as_of: s.as_of || "",
                           // a station in the archive but absent from the current
-                          // government feed must not be drawn as if it were live
-                          stale: (era === "live" && s.as_of &&
-                                  (Date.now() - new Date(s.as_of.replace(" ", "T")).getTime()) > 36e5 * 24) ? 1 : 0 },
+                          // government feed must not be drawn as if it were live.
+                          // Compared against the newest reading in the store, not
+                          // the browser clock: these timestamps carry no timezone.
+                          stale: (era === "live" && isStale(s.as_of, newestAsOf)) ? 1 : 0 },
             geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) } });
         m.addLayer({ id: "stations-dots", type: "circle", source: "stations",
           paint: { "circle-radius": ["case", ["==", ["get", "stale"], 1], 4, 7],
@@ -168,8 +184,9 @@ export default function App() {
       <div className="era-banner">
         {era === "live"
           ? (live && live.available
-              ? `LIVE — official data.gov.in feed, latest reading ${live.as_of} · ` +
-                `refreshed hourly · analytics run on the last 72 hours`
+              ? `LIVE — official data.gov.in feed, latest reading ${live.as_of} (${ageLabel(live)})` +
+                `${live.fresh_stations ? ` · ${live.fresh_stations} sensors reporting` : ""}` +
+                ` · analytics run on the last 72 hours`
               : "LIVE — awaiting the first government snapshot of this cycle")
           : "CRISIS EPISODE — real CPCB data, Dec 25 2025 – Jan 1 2026 (New Year smog crisis) · every number from government sensors + NASA satellites"}
       </div>
@@ -220,6 +237,19 @@ const GROUP_ACTIONS = {
   elderly: { Poor: "Avoid morning walks near roads.", "Very Poor": "Stay indoors during peak hours; keep medication at hand.", Severe: "Remain indoors; use purifiers if available; seek help if breathless." },
   general: { Poor: "Reduce prolonged outdoor exertion.", "Very Poor": "Avoid outdoor exercise; keep windows closed at peak hours.", Severe: "Avoid all outdoor exertion; wear N95 outdoors." } };
 const bandOf = a => a <= 50 ? "Good" : a <= 100 ? "Satisfactory" : a <= 200 ? "Moderate" : a <= 300 ? "Poor" : a <= 400 ? "Very Poor" : "Severe";
+
+// State the real age rather than claiming a refresh cadence: the scheduled
+// ingest is best-effort, and asserting "refreshed hourly" over a stale reading
+// is exactly the claim the banner should not be making. Age comes from the API,
+// measured against the database clock — readings carry no timezone, so the
+// browser cannot work it out on its own.
+function ageLabel(live) {
+  const h = live && typeof live.age_hours === "number" ? live.age_hours : null;
+  if (h === null) return "age unknown";
+  if (h < 1.5) return "under an hour old";
+  if (h < 48) return `${Math.round(h)}h old`;
+  return `${Math.round(h / 24)} days old`;
+}
 const TTS_LANG = { en: "en-IN", hi: "hi-IN", mr: "mr-IN", kn: "kn-IN" };
 
 function CitizenView({ city }) {
@@ -239,13 +269,20 @@ function CitizenView({ city }) {
     setWards(list); setStations(st); setWard(list[0]?.id || ""); setAdv(null);
   })().catch(console.error); }, [city]);
 
+  // A station absent from the current feed keeps serving its last archived
+  // reading. Averaging those in put winter-crisis numbers behind a live health
+  // advisory — the citizen view showed AQI 271 for monsoon-season Delhi.
+  const newestAsOf = stations.map(s => s.as_of).filter(Boolean).sort().pop() || null;
+  const fresh = stations.filter(s => s.aqi && !isStale(s.as_of, newestAsOf));
   const w = wards.find(x => x.id === ward);
-  const inWard = stations.filter(s => s.ward_id === ward && s.aqi);
-  const cityAqis = stations.map(s => s.aqi).filter(Boolean);
+  const inWard = fresh.filter(s => s.ward_id === ward);
+  const cityAqis = fresh.map(s => s.aqi);
   const aqi = inWard.length ? Math.max(...inWard.map(s => s.aqi))
             : cityAqis.length ? Math.round(cityAqis.reduce((a, b) => a + b, 0) / cityAqis.length) : null;
   const band = aqi ? bandOf(aqi) : null;
-  const src = inWard.length ? `${inWard.length} sensor(s) in this ward` : "city average (no sensor in ward)";
+  const src = inWard.length ? `${inWard.length} sensor(s) in this ward`
+            : cityAqis.length ? `city average of ${cityAqis.length} reporting sensors (no sensor in ward)`
+            : "no sensor currently reporting";
 
   async function getAdvice() {
     if (!w || !aqi) return;
@@ -309,8 +346,7 @@ function LiveNote({ what }) {
   return (
     <div className="card" style={{ borderLeft: "3px solid #3fb950" }}>
       <b style={{ color: "#3fb950" }}>No {what} in the last 72 hours.</b> The agents ran on the current
-      government feed and found no pollution event meeting the trigger thresholds — monsoon-season air
-      across these cities is within limits right now, so no enforcement is warranted.
+      government feed and no ward cleared the trigger thresholds in that window.
       <div className="evli" style={{ marginTop: 6 }}>
         Switch to <b>Crisis episode</b> to see the full chain on the December smog week, or open
         <b> Replay</b> to run the agents live against the current data.
@@ -354,7 +390,9 @@ function Actions({ actions, era, live, city }) {
 }
 
 function Events({ events, era, live, city }) {
-  const recent = events.slice(-80).reverse();
+  // The API already returns newest-first. Taking the tail and reversing showed
+  // the OLDEST 80 and dropped every recent event.
+  const recent = events.slice(0, 80);
   const liveTop = era === "live" ? <LiveHotspots live={live} city={city} /> : null;
   if (!recent.length) return <>{liveTop}{era === "live"
     ? <LiveNote what="attributed pollution event" />
@@ -374,32 +412,19 @@ function Events({ events, era, live, city }) {
 
 function Compare() {
   const [rows, setRows] = useState(null);
-  useEffect(() => { (async () => {
-    const out = [];
-    for (const [slug, c] of Object.entries(CITIES)) {
-      const [st, ev, ac] = await Promise.all([api.getStations(slug), api.getEvents(slug), api.getActions(slug)]);
-      const aqis = st.map(s => s.aqi).filter(Boolean);
-      const cats = {};
-      ev.forEach(e => { cats[e.category] = (cats[e.category] || 0) + 1; });
-      const top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
-      out.push({ city: c.name, stations: st.length,
-        maxAqi: aqis.length ? Math.round(Math.max(...aqis)) : "—",
-        meanAqi: aqis.length ? Math.round(aqis.reduce((a, b) => a + b, 0) / aqis.length) : "—",
-        events: ev.length, topSource: top ? `${top[0]} (${top[1]})` : "—",
-        topPriority: ac.length ? Number(ac[0].priority).toFixed(2) : "—" });
-    }
-    setRows(out);
-  })().catch(console.error); }, []);
+  useEffect(() => { api.getCompare().then(setRows).catch(e => { console.error(e); setRows([]); }); }, []);
   if (!rows) return <div className="card">Comparing cities…</div>;
+  const dash = v => (v === null || v === undefined ? "—" : v);
   return (
     <>
       <div className="card">
-        <h4>Same episode week, same scoring — cities directly comparable</h4>
+        <h4>Same window, same scoring — cities directly comparable</h4>
         <table><thead><tr><th>City</th><th>Mean AQI</th><th>Max</th><th>Events</th><th>Top source</th><th>Top priority</th></tr></thead>
-          <tbody>{rows.map(r => (<tr key={r.city}><td>{r.city}</td><td>{r.meanAqi}</td><td>{r.maxAqi}</td>
-            <td>{r.events}</td><td>{r.topSource}</td><td>{r.topPriority}</td></tr>))}</tbody></table>
-        <div className="evli">Priority scores share one formula (severity × confidence × persistence × vulnerability) —
-          a commissioner can see at a glance that Delhi's NYE week needed ~6× Mumbai's response.</div>
+          <tbody>{rows.map(r => (<tr key={r.city}><td>{r.city}</td><td>{dash(r.meanAqi)}</td><td>{dash(r.maxAqi)}</td>
+            <td>{dash(r.events)}</td><td>{dash(r.topSource)}</td><td>{dash(r.topPriority)}</td></tr>))}</tbody></table>
+        <div className="evli">AQI is the latest reading per station (last 24h); events and priority span the
+          full attributed record. Priority scores share one formula
+          (severity × confidence × persistence × vulnerability), so cities rank on identical terms.</div>
       </div>
       <div className="card">
         <h4>Onboarding a 4th city</h4>
@@ -417,14 +442,26 @@ function Metrics({ metrics }) {
       <div className="card">
         <h4>Forecast accuracy — honest backtest (test window = hardest 36h incl. NYE spike)</h4>
         <table><thead><tr><th>Horizon</th><th>Model RMSE</th><th>Persistence</th><th>Improvement</th></tr></thead>
-          <tbody>{Object.entries(f).map(([h, v]) => (
-            <tr key={h}><td>{h.slice(1)}h</td><td>{v.rmse_model}</td><td>{v.rmse_persistence}</td>
-              <td>{v.improvement_vs_persistence_pct}%</td></tr>))}</tbody></table>
+          {/* horizons with no test window carry a note instead of numbers —
+              rendering them as empty cells with a stray % read as broken */}
+          <tbody>{Object.entries(f).map(([h, v]) => (v.n_test
+            ? <tr key={h}><td>{h.slice(1)}h</td><td>{v.rmse_model}</td><td>{v.rmse_persistence}</td>
+                <td>{v.improvement_vs_persistence_pct}%</td></tr>
+            : <tr key={h}><td>{h.slice(1)}h</td>
+                <td colSpan={3} style={{ color: "#8b949e", fontSize: 11 }}>
+                  not backtested — {v.note || "no test window available"}</td></tr>))}</tbody></table>
       </div>
       <div className="card">
         <h4>Attribution</h4>
         <div className="evli">{metrics.attribution?.events} events · mean confidence {metrics.attribution?.mean_confidence}%</div>
-        <div className="evli">Satellite fire layer: {metrics.attribution?.fires_used ? "active (VIIRS/FIRMS)" : "pending FIRMS csv"}</div>
+        {/* reported from the store, not asserted: the layer silently ran on
+            December detections for months while this claimed it was active */}
+        <div className="evli">Satellite fire layer (VIIRS/FIRMS): {
+          !metrics.fires || metrics.fires.status === "absent" ? "not loaded"
+          : metrics.fires.status === "live"
+            ? `live — ${metrics.fires.detections.toLocaleString()} detections, newest ${metrics.fires.newest}`
+            : `archive only — newest detection ${metrics.fires.newest ?? "n/a"}, not current enough to inform attribution`
+        }</div>
       </div>
       <div className="card">
         <h4>Attribution vs ground-truth inventory (CAQM unified report, Jan 2026)</h4>
@@ -445,11 +482,12 @@ function Metrics({ metrics }) {
 function Replay({ replay, busy }) {
   if (busy) return <div className="card">Agents running…</div>;
   if (!replay) return <div className="card">Click “Run war-room replay” to execute the live agent chain
-    on the Dec 31 NYE window. Requires the live API (Railway/local); demo snapshot mode shows precomputed results in other tabs.</div>;
+    against the current government feed. Without the live API configured, the app replays a recorded
+    run over the same dataset.</div>;
   if (replay.error || !replay.log) return <div className="card">Replay unavailable: {replay?.error || "data not found"}</div>;
   return (
     <div className="replaylog">
-      <div className="card"><b>{replay.events}</b> events → <b>{replay.actions}</b> ranked actions in <b>{replay.elapsed_s}s</b>
+      <div className="card"><b>{replay.events}</b> events → <b>{replay.actions ?? 0}</b> ranked actions in <b>{replay.elapsed_s}s</b>
         {replay.mode === "precomputed" && <div className="evli" style={{ color: "#8b949e" }}>
           Timeline from a recorded agent run on this dataset — identical pipeline, timings as measured.</div>}
         <div className="evli">(status quo: multi-day manual coordination — CAG 2024: only 31% of cities have any response protocol)</div></div>

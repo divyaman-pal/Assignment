@@ -62,5 +62,33 @@ export async function getAdvisory(slug, ward, aqi, group, lang) {
 }
 
 export async function getLive() {
+  // Freshness must come from the store, not from a build artefact: /demo/live.json
+  // is only rewritten by the batch rebuild, so the "LIVE" banner reported the last
+  // successful build (12 days stale) while the API was serving 2-hour-old readings.
+  if (API) {
+    try { return await j(`${API}/live`); } catch (e) { /* fall through to snapshot */ }
+  }
   try { return await j("/demo/live.json"); } catch { return { available: false }; }
+}
+
+export async function getCompare() {
+  // Computed in SQL when the API is up. Deriving it client-side made every city
+  // hit the 300-row event cap, so Delhi always reported exactly 300 events.
+  if (API) return j(`${API}/compare`);
+  const cityOf = { delhi: "Delhi", mumbai: "Mumbai", bengaluru: "Bengaluru" };
+  const [stations, events, actions] = await Promise.all([
+    j("/demo/stations.json"), j("/demo/events.json"), j("/demo/actions.json")]);
+  return Object.values(cityOf).map(city => {
+    const aqis = stations.filter(s => s.city === city).map(s => s.aqi).filter(Boolean);
+    const ev = events.filter(e => e.city === city);
+    const cats = {};
+    ev.forEach(e => { cats[e.category] = (cats[e.category] || 0) + 1; });
+    const top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
+    const ac = actions.filter(a => a.city === city);
+    return { city, stations: aqis.length,
+      meanAqi: aqis.length ? Math.round(aqis.reduce((a, b) => a + b, 0) / aqis.length) : null,
+      maxAqi: aqis.length ? Math.round(Math.max(...aqis)) : null,
+      events: ev.length, topSource: top ? `${top[0]} (${top[1]})` : null,
+      topPriority: ac.length ? Number(ac[0].priority).toFixed(2) : null };
+  });
 }

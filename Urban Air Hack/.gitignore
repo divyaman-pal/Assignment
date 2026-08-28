@@ -23,3 +23,6 @@ models/*.txt
 
 !data/supabase_load/
 !data/supabase_load/*.json
+
+# local backups of the live store (never commit)
+_backup/

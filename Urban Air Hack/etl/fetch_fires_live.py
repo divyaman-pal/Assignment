@@ -13,6 +13,9 @@ from pathlib import Path
 
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from etl import env as _env  # noqa: E402,F401  (loads .env for local runs)
+
 RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 BBOX = "68,6,98,36"          # India
 DAYS = 3                      # rolling window (FIRMS area API allows up to 10)
@@ -56,7 +59,39 @@ def main():
             subset=["h", "latitude", "longitude"])
     out.to_csv(RAW / "firms.csv", index=False)
     print(f"firms.csv now {len(out)} detections | newest {out.h.max()}")
+    push_to_store(out)
     return 0
+
+
+def push_to_store(df):
+    """A CSV written in a CI runner never reaches the deployed function, so the
+    fire layer read 'archive-only' forever no matter how often this ran. The
+    live store is the only channel both halves can see."""
+    try:
+        from etl.sb import connect, insert_rows
+    except Exception as e:
+        print(f"  store push skipped ({type(e).__name__})"); return
+    try:
+        conn = connect(); cur = conn.cursor()
+        cur.execute("""create table if not exists fires (
+                         h timestamp, latitude double precision, longitude double precision,
+                         frp double precision, confidence text, daynight text,
+                         primary key (h, latitude, longitude))""")
+        rows = [(r.h.to_pydatetime(), float(r.latitude), float(r.longitude),
+                 float(r.frp) if pd.notna(r.frp) else None, str(r.confidence), str(r.daynight))
+                for r in df.itertuples(index=False)]
+        insert_rows(cur, "fires",
+                    ["h", "latitude", "longitude", "frp", "confidence", "daynight"], rows,
+                    conflict="(h, latitude, longitude) do nothing")
+        # keep the table bounded: attribution only ever looks back days
+        cur.execute("delete from fires where h < (now() at time zone 'Asia/Kolkata') - interval '400 days'")
+        conn.commit()
+        cur.execute("select count(*), max(h) from fires")
+        n, newest = cur.fetchone()
+        conn.close()
+        print(f"  live store: fires table now {n} detections | newest {newest}")
+    except Exception as e:
+        print(f"  store push failed non-fatally: {type(e).__name__}: {e}")
 
 if __name__ == "__main__":
     try:

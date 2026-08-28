@@ -10,8 +10,12 @@ Connectivity notes:
 """
 import os
 import re
+
 import psycopg2
 import psycopg2.extras
+
+
+from etl import env as _env  # noqa: F401  (loads .env on import)
 
 POOLER_REGIONS = ["ap-south-1", "us-east-1", "ap-southeast-1", "eu-central-1"]
 _GOOD_DSN = None          # remembered across warm invocations

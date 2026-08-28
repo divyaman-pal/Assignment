@@ -47,9 +47,39 @@ def english_template(ward, band, aqi, group, horizon_h):
     return (f"Air quality alert for {ward}: forecast AQI {aqi} ({band}) in the next {horizon_h} hours. "
             f"{CPCB_HEALTH[band]} {GROUP_ACTIONS[group].get(band, 'Follow general precautions.')}")
 
-def validate(text, ward, band_local_ok=True):
-    if not text or len(text) > 500: return False
-    if ward.split(",")[0].split("(")[0].strip()[:6].lower() not in text.lower(): return False
+# Targets that do not use the Latin alphabet: the ward name is legitimately
+# transliterated (ROHINI -> रोहिणी), so requiring the Latin string back would
+# reject every correct translation and silently serve English instead.
+NON_LATIN = {"hi", "mr", "kn", "ta"}
+
+
+def _ascii_digits(text):
+    """Indic scripts carry their own numerals — Marathi renders 380 as ३८०.
+    Fold every Unicode decimal digit to ASCII so a correct translation is not
+    rejected for spelling the number in its own script."""
+    import unicodedata
+    out = []
+    for ch in text:
+        if ch.isdigit() and not ch.isascii():
+            try:
+                out.append(str(unicodedata.decimal(ch)))
+                continue
+            except (TypeError, ValueError):
+                pass
+        out.append(ch)
+    return "".join(out)
+
+
+def validate(text, ward, aqi=None, lang="en"):
+    """Facts must survive the translation; script must not be held against it."""
+    if not text or not text.strip() or len(text) > 500:
+        return False
+    if aqi is not None and str(int(aqi)) not in _ascii_digits(text):
+        return False            # the AQI number is the one fact we cannot lose
+    if lang not in NON_LATIN:
+        stem = ward.split(",")[0].split("(")[0].strip()[:6].lower()
+        if stem and stem not in text.lower():
+            return False
     return True
 
 _client = None
@@ -68,11 +98,15 @@ def generate(ward, band, aqi, group="general", lang="en", horizon_h=24):
         model=MODEL, max_tokens=300,
         system=("You translate public-health air quality advisories. Render the advisory naturally in the "
                 "target language for a city resident. Keep ALL facts identical: ward name (keep it "
-                "recognisable, may transliterate), AQI number, time window. Do not add health claims. "
-                "Output only the advisory text."),
+                "recognisable, may transliterate), AQI number (write it in Western digits), time window. "
+                "Do not add health claims. Output only the advisory text."),
         messages=[{"role": "user", "content": f"Target language: {LANG_NAMES[lang]}\nAdvisory: {base}"}])
+    # record() never raises: the call above is already billed, so a bookkeeping
+    # failure must not cause us to discard a translation the user paid for.
     s, warn = budget.record(msg.usage)
     text = msg.content[0].text.strip()
-    if not validate(text, ward):
-        return {"text": base, "lang": "en", "source": "fallback_validation_failed", "spend_usd": s["usd"]}
-    return {"text": text, "lang": lang, "source": "llm_translated", "spend_usd": round(s["usd"], 4), "budget_warning": warn}
+    if not validate(text, ward, aqi, lang):
+        return {"text": base, "lang": "en", "source": "fallback_validation_failed",
+                "spend_usd": round(s["usd"], 4)}
+    return {"text": text, "lang": lang, "source": "llm_translated",
+            "spend_usd": round(s["usd"], 4), "budget_warning": warn}

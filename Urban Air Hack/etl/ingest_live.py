@@ -14,7 +14,10 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from etl import env as _env  # noqa: E402,F401  (loads .env for local runs)
 from etl.sb import connect, insert_rows
+from etl.station_identity import Resolver
+from etl import wards_geo
 
 RESOURCE = "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69"
 CITIES = {"Delhi": (28.61, 77.21), "Mumbai": (19.08, 72.88), "Bengaluru": (12.97, 77.59)}
@@ -97,18 +100,60 @@ def main():
                      d.get("so2"), d.get("nh3"), d.get("o3"), w[0], w[1], w[2], w[3]))
 
     conn = connect(); cur = conn.cursor()
+
+    # The feed identifies a station only by name; the archive keys the same
+    # sensor as site_NNN. Resolve to the canonical id so live readings extend
+    # that sensor's history instead of starting a second, ward-less row.
+    cur.execute("select station_id, station_name, city, lat, lon from stations")
+    resolver = Resolver(cur.fetchall())
+
+    canon, fresh = {}, {}
+    for (st, _ts), d in by_station.items():
+        if st in canon:
+            continue
+        lat = float(d["lat"]) if d.get("lat") else None
+        lon = float(d["lon"]) if d.get("lon") else None
+        cid, how = resolver.resolve(st, d["city"], lat, lon)
+        canon[st] = cid
+        if how == "new":
+            fresh[cid] = (st, d["city"], lat, lon)
+
+    # A brand-new station needs its ward before the enforcement agent can ever
+    # rank it — that join is what turns a reading into an actionable ward.
+    st_rows = []
+    for cid, (name, city, lat, lon) in fresh.items():
+        wid, method = wards_geo.assign(city, lat, lon)
+        st_rows.append((cid, name, city, None, lat, lon, wid, method))
+    if st_rows:
+        insert_rows(cur, "stations",
+                    ["station_id", "station_name", "city", "state", "lat", "lon",
+                     "ward_id", "ward_method"], st_rows,
+                    conflict="(station_id) do update set "
+                             "lat=coalesce(stations.lat, excluded.lat), "
+                             "lon=coalesce(stations.lon, excluded.lon), "
+                             "ward_id=coalesce(stations.ward_id, excluded.ward_id), "
+                             "ward_method=coalesce(stations.ward_method, excluded.ward_method)")
+        print(f"registered {len(st_rows)} new station(s): {', '.join(sorted(fresh))[:160]}")
+
+    # Self-healing: any station still without a ward is invisible to
+    # enforcement, so resolve it every cycle rather than only at migration time.
+    cur.execute("select station_id, city, lat, lon from stations where ward_id is null")
+    backfilled = 0
+    for sid, city, lat, lon in cur.fetchall():
+        wid, method = wards_geo.assign(city, lat, lon)
+        if wid:
+            cur.execute("update stations set ward_id=%s, ward_method=%s where station_id=%s",
+                        (wid, method, sid))
+            backfilled += 1
+    if backfilled:
+        print(f"ward backfill: mapped {backfilled} previously unmapped station(s)")
+
+    rows = [(canon.get(r[0], r[0]),) + r[1:] for r in rows]
     insert_rows(cur, "readings_hourly", cols, rows,
                 conflict="(station_id, h) do update set "
                          "pm25=excluded.pm25, pm10=excluded.pm10, no2=excluded.no2, co=excluded.co, "
                          "so2=excluded.so2, nh3=excluded.nh3, o3=excluded.o3, ws=excluded.ws, "
                          "wd=excluded.wd, at_c=excluded.at_c, rh=excluded.rh")
-    # keep the station registry current (new stations appear over time)
-    st_rows = [(st, st, d["city"], None,
-                float(d["lat"]) if d.get("lat") else None,
-                float(d["lon"]) if d.get("lon") else None)
-               for (st, _), d in by_station.items() if d.get("lat")]
-    insert_rows(cur, "stations", ["station_id", "station_name", "city", "state", "lat", "lon"],
-                st_rows, conflict="(station_id) do nothing")
     conn.commit()
     cur.execute("select count(*), max(h) from readings_hourly")
     n, latest = cur.fetchone()
