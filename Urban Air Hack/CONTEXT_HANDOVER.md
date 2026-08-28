@@ -177,10 +177,16 @@ select key, length(value) from ops_config;
 
 - Full DB backup: `_backup/*_20260829_010955.parquet` (all 6 tables, gitignored).
 - `.env` holds live credentials. `ops_config` now also holds `ingest_token` and
-  `data_gov_in_key`. This is the same trust boundary as the service-role DSN
-  that was already required to serve a request — but note it does widen the
-  blast radius of DB access from "all the data" to "all the data plus these two
-  keys". Rotate both if that DSN is ever exposed.
+  `data_gov_in_key`. That is the same trust boundary as the service-role DSN
+  already needed to serve a request, but it does widen the blast radius of DB
+  access from "all the data" to "all the data plus these two keys".
+- **`ops_config` was world-readable and this was fixed.** RLS was disabled with
+  full `anon` / `authenticated` grants, and Supabase serves every public-schema
+  table over PostgREST — so the ingest token was readable by anyone holding the
+  project's anon key, which is a published credential by design. RLS is now on
+  with no policy and those grants revoked; `verify_live.py` asserts it. The API
+  and cron connect as a role that bypasses RLS, so nothing broke.
+  **If you ever add a table holding secrets, check RLS before trusting it.**
 - **The ingest token was pasted into a chat transcript.** Rotate it if that
   transcript is ever shared — now a single statement, no redeploy:
   `update ops_config set value = '<new>' where key = 'ingest_token';`

@@ -213,6 +213,36 @@ def ingest_armed():
 
 check("ingest armed", ingest_armed)
 
+
+def ops_config_locked():
+    """ops_config holds secrets, so the public roles must not reach it.
+
+    Supabase serves every public-schema table over PostgREST, and the anon key
+    is a published credential by design -- it ships in frontends. A table with
+    RLS off and a grant to anon is therefore world-readable, which for this
+    table means the ingest token and the CPCB feed key. RLS was in fact off
+    here, so this is a regression guard, not a hypothetical.
+    """
+    from service import live_api
+
+    with live_api._conn().cursor() as c:
+        c.execute("""select relrowsecurity from pg_class
+                     where oid = 'public.ops_config'::regclass""")
+        row = c.fetchone()
+        assert row, "ops_config table is missing"
+        assert row[0], "RLS is disabled on ops_config (it holds secrets)"
+
+        c.execute("""select grantee, privilege_type
+                     from information_schema.role_table_grants
+                     where table_schema = 'public' and table_name = 'ops_config'
+                       and grantee in ('anon', 'authenticated')""")
+        leaked = c.fetchall()
+        assert not leaked, f"public roles hold grants on ops_config: {leaked}"
+    return "RLS on, no anon/authenticated grants"
+
+
+check("ops_config locked", ops_config_locked)
+
 warn("feed freshness", lambda: (
     f"newest reading is {c.get('/health').json().get('age_hours')}h old"
     if (c.get("/health").json().get("age_hours") or 0) > 6 else None))

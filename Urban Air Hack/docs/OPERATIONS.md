@@ -147,6 +147,21 @@ No redeploy is needed — the value is cached per warm instance and re-read on t
 next cold start. If you also set the Vercel env var, that wins; keep the two in
 sync or set only the table.
 
+`ops_config` is restricted to `service_role`: RLS is enabled with no policy and
+the `anon` / `authenticated` grants are revoked. This matters more than it looks
+— Supabase serves every public-schema table over PostgREST and the anon key is a
+*published* credential by design, so a secrets table with RLS off is world-
+readable. It was in that state; `verify_live.py` now asserts the lockdown so it
+cannot silently regress. The API and the cron connect as a role that bypasses
+RLS, so nothing in the running system depends on the grants.
+
+To re-apply after a restore:
+
+```sql
+alter table public.ops_config enable row level security;
+revoke all on public.ops_config from anon, authenticated;
+```
+
 `GET /health` reports `ingest_token_source` (`env` | `ops_config` | `unset` |
 `unavailable`), so "saved in the dashboard" and "visible to the running code"
 stay distinguishable. `ingest_configured: false` ⇒ `/ingest` returns 503 and is
