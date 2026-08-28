@@ -243,6 +243,28 @@ def ops_config_locked():
 
 check("ops_config locked", ops_config_locked)
 
+def fire_layer_stale():
+    """The fire sync fails silently by design, so staleness is the only signal.
+
+    push_to_store() in etl/fetch_fires_live.py catches every exception so a
+    satellite outage cannot fail the pipeline. The cost is that a missing DSN
+    on the CI step looks exactly like success -- the CSV is still written and
+    the step still exits 0. Age of the newest detection is the only thing that
+    distinguishes "FIRMS is quiet" from "nothing has reached the store in days".
+
+    A warning, not a failure: FIRMS genuinely lags, and failing the run on an
+    upstream provider's latency would train people to ignore this.
+    """
+    f = c.get("/metrics").json().get("fires", {})
+    if f.get("status") != "live":
+        return (f"fire layer is {f.get('status')} — newest detection "
+                f"{f.get('newest')} ({f.get('age_hours')}h old); check that the "
+                f"FIRMS step has SUPABASE_DB_URL")
+    return None
+
+
+warn("fire layer", fire_layer_stale)
+
 warn("feed freshness", lambda: (
     f"newest reading is {c.get('/health').json().get('age_hours')}h old"
     if (c.get("/health").json().get("age_hours") or 0) > 6 else None))

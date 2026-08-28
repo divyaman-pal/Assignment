@@ -2,7 +2,35 @@
 
 Updated 2026-08-29. Read this first to reload full context.
 
-## Status: no open items
+## Status: one open item, and it needs your GitHub account
+
+The ingest chain is closed and verified (see below). The remaining item is a
+**one-line workflow edit I do not have permission to make.**
+
+`.github/workflows/live-hourly.yml` — the FIRMS step is missing the database
+DSN, so `push_to_store()` cannot reach the live store. It catches every
+exception by design (a satellite outage must not fail the pipeline), so the
+step writes its CSV, prints success, and exits 0 while the fire layer quietly
+stops updating. It has not bitten yet only because `push_to_store()` was added
+after the last hourly run; **the next run is the first that will silently fail.**
+
+Add the marked line:
+
+```yaml
+      - name: Refresh satellite fire detections (NASA FIRMS)
+        env:
+          NASA_FIRMS_API_KEY: ${{ secrets.NASA_FIRMS_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}   # <-- add this
+        run: python etl/fetch_fires_live.py
+```
+
+`GITHUB_PAT` is fine-grained with Contents:write but **no `workflow` scope**, so
+the API refuses this file (`refusing to allow a Personal Access Token to create
+or update workflow ... without workflow scope`). Edit it in the GitHub web UI,
+as was done for `main.yml`. `verify_live.py` now warns when the fire layer goes
+stale, so if this is left undone it will show up rather than rot silently.
+
+## Everything else: done
 
 The hourly ingest chain is closed and verified end to end. `/health` reports
 `ingest_configured: true`, and `POST /ingest` returns `ok: true`.
