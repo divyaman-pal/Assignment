@@ -87,6 +87,9 @@ def live_ok():
     lv = c.get("/live").json()
     assert "age_hours" in lv, "/live does not report data age"
     assert lv.get("as_of"), "/live has no as_of"
+    # hotspots are shown to a commissioner by name; an internal id is not a place
+    ids = [x for x in lv.get("stations", []) if str(x["station"]).startswith("site_")]
+    assert not ids, f"{len(ids)} hotspots labelled by internal id, e.g. {ids[0]['station']}"
     return (f"as_of={lv['as_of']} age={lv['age_hours']}h "
             f"fresh_stations={lv.get('fresh_stations')}")
 

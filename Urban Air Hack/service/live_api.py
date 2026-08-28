@@ -134,7 +134,8 @@ def live():
                  from readings_hourly
                  where h > (select max(h) from readings_hourly) - interval '24 hours'
                  order by station_id, h desc)
-              select s.station_id as station, l.city, s.lat, s.lon, l.pm25, l.pm10,
+              select coalesce(s.station_name, s.station_id) as station,
+                     s.station_id, l.city, s.lat, s.lon, l.pm25, l.pm10,
                      l.h::text as as_of
               from latest l join stations s using (station_id)
               where s.lat is not null""")
