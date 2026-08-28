@@ -185,19 +185,40 @@ def run(conn, verbose=True):
 
 
 def load_fires(conn):
-    """Satellite detections from the live store, falling back to the bundled
-    episode archive. Reading from Postgres is what lets the hourly FIRMS pull
-    reach the deployed function at all — a CSV written in a CI runner never
-    leaves it, which is why the fire layer read 'archive-only' indefinitely."""
+    """Satellite detections from the live store, synced up from any fresher CSV.
+
+    The FIRMS fetch writes data/raw/firms.csv, but a file written in a CI runner
+    never reaches the deployed function — which is why the fire layer read
+    'archive-only' however often that step ran. The store is the only channel
+    both halves see, so the chain syncs the CSV into it here, in the same job
+    and with the credentials this step already holds.
+    """
+    store = None
     try:
-        df = pd.read_sql("select h, latitude, longitude, frp, confidence, daynight from fires", conn)
-        if len(df):
-            df["h"] = pd.to_datetime(df["h"])
-            return df
+        store = pd.read_sql("select h, latitude, longitude, frp, confidence, daynight from fires", conn)
+        store["h"] = pd.to_datetime(store["h"])
     except Exception:
         conn.rollback()
+
     p = ROOT / "data" / "raw" / "firms.csv"
-    return pd.read_csv(p, parse_dates=["h"]) if p.exists() else None
+    local = pd.read_csv(p, parse_dates=["h"]) if p.exists() else None
+    if local is None or not len(local):
+        return store if store is not None and len(store) else None
+
+    newest_stored = store.h.max() if store is not None and len(store) else None
+    if newest_stored is None or local.h.max() > newest_stored:
+        try:
+            from etl.fetch_fires_live import push_to_store
+            push_to_store(local)
+            df = pd.read_sql("select h, latitude, longitude, frp, confidence, daynight from fires", conn)
+            df["h"] = pd.to_datetime(df["h"])
+            return df
+        except Exception as e:
+            conn.rollback()
+            print(f"fire sync skipped non-fatally: {type(e).__name__}: {e}")
+    if store is not None and len(store):
+        return store
+    return local
 
 
 if __name__ == "__main__":
