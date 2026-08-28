@@ -66,10 +66,16 @@ def health():
         df = q(f"""select count(*) n, max(h)::text newest,
                           round(extract(epoch from ({IST_NOW_SQL} - max(h))) / 3600.0, 2) age_hours
                    from readings_hourly""")
+        import os
         age = float(df.age_hours[0])
         return {"ok": True, "store": "supabase", "readings": int(df.n[0]),
                 "newest_reading": df.newest[0], "age_hours": age,
-                "feed": "current" if age <= 6 else ("lagging" if age <= 24 else "stale")}
+                "feed": "current" if age <= 6 else ("lagging" if age <= 24 else "stale"),
+                # whether the scheduled ingest path is armed on THIS deployment.
+                # Vercel applies env vars only to new deployments, so setting
+                # INGEST_TOKEN without redeploying leaves the running function
+                # rejecting every call — worth being able to see, not guess.
+                "ingest_configured": bool(os.environ.get("INGEST_TOKEN", "").strip())}
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"{type(e).__name__}: {e}"}, status_code=503)
 
