@@ -1,8 +1,51 @@
 # VAYU-NET — session handover
 
-Updated 2026-08-29. Read this first to reload full context.
+Updated 2026-08-30. Read this first to reload full context.
 
-## Pre-handover validation sweep — 2026-08-29 (read this first)
+## The CI failure of 2026-08-29, and why it could not repeat (read this first)
+
+The hourly live job went red on `forecast trained on live store`. The cause was
+not in the hourly job at all.
+
+`live-hourly.yml` trains nothing. It reads the **committed**
+`data/forecast_metrics.json` and asserts the provenance recorded in `_meta`.
+The file is written by the *other* workflow, `main.yml`, whose "Rebuild pipeline
+on fresh data" step passed only `DATA_GOV_IN_KEY`. So `models/forecast.py` ran
+there with no DSN, took its offline fallback, re-fit the frozen December
+archive, and the batch job committed that result:
+
+```
+live store unavailable (RuntimeError: SUPABASE_DB_URL not set); falling back to the bundled archive
+training data: duckdb readings (bundled archive -- STALE) — 13993 rows, 2025-12-25 -> 2026-01-01
+```
+
+The next hourly run then failed on a file a *different* workflow had poisoned an
+hour earlier. Because the deployed `main.yml` was still on the every-6h cron,
+this recurred roughly four times a day.
+
+**Two commits close it, and the second is the one that matters:**
+
+- `cd829215` — `main.yml` now passes `SUPABASE_DB_URL` to the rebuild step.
+- `353c2ccb` — `load_hourly()` **raises** instead of falling back when the live
+  store is unreachable and `GITHUB_ACTIONS` is set. The archive fallback exists
+  for offline development; in CI it is never legitimate, because CI *commits*
+  the result. A missing secret now fails the batch job loudly instead of
+  publishing a stale model and breaking a downstream workflow.
+
+The same push moved the deployed `main.yml` to the weekly cron
+(`15 3 * * 0`) and the name "Rebuild backbone and models" — the deployed copy
+had still been the older every-6h "Refresh air quality data".
+
+Verified in order: `main.yml` run 33273017287 trained on
+`supabase readings_hourly (live)`, committed `ca4c554`, and `live-hourly.yml`
+run 33273128582 returned `RESULT: ALL PASSED`.
+
+**The generalisable lesson:** a check that reads a build artefact tests the job
+that *wrote* the artefact, not the job that runs the check. When it fails, read
+the writer's log first. And any fallback whose output gets committed must be
+unavailable in CI.
+
+## Pre-handover validation sweep — 2026-08-29
 
 The test plan was executed against **production**, not just the local suite.
 Eight input-validation defects were found, fixed and deployed; one security
@@ -66,8 +109,8 @@ below, where the API must ship first. Check which pair you are touching.
 ## Forecast: trains on live data now, and does NOT beat persistence
 
 `models/forecast.py` loaded `readings` from the bundled DuckDB, frozen at
-2025-12-25 → 2026-01-01. The nightly retrain therefore re-fit the same seven
-days of December every night and **never saw a row the platform collected**.
+2025-12-25 → 2026-01-01. The retrain therefore re-fit the same seven days of
+December every run and **never saw a row the platform collected**.
 Nothing failed; the job went green. It now trains on Supabase `readings_hourly`,
 a strict superset — the live store already holds that December window, so there
 was nothing to union, only a store to stop ignoring.
@@ -86,11 +129,15 @@ Two further defects surfaced with it:
 
 | horizon | persistence | model | verdict |
 |---|---|---|---|
-| h6  |  7.49 | 16.14 | persistence much better |
-| h12 | 10.66 | 15.62 | persistence better |
-| h24 | 17.80 | 17.58 | tie |
-| h48 | 25.72 | 27.46 | persistence better |
-| h72 | 29.06 | 29.06 | tie |
+| h6  |  6.51 | 16.77 | persistence much better |
+| h12 | 10.90 | 19.32 | persistence better |
+| h24 | 19.78 | 20.40 | tie |
+| h48 | 25.52 | 27.56 | persistence better |
+| h72 | 27.53 | 27.56 | tie |
+
+(RMSE from the deployed run, `ca4c554`, trained 2026-08-30 on 29,643 rows /
+90 stations. The shape has not moved since the first honest measurement; only
+the digits have.)
 
 The previous "+35.7% vs persistence" was real **for December's episode**, where
 PM2.5 swings hard and persistence RMSE is ~100. On calm monsoon air persistence
@@ -106,6 +153,10 @@ severe-episode data that exists, and the platform exists for severe episodes.
 `verify_live.py` asserts the training provenance, so a silent fall back to the
 stale archive fails the build. It deliberately does **not** assert the model
 beats persistence.
+
+Since 2026-08-30 the fallback cannot reach CI at all: `load_hourly()` raises
+when the live store is unreachable and `GITHUB_ACTIONS` is set. The provenance
+assertion is the backstop; refusing to write the file is the fix.
 
 ## Ward estimator — shipped and live (2026-08-29)
 
@@ -248,6 +299,14 @@ path is verifiable from SQL, and the dashboard path is not observable from here.
 - **This folder's `.git/` is an empty stub.** No history, nothing recoverable.
 - **`GITHUB_PAT` has Contents:write but NOT Workflows or Actions.** Code pushes
   work; editing `.github/workflows/*` is rejected and `workflow_dispatch` 403s.
+- **Use the `gh` CLI's own OAuth token instead** — it can PUT via the Contents
+  API, create blobs/trees/commits, and `gh workflow run`. It could *not* write
+  `.github/workflows/*` until 2026-08-30 (`403 refusing to allow an OAuth App to
+  create or update workflow ... without 'workflow' scope`); the user ran
+  `gh auth refresh -h github.com -s workflow` and it now carries
+  `gist, read:org, repo, workflow`. If that 403 returns, the token was reissued
+  without the scope — re-run that command, it is interactive and cannot be
+  automated from here.
 - **Git Bash `/tmp` and Python `/tmp` are different directories on Windows**
   (`C:\Users\...\AppData\Local\Temp` vs `C:\tmp`). Passing `/tmp/x` between a
   shell heredoc and a Python script silently writes and reads two files.
@@ -315,15 +374,16 @@ token from `ops_config` (not from the job body: `cron.job` is readable by anyone
 with DB access). GitHub Actions remains the backup path and is where
 `verify_live.py` runs.
 
-## Current live state (all verified 2026-08-29)
+## Current live state (all verified 2026-08-30, run 33273128582)
 
 `verify_live.py`: 18 checks, **17 pass and 1 warns — RLS parity, deliberately
 open** (see above). `verify_edge_cases.py --live`: 18/18 against production.
 `verify_ward_estimate.mjs`: 12/12.
 
 - 90 sensors, all ward-mapped bar 3: Delhi 46/46, Mumbai 29/28, Bengaluru 14/13
-- 29,193 hourly readings, 2025-12-25 → current, ~15,200 from the live era
-- Feed ~1h old, `feed: "current"`, ingest via Supabase `pg_cron`
+- 29,643 hourly readings, 2025-12-25 → current, 15,650 from the live era over
+  16 live days; 1,789 in the last 48h
+- Feed ~0.8h old, `feed: "current"`, ingest via Supabase `pg_cron`
 - Delhi 290 wards resolve 40 measured / 247 estimated / 3 refused, 117 distinct
   values; 76 wards name a worse nearby sensor in red
 - Attribution 1,588 events: traffic 718, fireworks/burning 668, construction 106,
