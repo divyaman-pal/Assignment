@@ -43,13 +43,31 @@ GROUP_ACTIONS = {
 }
 LANG_NAMES = {"en": "English", "hi": "Hindi", "mr": "Marathi", "kn": "Kannada", "ta": "Tamil"}
 
+BASES = ("current", "forecast", "estimated")
+
 def english_template(ward, band, aqi, group, horizon_h, basis="current"):
     """`basis` must match where the number came from. Calling an observed
     reading a forecast is a factual claim the system cannot support: the live
     agent chain reports measured ward AQI, and the citizen view asks about
-    conditions now — only the batch forecast produces a genuine prediction."""
-    lead = (f"forecast AQI {aqi} ({band}) in the next {horizon_h} hours"
-            if basis == "forecast" else f"AQI {aqi} ({band}) measured now")
+    conditions now — only the batch forecast produces a genuine prediction.
+
+    `estimated` is the third case, and the one with the widest blast radius:
+    most wards hold no sensor at all (289 in Delhi, 38 with one), so their
+    number is interpolated from neighbours. Saying "measured now" over that is
+    the same class of error as calling a forecast an observation, and it is the
+    one a resident acts on. An unrecognised basis degrades to `estimated`
+    rather than to `current`: overstating certainty is the failure that hurts
+    someone, so the ambiguous case must fall to the weaker claim.
+    """
+    if basis not in BASES:
+        basis = "estimated"
+    if basis == "forecast":
+        lead = f"forecast AQI {aqi} ({band}) in the next {horizon_h} hours"
+    elif basis == "estimated":
+        lead = (f"an estimated AQI {aqi} ({band}), interpolated from nearby sensors "
+                f"because this ward has none of its own")
+    else:
+        lead = f"AQI {aqi} ({band}) measured now"
     return (f"Air quality alert for {ward}: {lead}. "
             f"{CPCB_HEALTH[band]} {GROUP_ACTIONS[group].get(band, 'Follow general precautions.')}")
 
@@ -104,7 +122,9 @@ def generate(ward, band, aqi, group="general", lang="en", horizon_h=24, basis="c
         model=MODEL, max_tokens=300,
         system=("You translate public-health air quality advisories. Render the advisory naturally in the "
                 "target language for a city resident. Keep ALL facts identical: ward name (keep it "
-                "recognisable, may transliterate), AQI number (write it in Western digits), time window. "
+                "recognisable, may transliterate), AQI number (write it in Western digits), time window, "
+                "and — this one matters most — whether the reading is measured, forecast, or estimated "
+                "from nearby sensors. Never translate an estimate into a statement of measured fact. "
                 "Do not add health claims. Output only the advisory text."),
         messages=[{"role": "user", "content": f"Target language: {LANG_NAMES[lang]}\nAdvisory: {base}"}])
     # record() never raises: the call above is already billed, so a bookkeeping

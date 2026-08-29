@@ -172,6 +172,71 @@ def advisory_ok():
 
 check("advisory", advisory_ok)
 
+
+def advisory_basis_ok():
+    """An interpolated number must never be described as a measurement.
+
+    Most wards hold no sensor (Delhi: 289 wards, 38 with one), so their AQI is
+    estimated from neighbours. The citizen view used to substitute the city
+    mean and render it exactly like a reading, which put "AQI 130 Moderate"
+    under wards next to a sensor measuring 448 Severe. The number is now
+    interpolated and carries its provenance; these assertions keep the wording
+    honest at the API boundary, where the IVR and public-display channels read
+    it and no human is looking at the screen.
+    """
+    from agents import advisory
+
+    est = c.get("/cities/delhi/advisory?ward=Rohini&aqi=130&basis=estimated").json()
+    assert est["basis"] == "estimated", f"basis not echoed: {est.get('basis')}"
+    assert "measured" not in est["text"].lower(), \
+        f"an estimate is described as measured: {est['text']}"
+    assert "estimated" in est["text"].lower(), \
+        f"an estimate does not say so: {est['text']}"
+
+    cur = c.get("/cities/delhi/advisory?ward=Rohini&aqi=130&basis=current").json()
+    assert "measured now" in cur["text"], f"measured reading lost its wording: {cur['text']}"
+
+    # An unrecognised basis must degrade to the weaker claim, never to
+    # "measured now" — overstating certainty is the direction that harms.
+    junk = c.get("/cities/delhi/advisory?ward=Rohini&aqi=130&basis=nonsense").json()
+    assert junk["basis"] == "estimated", f"unknown basis became {junk['basis']}"
+    assert "measured" not in junk["text"].lower(), \
+        f"unknown basis produced a measurement claim: {junk['text']}"
+
+    # The AQI number must survive every basis: the validator drops a
+    # translation that loses it, and losing it silently serves English.
+    for b in advisory.BASES:
+        t = advisory.english_template("Rohini", "Moderate", 130, "general", 24, b)
+        assert "130" in t, f"basis={b} dropped the AQI number"
+    return f"bases {list(advisory.BASES)} distinct, unknown -> estimated"
+
+
+check("advisory basis", advisory_basis_ok)
+
+
+def ward_estimator_ok():
+    """Run the JS estimator's own assertions (deploy/verify_ward_estimate.mjs).
+
+    Invoked from here rather than as a separate CI step on purpose: GITHUB_PAT
+    is fine-grained without `workflow` scope, so .github/workflows/* cannot be
+    edited from a session, and a check that needs a workflow edit to run is a
+    check that never runs. Node is preinstalled on the GitHub runners.
+    """
+    import shutil, subprocess
+    node = shutil.which("node")
+    if not node:
+        return "SKIPPED (no node on PATH)"
+    root = Path(__file__).resolve().parent.parent
+    p = subprocess.run([node, str(root / "deploy" / "verify_ward_estimate.mjs")],
+                       capture_output=True, text=True, timeout=180, cwd=str(root))
+    tail = (p.stdout or p.stderr).strip().splitlines()
+    assert p.returncode == 0, "ward estimator assertions failed:\n" + "\n".join(tail[-8:])
+    passed = sum(1 for ln in tail if ln.strip().startswith("PASS"))
+    return f"{passed} estimator assertions passed"
+
+
+check("ward estimator", ward_estimator_ok)
+
 def ingest_armed():
     """The scheduled ingest path must be armed, and armed by the source
     production actually uses.

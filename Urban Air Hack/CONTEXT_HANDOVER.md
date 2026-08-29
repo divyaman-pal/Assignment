@@ -2,7 +2,43 @@
 
 Updated 2026-08-29. Read this first to reload full context.
 
-## Status: no open items
+## Open item: the ward estimator is built and tested but NOT DEPLOYED
+
+The citizen view showed the **city arithmetic mean** for every ward without a
+sensor of its own — 251 of Delhi's 289 wards — rendered in 46px type under the
+ward's own name, exactly like a real reading. On 2026-08-29 that meant those
+wards displayed "AQI 130 · Moderate · reduce prolonged outdoor exertion" while
+the sensor at Anand Vihar measured 448 Severe. The map was right and the
+advisory was wrong, from the same store, at the same moment.
+
+Fixed by `web/src/geo.js`: inverse-distance weighting over the nearest sensors
+within 8 km, three explicit outcomes (`measured` / `estimated` / `unavailable`),
+a ward with several sensors reporting the worst rather than the average, and a
+worse-reading neighbour named in red instead of averaged away. Past 8 km no
+number is shown at all. Delhi now resolves 39 measured / 248 estimated /
+3 refused, with 115 distinct values instead of one repeated 130. Ward dropdowns
+also carry the landmark (`I.P EXTENTION — Anand Vihar`), which is what made the
+sensor unfindable: nobody searches for the municipal charge name.
+
+**What is not done: the API half is not deployed.** `agents/advisory.py` and
+`service/live_api.py` gained an `estimated` basis so an interpolated number is
+never described as "measured now", and the endpoint echoes `basis` back. That
+code is local only. `verify_live.py` passes because it drives a local
+`TestClient(app)` against the remote database — it does **not** exercise the
+deployed function, and this is a standing trap for anyone reading a green suite
+as proof of what is live.
+
+Until the API ships, the client refuses a server advisory whose `basis` does not
+come back `estimated` and renders the local CPCB template instead, so the wrong
+wording cannot reach a resident. **Deploy the API before the front end** —
+that ordering keeps the guard from being needed.
+
+```bash
+node deploy/verify_ward_estimate.mjs      # 12 estimator assertions, incl. live data
+PYTHONIOENCODING=utf-8 python -W ignore deploy/verify_live.py   # 17 checks, runs the above
+```
+
+## Status of everything else: no open items
 
 The hourly ingest chain and the satellite fire sync are both closed and verified
 end to end. `/health` reports `ingest_configured: true`; the Supabase cron fires

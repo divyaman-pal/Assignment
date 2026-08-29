@@ -324,8 +324,15 @@ def advisory_ep(slug: str, ward: str, aqi: int = 300, group: str = "general", la
                 basis: str = "current"):
     from agents import advisory
     b = band(aqi) or "Poor"
+    # Normalise here too, so the basis is settled before it reaches either the
+    # template or the model, and `basis` comes back on the response — a caller
+    # that asked for one provenance must be able to see which one it got.
+    if basis not in advisory.BASES:
+        basis = "estimated"
     try:
-        return advisory.generate(ward, b, aqi, group=group, lang=lang, basis=basis)
+        out = advisory.generate(ward, b, aqi, group=group, lang=lang, basis=basis)
     except Exception as e:
-        return {"text": advisory.english_template(ward, b, aqi, group, 24, basis),
-                "lang": "en", "source": f"fallback ({type(e).__name__})"}
+        out = {"text": advisory.english_template(ward, b, aqi, group, 24, basis),
+               "lang": "en", "source": f"fallback ({type(e).__name__})"}
+    out["basis"] = basis
+    return out

@@ -220,6 +220,41 @@ Each assertion corresponds to a failure that reached production once:
 - a missing inventory table (excluded from the serverless bundle)
 - spend bookkeeping that does not persist, or a validator that rejects a correct
   Devanagari translation
+- an interpolated ward AQI described as "measured now" (`advisory basis`), and
+  an unrecognised basis defaulting to the *stronger* claim instead of the weaker
+- the city mean standing in for a ward reading (`ward estimator`, which shells
+  out to `deploy/verify_ward_estimate.mjs`; skipped with a note if node is absent)
+
+## Ward coverage and the estimator
+
+Most wards hold no sensor: Delhi has 289 wards and 38 with one, Bengaluru 243
+with 13. `web/src/geo.js` decides what a ward may claim, and the citizen view
+must render its three outcomes differently — this is a health-advice surface,
+and the distinction is the safeguard:
+
+| status | condition | shown |
+|---|---|---|
+| `measured` | ≥1 reporting sensor inside the ward | value, blue MEASURED chip, sensor named |
+| `estimated` | none inside, ≥1 within `MAX_KM` (8 km) | value, amber ESTIMATED chip, dashed border, contributing sensors and distances listed |
+| `unavailable` | nearest sensor beyond 8 km | **no number at all**; the advisory button stays disabled |
+
+Two deliberate choices, both erring toward warning rather than reassuring:
+
+- A ward with several sensors reports the **worst**, not the average. Averaging a
+  roadside hotspot against a park understates what the roadside is breathing.
+- When a contributing sensor sits in a **worse band** than the interpolated
+  value, it is named in red with its distance. IDW smooths peaks away, and the
+  peak is the thing a resident needs to know about.
+
+Tuning `MAX_KM` or `K_NEAREST` changes which wards get a number at all. Raising
+`MAX_KM` buys coverage by extrapolating further from real data — do not raise it
+to make the map look complete.
+
+**The advisory's `basis` parameter carries this to the API** (`current` /
+`forecast` / `estimated`), and the response echoes it back. The client requires
+that echo before it will display a server-generated advisory for an estimated
+ward: an API too old to know the field would answer "measured now". Front end
+and API deploy separately, so **deploy the API first** when changing this.
 
 ## Known limits
 
@@ -232,3 +267,7 @@ Each assertion corresponds to a failure that reached production once:
   The UI prints that instead of a number.
 - **Three cities.** The pipeline is city-agnostic; only config and boundaries
   are per-city.
+- **Most wards have no sensor of their own.** Their AQI is interpolated from
+  neighbours within 8 km and is labelled as an estimate everywhere it appears;
+  past 8 km no number is shown. This is a limit of the CPCB network's density,
+  not of the pipeline — the honest fix is more sensors, not a wider radius.
