@@ -1,11 +1,15 @@
-name: Refresh air quality data
-# Real-time integration: re-pulls the latest CPCB CAAQMS data (via the
-# Vonter/india-cpcb-aqi mirror), reruns the full agent pipeline, and commits
-# the refreshed serving DB + demo exports. Vercel and Railway auto-redeploy
-# on push, so the deployed platform updates with no human in the loop.
+name: Rebuild backbone and models
+# BATCH job, not the live path. Rebuilds the episode backbone from the
+# Vonter/india-cpcb-aqi mirror, retrains the forecast models, and refreshes the
+# bundled demo snapshot used when no API is configured.
+#
+# The live platform does not depend on this: readings reach Supabase hourly via
+# live-hourly.yml, and the frontend now reads freshness and hotspots from the
+# API rather than from the snapshot this job writes. Weekly is the right cadence
+# for a retrain, and it stops a heavy DuckDB re-commit running every 6 hours.
 on:
   schedule:
-    - cron: "15 */6 * * *"   # every 6h: accumulates live government snapshots
+    - cron: "15 3 * * 0"     # Sundays 03:15 UTC
   workflow_dispatch: {}
 
 jobs:
@@ -19,10 +23,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # the full rebuild needs duckdb/shapely/lightgbm, which the slim
+      # serverless requirements.txt deliberately omits
       - run: pip install -r requirements-pipeline.txt
       - name: Rebuild pipeline on fresh data
         env:
           DATA_GOV_IN_KEY: ${{ secrets.DATA_GOV_IN_KEY }}
+          # models/forecast.py trains on the live store and falls back to the
+          # bundled December archive when it cannot reach it. Without this the
+          # fallback fired on every run, and the STALE forecast_metrics.json it
+          # wrote was then committed -- which is what failed live-hourly.yml's
+          # "forecast trained on live store" check on the next hour.
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           python etl/fetch_data.py
           python etl/fetch_live.py
