@@ -1,36 +1,56 @@
 {
   "_meta": {
-    "source": "duckdb readings (bundled archive -- STALE)",
-    "rows": 13993,
-    "stations": 83,
-    "window": "2025-12-25 05:00:00 -> 2026-01-01 05:00:00",
-    "train_until": "2025-12-25 05:00:00",
+    "source": "supabase readings_hourly (live)",
+    "rows": 29568,
+    "stations": 90,
+    "window": "2025-12-25 05:00:00 -> 2026-08-30 00:00:00",
+    "train_until": "2026-08-23 00:00:00",
     "test_days": 7,
-    "trained_at": "2026-08-29 16:42 UTC"
+    "trained_at": "2026-08-29 20:00 UTC"
   },
   "h6": {
-    "n_train": 0,
-    "validated": false,
-    "note": "only 0 training rows before the 7-day test window; the data window is too short to both fit and test"
+    "n_test": 1880,
+    "n_train": 17518,
+    "validated": true,
+    "rmse_model": 16.99,
+    "rmse_persistence": 6.56,
+    "rmse_seasonal_naive": 6.56,
+    "improvement_vs_persistence_pct": -159.1
   },
   "h12": {
-    "n_train": 0,
-    "validated": false,
-    "note": "only 0 training rows before the 7-day test window; the data window is too short to both fit and test"
+    "n_test": 1094,
+    "n_train": 17136,
+    "validated": true,
+    "rmse_model": 17.01,
+    "rmse_persistence": 10.96,
+    "rmse_seasonal_naive": 17.69,
+    "improvement_vs_persistence_pct": -55.2
   },
   "h24": {
-    "n_train": 0,
-    "validated": false,
-    "note": "only 0 training rows before the 7-day test window; the data window is too short to both fit and test"
+    "n_test": 819,
+    "n_train": 17178,
+    "validated": true,
+    "rmse_model": 20.07,
+    "rmse_persistence": 19.27,
+    "rmse_seasonal_naive": 19.27,
+    "improvement_vs_persistence_pct": -4.2
   },
   "h48": {
-    "n_train": 0,
-    "validated": false,
-    "note": "only 0 training rows before the 7-day test window; the data window is too short to both fit and test"
+    "n_test": 674,
+    "n_train": 14953,
+    "validated": true,
+    "rmse_model": 27.56,
+    "rmse_persistence": 25.52,
+    "rmse_seasonal_naive": 25.52,
+    "improvement_vs_persistence_pct": -8.0
   },
   "h72": {
-    "n_train": 0,
-    "validated": false,
-    "note": "only 0 training rows before the 7-day test window; the data window is too short to both fit and test"
+    "n_test": 424,
+    "n_train": 12697,
+    "validated": true,
+    "rmse_model": 27.79,
+    "rmse_persistence": 27.38,
+    "rmse_seasonal_naive": 27.38,
+    "improvement_vs_persistence_pct": -1.5
   }
 }
