@@ -21,6 +21,21 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _backtest_claim(horizon="h24"):
+    """The h24 backtest as last measured, or an explicit refusal to claim one."""
+    import json
+    try:
+        m = json.loads((ROOT / "data" / "forecast_metrics.json").read_text(encoding="utf-8"))
+        v = m.get(horizon, {})
+        if not v.get("validated"):
+            return f"{horizon} not backtested ({v.get('note', 'no metrics')})"
+        return (f"{v['rmse_model']} vs {v['rmse_persistence']} persistence "
+                f"({v['improvement_vs_persistence_pct']:+}%), "
+                f"n_test={v['n_test']}, source={m.get('_meta', {}).get('source', '?')}")
+    except Exception as e:
+        return f"unavailable ({type(e).__name__})"
 DB = ROOT / "data" / "vayu.duckdb"
 if not DB.exists():
     DB = ROOT / "data" / "vayu_serve.duckdb"
@@ -86,7 +101,11 @@ class Orchestrator:
         state.forecasts = dict(zip(latest.station_id, [round(float(p), 1) for p in preds]))
         self.log(state, "forecast", {"stations": len(latest), "horizon_h": 24},
                  {"mean_pm25_24h": round(float(preds.mean()), 1),
-                  "backtest_rmse_vs_persistence": "52.5 vs 79.2 (see forecast_metrics.json)"})
+                  # Read the claim rather than restating it. This line said
+                  # "52.5 vs 79.2" long after a retrain had changed both, which
+                  # is how a stale accuracy number reaches an agency: hardcoded
+                  # beside the log line that is supposed to evidence it.
+                  "backtest_rmse_vs_persistence": _backtest_claim()})
         # 4) ENFORCEMENT
         from agents.enforcement import rank_actions
         actions = rank_actions(con=self.con)

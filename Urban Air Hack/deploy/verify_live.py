@@ -308,6 +308,66 @@ def ops_config_locked():
 
 check("ops_config locked", ops_config_locked)
 
+
+def rls_parity():
+    """Every public-schema table must have RLS on — not just the secret one.
+
+    Supabase serves the whole public schema over PostgREST, so a table with RLS
+    off and a grant to `anon` is reachable by anyone holding the anon key, which
+    is a publishable credential by design. The grants here are identical on all
+    nine tables; RLS is the only thing neutralising them.
+
+    `fires` and `llm_spend` were the two left off. `fires` is not merely a read
+    leak: the anon grants include INSERT, UPDATE, DELETE and TRUNCATE, and the
+    fire layer feeds the attribution agent that produces enforcement evidence —
+    so it is a write path into evidence inputs. This is a regression guard.
+    """
+    from service import live_api
+
+    with live_api._conn().cursor() as c:
+        c.execute("""select relname, relrowsecurity from pg_class
+                     where relnamespace = 'public'::regnamespace and relkind = 'r'""")
+        off = sorted(n for n, on in c.fetchall() if not on)
+        assert not off, (f"RLS is disabled on {off} — with anon holding "
+                         f"INSERT/UPDATE/DELETE/TRUNCATE, these are world-writable "
+                         f"to anyone with the anon key")
+    return "RLS on for every public table"
+
+
+check("RLS parity (SEC-03)", rls_parity)
+
+
+def forecast_trained_on_live():
+    """The forecast must be fit on the live store, and say so.
+
+    models/forecast.py loaded the bundled DuckDB snapshot -- frozen at
+    2025-12-25 -> 2026-01-01 -- so the nightly retrain re-fit the same seven
+    days of December every night and never saw a row the platform collected.
+    Nothing failed; the job went green and the metrics looked plausible. The
+    only way to catch that is to assert the provenance the run records.
+
+    Note this deliberately does NOT assert the model beats persistence. On calm
+    air it does not, and an assertion saying otherwise would only encourage
+    quoting a number that is not true.
+    """
+    import json
+    from pathlib import Path as _P
+    m = json.loads((_P(__file__).resolve().parent.parent / "data" /
+                    "forecast_metrics.json").read_text(encoding="utf-8"))
+    meta = m.get("_meta")
+    assert meta, "forecast_metrics.json has no _meta — retrain with models/forecast.py"
+    assert "STALE" not in meta["source"], (
+        f"forecast was trained on {meta['source']}: the live store was unreachable, "
+        f"so the model has not seen anything the platform collected")
+    unvalidated = [h for h, v in m.items()
+                   if h != "_meta" and not v.get("validated")]
+    assert not unvalidated, f"horizons fit but never backtested: {unvalidated}"
+    return (f"{meta['source']}, {meta['rows']} rows, {meta['window']}, "
+            f"all {len(m) - 1} horizons backtested")
+
+
+check("forecast trained on live store", forecast_trained_on_live)
+
 def fire_layer_stale():
     """The fire sync fails silently by design, so staleness is the only signal.
 

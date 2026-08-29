@@ -32,6 +32,20 @@ def band(aqi):
     # comparison against NaN is False, so an unguarded NaN falls through the
     # band loop and returns "Severe" — painting no-data stations blood red.
     if aqi is None or aqi != aqi: return None
-    for lo, hi, name in BANDS:
-        if lo <= aqi <= hi: return name
+    # A negative AQI is not a low reading; it is not a reading at all. It fell
+    # through the same loop to the same "Severe" default, and because the
+    # advisory endpoint takes AQI as a query parameter, `aqi=-50` came back as
+    # "AQI -50 (Severe) measured now" — public health guidance over an
+    # impossible number. Below the scale is no-data; above the top of it,
+    # Severe remains the correct and most protective answer.
+    if aqi < 0: return None
+    # Compare against the upper edge only. The band table is written with
+    # integer gaps (50 then 51, 100 then 101, ...), so a fractional AQI landing
+    # between two bands -- 50.5 -- matched none of them and fell through to the
+    # "Severe" default, the same failure the NaN guard above exists to stop.
+    # pm_aqi() cannot currently produce such a value, because each sub-index is
+    # interpolated within one band's own AQI range; an averaged or interpolated
+    # AQI can, and that is exactly what the ward estimator computes.
+    for _lo, hi, name in BANDS:
+        if aqi <= hi: return name
     return "Severe"

@@ -19,6 +19,11 @@ from models.aqi import pm_aqi, band             # noqa: E402
 
 CITIES = {"delhi": "Delhi", "mumbai": "Mumbai", "bengaluru": "Bengaluru"}
 
+# Hard ceiling on any client-supplied row count. The endpoints are public and
+# unauthenticated, so an unbounded LIMIT is the cheapest way to exhaust the
+# function's 60s budget.
+MAX_ROWS = 5000
+
 # readings_hourly.h is IST wall-clock stored without a zone, while the database
 # clock is UTC. Comparing h against a bare now() therefore skewed every window
 # by 5h30m and put the newest reading 3 hours in the "future".
@@ -114,6 +119,13 @@ def stations(slug: str):
 
 @app.get("/cities/{slug}/events")
 def events(slug: str, limit: int = 300, since_days: int | None = None):
+    # `limit` reaches Postgres as LIMIT, where a negative value is a hard error
+    # -- so limit=-5 answered 500 -- and an unbounded one lets one anonymous
+    # call pull the whole attributions table through a 60s serverless function.
+    # Clamp rather than reject: a caller asking for too much wants the maximum.
+    limit = max(1, min(int(limit or 0) or 1, MAX_ROWS))
+    if since_days is not None:
+        since_days = max(1, min(int(since_days), 3650))
     city = CITIES.get(slug, slug)
     where = "a.city = %(c)s" + (f" and a.h > {IST_NOW_SQL} - (%(d)s || ' days')::interval" if since_days else "")
     return rows(q(f"""select a.station_id, s.ward_id, a.h::text h, a.event_type, a.pm25, a.zscore,
@@ -316,6 +328,14 @@ def replay_run(city: str = "Delhi"):
 @app.get("/actions/{action_id}/pack.pdf")
 def pack(action_id: int):
     from agents.enforcement import evidence_pack
+    # evidence_pack does .iloc[0] on the action row, so an unknown id raised
+    # IndexError and the endpoint answered an opaque 500. An evidence pack that
+    # does not exist is a 404 -- and saying so matters here, because this URL is
+    # what an enforcement officer follows from a citation.
+    n = q("select count(*) n from actions where action_id = %(a)s", {"a": int(action_id)}).n[0]
+    if not int(n):
+        return JSONResponse({"ok": False, "error": "no such action", "action_id": action_id},
+                            status_code=404)
     path = evidence_pack(action_id, con=_conn())
     return FileResponse(path, media_type="application/pdf", filename=f"evidence_pack_{action_id}.pdf")
 
@@ -323,6 +343,29 @@ def pack(action_id: int):
 def advisory_ep(slug: str, ward: str, aqi: int = 300, group: str = "general", lang: str = "en",
                 basis: str = "current"):
     from agents import advisory
+
+    # Validate before banding. Every one of these arrived as a query parameter,
+    # so any caller could reach them: aqi=-50 was banded "Severe" and returned
+    # as measured health guidance, and an unrecognised group raised a KeyError
+    # that the except-branch below re-raised (it calls the same function), so
+    # the endpoint answered 500 rather than saying what was wrong.
+    if not (0 <= aqi <= 500):
+        return JSONResponse({"ok": False, "error": "aqi out of range: the CPCB National AQI "
+                                                   "scale is 0-500", "aqi": aqi}, status_code=422)
+    if group not in advisory.GROUP_ACTIONS:
+        return JSONResponse({"ok": False, "error": "unknown group",
+                             "valid": sorted(advisory.GROUP_ACTIONS)}, status_code=422)
+    if lang not in advisory.LANG_NAMES:
+        # Previously this fell through to generate(), raised KeyError on
+        # LANG_NAMES, and was caught below -- so the caller got English text
+        # labelled source "fallback (KeyError)": an internal exception name on a
+        # public health response, and no signal that the language was refused.
+        return JSONResponse({"ok": False, "error": "unsupported language",
+                             "valid": sorted(advisory.LANG_NAMES)}, status_code=422)
+    if not ward or not ward.strip():
+        return JSONResponse({"ok": False, "error": "ward is required"}, status_code=422)
+    ward = ward.strip()[:120]        # bound it: the ward name is echoed into the advisory text
+
     b = band(aqi) or "Poor"
     # Normalise here too, so the basis is settled before it reaches either the
     # template or the model, and `basis` comes back on the response — a caller

@@ -1,31 +1,56 @@
 {
+  "_meta": {
+    "source": "supabase readings_hourly (live)",
+    "rows": 29117,
+    "stations": 90,
+    "window": "2025-12-25 05:00:00 -> 2026-08-29 18:00:00",
+    "train_until": "2026-08-22 18:00:00",
+    "test_days": 7,
+    "trained_at": "2026-08-29 13:49 UTC"
+  },
   "h6": {
-    "n_test": 2020,
-    "rmse_model": 68.04,
-    "rmse_persistence": 105.76,
-    "rmse_seasonal_naive": 105.76,
-    "improvement_vs_persistence_pct": 35.7
+    "n_test": 1823,
+    "n_train": 17193,
+    "validated": true,
+    "rmse_model": 16.14,
+    "rmse_persistence": 7.49,
+    "rmse_seasonal_naive": 7.49,
+    "improvement_vs_persistence_pct": -115.4
   },
   "h12": {
-    "n_test": 1555,
-    "rmse_model": 61.38,
-    "rmse_persistence": 119.14,
-    "rmse_seasonal_naive": 83.17,
-    "improvement_vs_persistence_pct": 48.5
+    "n_test": 1222,
+    "n_train": 16936,
+    "validated": true,
+    "rmse_model": 15.62,
+    "rmse_persistence": 11.27,
+    "rmse_seasonal_naive": 17.57,
+    "improvement_vs_persistence_pct": -38.6
   },
   "h24": {
-    "n_test": 819,
-    "rmse_model": 47.09,
-    "rmse_persistence": 81.78,
-    "rmse_seasonal_naive": 81.78,
-    "improvement_vs_persistence_pct": 42.4
+    "n_test": 1208,
+    "n_train": 16784,
+    "validated": true,
+    "rmse_model": 17.58,
+    "rmse_persistence": 17.8,
+    "rmse_seasonal_naive": 17.8,
+    "improvement_vs_persistence_pct": 1.3
   },
   "h48": {
-    "n_test": 0,
-    "note": "model trained; no honest backtest possible on one-week dataset \u2014 extend history via etl/fetch_data.py for full validation"
+    "n_test": 798,
+    "n_train": 14825,
+    "validated": true,
+    "rmse_model": 27.46,
+    "rmse_persistence": 25.72,
+    "rmse_seasonal_naive": 25.72,
+    "improvement_vs_persistence_pct": -6.8
   },
   "h72": {
-    "n_test": 0,
-    "note": "model trained; no honest backtest possible on one-week dataset \u2014 extend history via etl/fetch_data.py for full validation"
+    "n_test": 544,
+    "n_train": 12575,
+    "validated": true,
+    "rmse_model": 29.06,
+    "rmse_persistence": 29.06,
+    "rmse_seasonal_naive": 29.06,
+    "improvement_vs_persistence_pct": -0.0
   }
 }
