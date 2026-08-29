@@ -2,7 +2,14 @@
 
 Updated 2026-08-29. Read this first to reload full context.
 
-## Open item: the ward estimator is built and tested but NOT DEPLOYED
+## Ward estimator — shipped and live (2026-08-29)
+
+Deployed API-first in two commits: `4880c154` (API, the `estimated` basis) then
+`0ecb2ee7` (front end). Verified on the live site: ward ANAND VIHAR renders
+ESTIMATED 299 Poor with its four contributing sensors, flags Anand Vihar at 448
+Severe 1.3 km away, and the advisory returns "an estimated AQI 299 (Poor),
+interpolated from nearby sensors" from the deployed API. The history below is
+kept because the failure mode is worth not repeating.
 
 The citizen view showed the **city arithmetic mean** for every ward without a
 sensor of its own — 251 of Delhi's 289 wards — rendered in 46px type under the
@@ -20,18 +27,19 @@ number is shown at all. Delhi now resolves 39 measured / 248 estimated /
 also carry the landmark (`I.P EXTENTION — Anand Vihar`), which is what made the
 sensor unfindable: nobody searches for the municipal charge name.
 
-**What is not done: the API half is not deployed.** `agents/advisory.py` and
-`service/live_api.py` gained an `estimated` basis so an interpolated number is
-never described as "measured now", and the endpoint echoes `basis` back. That
-code is local only. `verify_live.py` passes because it drives a local
-`TestClient(app)` against the remote database — it does **not** exercise the
-deployed function, and this is a standing trap for anyone reading a green suite
-as proof of what is live.
+`agents/advisory.py` and `service/live_api.py` carry an `estimated` basis so an
+interpolated number is never described as "measured now"; the endpoint echoes
+`basis` back, and the client refuses a server advisory that does not echo it,
+rendering the local CPCB template instead. **Deploy the API before the front
+end** whenever this pair changes — an API predating the field answers
+"measured now", and only that guard stops the wording reaching a resident.
 
-Until the API ships, the client refuses a server advisory whose `basis` does not
-come back `estimated` and renders the local CPCB template instead, so the wrong
-wording cannot reach a resident. **Deploy the API before the front end** —
-that ordering keeps the guard from being needed.
+**Standing trap this exposed: `verify_live.py` proves nothing about production.**
+It drives a local `TestClient(app)` against the remote database, so it went
+green on the `estimated` basis while the deployed function still returned
+"measured now". Only a browser against the live URL, or curl against the
+deployed API, tells you what is actually serving. Do not read a green suite as
+a statement about what is live.
 
 ```bash
 node deploy/verify_ward_estimate.mjs      # 12 estimator assertions, incl. live data
