@@ -55,9 +55,12 @@ export async function getGrid(slug) {
   return j(`/demo/grid_${slug}.json`);  // precomputed 1-km IDW forecast grid
 }
 
-export async function getAdvisory(slug, ward, aqi, group, lang) {
+export async function getAdvisory(slug, ward, aqi, group, lang, basis = "current") {
   if (!API) return null; // demo mode: caller renders official CPCB template text client-side
-  const u = `${API}/cities/${slug}/advisory?ward=${encodeURIComponent(ward)}&aqi=${Math.round(aqi)}&group=${group}&lang=${lang}`;
+  // `basis` states where the number came from. A ward with no sensor gets an
+  // interpolated value, and the advisory must not describe that as measured.
+  const u = `${API}/cities/${slug}/advisory?ward=${encodeURIComponent(ward)}&aqi=${Math.round(aqi)}` +
+            `&group=${group}&lang=${lang}&basis=${encodeURIComponent(basis)}`;
   return j(u);
 }
 

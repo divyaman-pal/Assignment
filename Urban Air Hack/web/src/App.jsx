@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as api from "./api.js";
+import { wardAqi, stationLabel, MAX_KM, bandOf } from "./geo.js";
 
 const CITIES = { delhi: { name: "Delhi", center: [77.1, 28.65], zoom: 9.6 },
                  mumbai: { name: "Mumbai", center: [72.88, 19.08], zoom: 10.2 },
@@ -236,7 +237,8 @@ const GROUP_ACTIONS = {
   outdoor_workers: { Poor: "Take breaks away from traffic; N95 recommended.", "Very Poor": "N95 required; rotate shifts to reduce exposure.", Severe: "Minimise outdoor hours; employers should reschedule work." },
   elderly: { Poor: "Avoid morning walks near roads.", "Very Poor": "Stay indoors during peak hours; keep medication at hand.", Severe: "Remain indoors; use purifiers if available; seek help if breathless." },
   general: { Poor: "Reduce prolonged outdoor exertion.", "Very Poor": "Avoid outdoor exercise; keep windows closed at peak hours.", Severe: "Avoid all outdoor exertion; wear N95 outdoors." } };
-const bandOf = a => a <= 50 ? "Good" : a <= 100 ? "Satisfactory" : a <= 200 ? "Moderate" : a <= 300 ? "Poor" : a <= 400 ? "Very Poor" : "Severe";
+// bandOf now lives in geo.js — one definition of the CPCB breakpoints, shared
+// by the estimator and by whatever renders its output.
 
 // State the real age rather than claiming a refresh cadence: the scheduled
 // ingest is best-effort, and asserting "refreshed hourly" over a stale reading
@@ -252,6 +254,71 @@ function ageLabel(live) {
 }
 const TTS_LANG = { en: "en-IN", hi: "hi-IN", mr: "mr-IN", kn: "kn-IN" };
 
+// The reading panel. A measured value and an interpolated one are different
+// kinds of claim, so they are different objects on screen — same-looking
+// numbers with a caption underneath is what let a city average be read as a
+// ward reading. An estimate is dashed, labelled, and carries the sensors it
+// came from; a ward with no sensor in range shows no number at all.
+function WardReading({ est, bandColor }) {
+  if (!est) return <div className="card" style={{ textAlign: "center" }}>Loading…</div>;
+
+  if (est.status === "unavailable") return (
+    <div className="card" style={{ textAlign: "center", borderStyle: "dashed" }}>
+      <div style={{ fontSize: 46, fontWeight: 700, color: "#8b949e" }}>—</div>
+      <div style={{ color: "#8b949e", fontWeight: 700 }}>No coverage</div>
+      <div className="evli" style={{ marginLeft: 0, marginTop: 6 }}>
+        No reporting sensor within {MAX_KM} km of this ward. We will not estimate
+        this far out — no advisory can be issued here.
+      </div>
+    </div>);
+
+  const measured = est.status === "measured";
+  return (
+    <div className="card" style={{ textAlign: "center",
+      borderStyle: measured ? "solid" : "dashed",
+      borderColor: measured ? "#30363d" : "#8b6d1f" }}>
+      <div style={{ marginBottom: 2 }}>
+        <span className="badge" style={{
+          background: measured ? "#1f6feb" : "#8b6d1f", color: "#fff" }}>
+          {measured ? "MEASURED" : "ESTIMATED"}</span>
+      </div>
+      <div style={{ fontSize: 46, fontWeight: 700, color: bandColor }}>{est.aqi}</div>
+      <div style={{ color: bandColor, fontWeight: 700 }}>{est.band}</div>
+
+      {measured ? (
+        <div className="evli" style={{ marginLeft: 0, marginTop: 6 }}>
+          {est.contributors.length === 1
+            ? `sensor ${stationLabel(est.contributors[0].name)}, in this ward`
+            : `worst of ${est.contributors.length} sensors in this ward ` +
+              `(${est.contributors.map(c => `${stationLabel(c.name)} ${c.aqi}`).join(", ")})`}
+        </div>
+      ) : (<>
+        <div className="evli" style={{ marginLeft: 0, marginTop: 6 }}>
+          <b style={{ color: "#d29922" }}>No sensor in this ward.</b> Interpolated from{" "}
+          {est.contributors.length} sensor{est.contributors.length > 1 ? "s" : ""} within{" "}
+          {MAX_KM} km — nearest {est.nearestKm.toFixed(1)} km away.{" "}
+          Confidence <b>{est.confidence}</b>.
+        </div>
+        <div className="evli" style={{ marginLeft: 0, marginTop: 4, textAlign: "left" }}>
+          {est.contributors.map((c, i) => (
+            <div key={i}>• {stationLabel(c.name)} — AQI {c.aqi} ({c.band}), {c.km.toFixed(1)} km</div>
+          ))}
+        </div>
+      </>)}
+
+      {est.understated && (
+        <div style={{ marginTop: 8, padding: "6px 8px", borderRadius: 6,
+          background: "#3d1d1d", border: "1px solid #da3633", textAlign: "left" }}>
+          <b style={{ color: "#ff7b72" }}>Nearby sensor reads worse.</b>
+          <div className="evli" style={{ marginLeft: 0, color: "#e6edf3" }}>
+            {stationLabel(est.understated.name)} is at AQI {est.understated.aqi}{" "}
+            ({est.understated.band}), {est.understated.km.toFixed(1)} km away. If you are
+            closer to it than to the others, follow the {est.understated.band} guidance.
+          </div>
+        </div>)}
+    </div>);
+}
+
 function CitizenView({ city }) {
   const [wards, setWards] = useState([]);
   const [stations, setStations] = useState([]);
@@ -263,8 +330,10 @@ function CitizenView({ city }) {
 
   useEffect(() => { (async () => {
     const [wg, st] = await Promise.all([api.getWards(city), api.getStations(city)]);
+    // Keep the GeoJSON feature: the estimator needs the geometry to place the
+    // ward, not just its name.
     const list = wg.features.map(f => ({ id: f.properties.ward_id, name: f.properties.name,
-      schools: f.properties.schools, hospitals: f.properties.hospitals }));
+      schools: f.properties.schools, hospitals: f.properties.hospitals, feature: f }));
     list.sort((a, b) => String(a.name).localeCompare(String(b.name)));
     setWards(list); setStations(st); setWard(list[0]?.id || ""); setAdv(null);
   })().catch(console.error); }, [city]);
@@ -275,23 +344,50 @@ function CitizenView({ city }) {
   const newestAsOf = stations.map(s => s.as_of).filter(Boolean).sort().pop() || null;
   const fresh = stations.filter(s => s.aqi && !isStale(s.as_of, newestAsOf));
   const w = wards.find(x => x.id === ward);
-  const inWard = fresh.filter(s => s.ward_id === ward);
-  const cityAqis = fresh.map(s => s.aqi);
-  const aqi = inWard.length ? Math.max(...inWard.map(s => s.aqi))
-            : cityAqis.length ? Math.round(cityAqis.reduce((a, b) => a + b, 0) / cityAqis.length) : null;
-  const band = aqi ? bandOf(aqi) : null;
-  const src = inWard.length ? `${inWard.length} sensor(s) in this ward`
-            : cityAqis.length ? `city average of ${cityAqis.length} reporting sensors (no sensor in ward)`
-            : "no sensor currently reporting";
+
+  // Three outcomes, never conflated: measured / estimated / unavailable.
+  // See web/src/geo.js for why the city mean was removed.
+  const est = w ? wardAqi(w.feature, fresh) : null;
+  const aqi = est ? est.aqi : null;
+  const band = est ? est.band : null;
+
+  // Wards are named after municipal charges, so the ward holding the Anand
+  // Vihar sensor is listed as "I.P EXTENTION". Residents search for the
+  // landmark; show them both.
+  const sensorIn = {};
+  fresh.forEach(s => {
+    const k = String(s.ward_id);
+    if (!sensorIn[k] || s.aqi > sensorIn[k].aqi) sensorIn[k] = s;
+  });
+  const dropdownLabel = x => {
+    const s = sensorIn[String(x.id)];
+    return s ? `${wardLabel(x.name)} — ${stationLabel(s.station_name)}` : wardLabel(x.name);
+  };
 
   async function getAdvice() {
-    if (!w || !aqi) return;
+    if (!w || !est || est.aqi === null) return;
     setBusy(true);
-    const fallback = `Air quality alert for ${wardLabel(w.name)}: AQI ${aqi} (${band}). ` +
+    // `basis` must match where the number came from — the API renders
+    // "measured now" for current and says so for an estimate. Sending the
+    // wrong one would make the system state a measurement it does not have.
+    const basis = est.status === "measured" ? "current" : "estimated";
+    const lead = est.status === "measured"
+      ? `AQI ${aqi} (${band}) measured now`
+      : `an estimated AQI ${aqi} (${band}), interpolated from sensors near this ward`;
+    const fallback = `Air quality alert for ${wardLabel(w.name)}: ${lead}. ` +
       `${CPCB_HEALTH[band]} ${(GROUP_ACTIONS[group] || {})[band] || "Follow general precautions."}`;
     try {
-      const r = await api.getAdvisory(city, w.name, aqi, group, lang);
-      setAdv(r && r.text ? r : { text: fallback, lang: "en", source: "official CPCB template" });
+      const r = await api.getAdvisory(city, w.name, aqi, group, lang, basis);
+      // The client knows the provenance for certain; the API is only told. An
+      // API that does not echo the basis back is older than this field and will
+      // describe an interpolated number as "measured now" — which is the exact
+      // claim being guarded against, so the local template wins instead. Front
+      // end and API deploy separately, so this skew is not hypothetical: it is
+      // the state of every deployment between the two pushes.
+      const honoured = r && r.text && (basis !== "estimated" || r.basis === "estimated");
+      setAdv(honoured ? r : { text: fallback, lang: "en",
+        source: r && r.text ? "official CPCB template (API did not confirm basis)"
+                            : "official CPCB template" });
     } catch { setAdv({ text: fallback, lang: "en", source: "official CPCB template" }); }
     setBusy(false);
   }
@@ -308,16 +404,12 @@ function CitizenView({ city }) {
         <div className="card"><h4>My ward</h4>
           <select value={ward} onChange={e => { setWard(e.target.value); setAdv(null); }}
             style={{ width: "100%", padding: 6, background: "#21262d", color: "#e6edf3", border: "1px solid #30363d", borderRadius: 6 }}>
-            {wards.map(x => <option key={x.id} value={x.id}>{wardLabel(x.name)}</option>)}
+            {wards.map(x => <option key={x.id} value={x.id}>{dropdownLabel(x)}</option>)}
           </select>
           <div className="evli" style={{ marginTop: 6 }}>
             {w ? `${w.schools} schools · ${w.hospitals} hospitals in this ward (OpenStreetMap)` : ""}</div>
         </div>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 46, fontWeight: 700, color: bandColor }}>{aqi ?? "—"}</div>
-          <div style={{ color: bandColor, fontWeight: 700 }}>{band ?? "no data"}</div>
-          <div className="evli">{src}</div>
-        </div>
+        <WardReading est={est} bandColor={bandColor} />
         <div className="card"><h4>Who is this for?</h4>
           {Object.keys(GROUP_ACTIONS).map(g => (
             <button key={g} className={`langbtn ${group === g ? "active" : ""}`}
