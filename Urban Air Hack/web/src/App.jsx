@@ -532,11 +532,17 @@ function Metrics({ metrics }) {
   return (
     <>
       <div className="card">
-        <h4>Forecast accuracy — honest backtest (test window = hardest 36h incl. NYE spike)</h4>
+        <h4>Forecast accuracy — honest backtest{f._meta ? ` (test window = final ${f._meta.test_days} days; trained on ${f._meta.rows} rows, ${f._meta.window})` : ""}</h4>
+        {/* A negative improvement is the honest result on calm air, not a bug:
+            persistence is very hard to beat when PM2.5 barely moves. Saying so
+            here stops the table being read as a defect — and stops the model
+            being quoted as accurate in conditions where it is not. */}
         <table><thead><tr><th>Horizon</th><th>Model RMSE</th><th>Persistence</th><th>Improvement</th></tr></thead>
           {/* horizons with no test window carry a note instead of numbers —
-              rendering them as empty cells with a stray % read as broken */}
-          <tbody>{Object.entries(f).map(([h, v]) => (v.n_test
+              rendering them as empty cells with a stray % read as broken.
+              _meta is provenance, not a horizon; rendering it produced a row
+              labelled "eta" that claimed it was not backtested. */}
+          <tbody>{Object.entries(f).filter(([h]) => h !== "_meta").map(([h, v]) => (v.n_test
             ? <tr key={h}><td>{h.slice(1)}h</td><td>{v.rmse_model}</td><td>{v.rmse_persistence}</td>
                 <td>{v.improvement_vs_persistence_pct}%</td></tr>
             : <tr key={h}><td>{h.slice(1)}h</td>
