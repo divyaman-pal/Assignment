@@ -26,6 +26,7 @@ Honesty rules (these numbers go in front of an agency):
   silently presented a reading up to 5438 hours old as "one hour ago".
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -102,6 +103,17 @@ def load_hourly(con=None):
     if df is not None:
         SOURCE = "supabase readings_hourly (live)"
     else:
+        # The archive fallback exists for offline development. In CI it is never
+        # legitimate: the batch job commits forecast_metrics.json, so a silent
+        # downgrade here publishes a model fit on seven days of December and
+        # fails the live job's provenance check an hour later. That is exactly
+        # how the retrain went green while shipping a stale model -- so in CI,
+        # an unreachable live store fails the run instead of writing a file.
+        if os.environ.get("GITHUB_ACTIONS"):
+            raise RuntimeError(
+                "live store unreachable in CI; refusing to retrain on the bundled "
+                "archive and commit it as the model. Check that SUPABASE_DB_URL is "
+                "passed to this workflow step.")
         df = _load_archive(con)
         SOURCE = "duckdb readings (bundled archive -- STALE)"
     print(f"  training data: {SOURCE} — {len(df)} rows, "
