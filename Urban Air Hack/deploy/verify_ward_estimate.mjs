@@ -143,16 +143,53 @@ if (!process.argv.includes("--offline")) {
   const stations = await res.json();
   const dw = wards("delhi");
 
-  check("live: Anand Vihar reads as measured, matching the map", () => {
+  const reporting = s => s && typeof s.aqi === "number" && isFinite(s.aqi) && s.aqi > 0;
+
+  // A sensor's own ward must show that sensor's own number. Asserted over every
+  // reporting station rather than one named one: CPCB stations drop in and out
+  // hour to hour - Anand Vihar itself read null at 2026-08-31 19:00, and 5 of
+  // Delhi's 46 sensors were quiet - so pinning the invariant to a single station
+  // tests the feed's luck instead of the ward_id join.
+  check("live: every ward holding a sensor reads measured, matching the map", () => {
+    // Iterated over features, not over ward_ids: delhi_193 ships as two
+    // features (a ward split by geometry), and a ward_id-keyed loop would check
+    // only the first of them.
+    let checked = 0;
+    for (const f of dw) {
+      const wardId = String(f.properties.ward_id);
+      const sens = stations.filter(s => reporting(s) && String(s.ward_id) === wardId);
+      if (!sens.length) continue;
+      const r = wardAqi(f, stations);
+      assert(r.status === "measured",
+        `${f.properties.name} holds ${sens.length} reporting sensor(s) but reads ${r.status}`);
+      // worst-in-ward, not the average - see wardAqi
+      const worst = Math.max(...sens.map(s => s.aqi));
+      assert(Math.abs(r.aqi - worst) < 1,
+        `${f.properties.name} shows ${r.aqi} but its worst sensor reads ${Math.round(worst)}`);
+      checked++;
+    }
+    assert(checked > 0, "no ward joined to a reporting sensor - the ward_id join is broken");
+    return `${checked} sensor-holding wards match their sensors`;
+  });
+
+  // The headline case keeps its own assertion, on the part that is invariant:
+  // the station is in the feed and joined to a real ward, and a ward whose
+  // sensor has gone quiet is never dressed up as a measurement.
+  check("live: Anand Vihar is joined to its ward and never claims a stale reading", () => {
     const av = stations.find(s => String(s.station_name).includes("Anand Vihar"));
     assert(av, "Anand Vihar not present in the live feed");
     const f = dw.find(x => String(x.properties.ward_id) === String(av.ward_id));
     assert(f, `ward ${av.ward_id} missing from the boundary file`);
     const r = wardAqi(f, stations);
-    assert(r.status === "measured", `status=${r.status}`);
-    assert(Math.abs(r.aqi - av.aqi) < 1,
-      `ward shows ${r.aqi} but the sensor reads ${Math.round(av.aqi)}`);
-    return `${f.properties.name} -> ${r.aqi} ${r.band} (sensor ${Math.round(av.aqi)})`;
+    if (reporting(av)) {
+      assert(r.status === "measured", `sensor is reporting but the ward reads ${r.status}`);
+      assert(Math.abs(r.aqi - av.aqi) < 1,
+        `ward shows ${r.aqi} but the sensor reads ${Math.round(av.aqi)}`);
+      return `${f.properties.name} -> ${r.aqi} ${r.band} (sensor ${Math.round(av.aqi)})`;
+    }
+    assert(r.status !== "measured",
+      `sensor is not reporting yet the ward claims a measurement of ${r.aqi}`);
+    return `${f.properties.name}: sensor quiet -> ${r.status}, correctly not measured`;
   });
 
   check("live: no single value dominates the city", () => {
