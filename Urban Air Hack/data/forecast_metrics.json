@@ -1,56 +1,56 @@
 {
   "_meta": {
     "source": "supabase readings_hourly (live)",
-    "rows": 51144,
+    "rows": 62156,
     "stations": 90,
-    "window": "2025-12-25 05:00:00 -> 2026-09-13 13:00:00",
-    "train_until": "2026-09-06 13:00:00",
+    "window": "2025-12-25 05:00:00 -> 2026-09-20 13:00:00",
+    "train_until": "2026-09-13 13:00:00",
     "test_days": 7,
-    "trained_at": "2026-09-13 08:19 UTC"
+    "trained_at": "2026-09-20 08:35 UTC"
   },
   "h6": {
-    "n_test": 5755,
-    "n_train": 28082,
+    "n_test": 7194,
+    "n_train": 34765,
     "validated": true,
-    "rmse_model": 14.75,
-    "rmse_persistence": 8.46,
-    "rmse_seasonal_naive": 8.46,
-    "improvement_vs_persistence_pct": -74.4
+    "rmse_model": 13.83,
+    "rmse_persistence": 9.84,
+    "rmse_seasonal_naive": 9.84,
+    "improvement_vs_persistence_pct": -40.6
   },
   "h12": {
-    "n_test": 4137,
-    "n_train": 27400,
+    "n_test": 6340,
+    "n_train": 33646,
     "validated": true,
-    "rmse_model": 19.34,
-    "rmse_persistence": 15.22,
-    "rmse_seasonal_naive": 22.92,
-    "improvement_vs_persistence_pct": -27.0
+    "rmse_model": 20.1,
+    "rmse_persistence": 17.19,
+    "rmse_seasonal_naive": 26.15,
+    "improvement_vs_persistence_pct": -16.9
   },
   "h24": {
-    "n_test": 5525,
-    "n_train": 27795,
+    "n_test": 7239,
+    "n_train": 34889,
     "validated": true,
-    "rmse_model": 23.29,
-    "rmse_persistence": 24.34,
-    "rmse_seasonal_naive": 24.34,
-    "improvement_vs_persistence_pct": 4.3
+    "rmse_model": 25.6,
+    "rmse_persistence": 26.5,
+    "rmse_seasonal_naive": 26.5,
+    "improvement_vs_persistence_pct": 3.4
   },
   "h48": {
-    "n_test": 4922,
-    "n_train": 25126,
+    "n_test": 5919,
+    "n_train": 32155,
     "validated": true,
-    "rmse_model": 26.05,
-    "rmse_persistence": 26.52,
-    "rmse_seasonal_naive": 26.52,
-    "improvement_vs_persistence_pct": 1.8
+    "rmse_model": 25.11,
+    "rmse_persistence": 24.88,
+    "rmse_seasonal_naive": 24.88,
+    "improvement_vs_persistence_pct": -0.9
   },
   "h72": {
-    "n_test": 3720,
-    "n_train": 22610,
+    "n_test": 4730,
+    "n_train": 29544,
     "validated": true,
-    "rmse_model": 26.6,
-    "rmse_persistence": 27.24,
-    "rmse_seasonal_naive": 27.24,
-    "improvement_vs_persistence_pct": 2.4
+    "rmse_model": 29.28,
+    "rmse_persistence": 28.79,
+    "rmse_seasonal_naive": 28.79,
+    "improvement_vs_persistence_pct": -1.7
   }
 }
